@@ -1,0 +1,61 @@
+{
+  "name": "shopping-for-algolia-personalized",
+  "version": "1.0.0",
+  "description": "AI-powered personalized shopping assistant with Gemini API image analysis and Algolia MCP integration",
+  "main": "dist/main/main.js",
+  "type": "module",
+  "homepage": ".",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && electron-builder",
+    "build:dev": "vite build",
+    "electron:dev": "electron dist/main/main.js",
+    "preview": "vite preview",
+    "lint": "eslint src --ext .ts,.tsx",
+    "type-check": "tsc --noEmit",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "electron",
+    "react",
+    "typescript",
+    "ai",
+    "shopping",
+    "algolia",
+    "gemini",
+    "mcp"
+  ],
+  "author": "Shopping for AIgolia personalized",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.15.1",
+    "algoliasearch": "^5.32.0",
+    "better-sqlite3": "^12.2.0",
+    "clsx": "^2.1.1",
+    "electron": "^37.2.1",
+    "keytar": "^7.9.0",
+    "lucide-react": "^0.525.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "typescript": "^5.8.3",
+    "zustand": "^5.0.6"
+  },
+  "devDependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@tailwindcss/postcss": "^4.1.11",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^24.0.13",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@typescript-eslint/eslint-plugin": "^8.36.0",
+    "@typescript-eslint/parser": "^8.36.0",
+    "@vitejs/plugin-react": "^4.6.0",
+    "autoprefixer": "^10.4.21",
+    "electron-builder": "^26.0.12",
+    "eslint": "^9.31.0",
+    "postcss": "^8.5.6",
+    "prettier": "^3.6.2",
+    "tailwindcss": "^4.1.11",
+    "vite": "^7.0.4"
+  }
+}
