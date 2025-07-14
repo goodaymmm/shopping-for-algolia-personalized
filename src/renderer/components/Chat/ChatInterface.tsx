@@ -31,9 +31,9 @@ export const ChatInterface: React.FC = () => {
     // Create user message
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
-      role: 'user',
+      sender: 'user',
       content,
-      imageUrl: imageFile ? URL.createObjectURL(imageFile) : undefined,
+      image: imageFile ? URL.createObjectURL(imageFile) : undefined,
       timestamp: new Date()
     }
 
@@ -48,7 +48,7 @@ export const ChatInterface: React.FC = () => {
       // Create assistant response
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        role: 'assistant',
+        sender: 'assistant',
         content: `Found ${products.length} products for "${content}"`,
         timestamp: new Date()
       }
@@ -70,7 +70,7 @@ export const ChatInterface: React.FC = () => {
       
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        role: 'assistant',
+        sender: 'assistant',
         content: 'Sorry, there was an error searching for products. Please try again.',
         timestamp: new Date()
       }

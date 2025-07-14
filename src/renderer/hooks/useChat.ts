@@ -23,9 +23,9 @@ export const useChat = () => {
     // Create user message
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
-      role: 'user',
+      sender: 'user',
       content,
-      imageUrl: imageFile ? URL.createObjectURL(imageFile) : undefined,
+      image: imageFile ? URL.createObjectURL(imageFile) : undefined,
       timestamp: new Date()
     }
 
@@ -40,7 +40,7 @@ export const useChat = () => {
       // Create assistant response
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        role: 'assistant',
+        sender: 'assistant',
         content: products.length > 0 
           ? `Found ${products.length} products for "${content}". Check the results below!`
           : `Sorry, I couldn't find any products matching "${content}". Try a different search term.`,
@@ -68,7 +68,7 @@ export const useChat = () => {
       
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        role: 'assistant',
+        sender: 'assistant',
         content: 'Sorry, there was an error searching for products. Please check your connection and try again.',
         timestamp: new Date()
       }
@@ -86,7 +86,7 @@ export const useChat = () => {
       // Add a confirmation message
       const confirmationMessage: ChatMessage = {
         id: Date.now().toString(),
-        role: 'assistant',
+        sender: 'assistant',
         content: `✅ Saved "${product.name}" to your database!`,
         timestamp: new Date()
       }
@@ -97,7 +97,7 @@ export const useChat = () => {
       
       const errorMessage: ChatMessage = {
         id: Date.now().toString(),
-        role: 'assistant',
+        sender: 'assistant',
         content: `❌ Failed to save "${product.name}". Please try again.`,
         timestamp: new Date()
       }

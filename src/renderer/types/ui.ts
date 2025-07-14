@@ -1,20 +1,7 @@
-// UI specific types from the prepared implementation
-export interface Message {
-  id: string
-  content: string
-  sender: 'user' | 'assistant'
-  timestamp: Date
-  image?: string
-}
+// Re-export shared types for UI consistency
+export type { ChatMessage, ChatSession, Product } from '../../shared/types'
 
-export interface ChatSession {
-  id: string
-  title: string
-  messages: Message[]
-  createdAt: Date
-  updatedAt: Date
-}
-
+// UI specific settings
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system'
   fontSize: 'small' | 'medium' | 'large'

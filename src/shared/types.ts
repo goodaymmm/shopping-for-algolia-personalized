@@ -15,7 +15,7 @@ export interface ElectronAPI {
   getDiscoverySetting: () => Promise<DiscoveryPercentage>
   
   // Search
-  searchProducts: (query: string, filters?: string) => Promise<Product[]>
+  searchProducts: (query: string, imageData?: string) => Promise<Product[]>
 }
 
 declare global {
@@ -47,18 +47,18 @@ export interface Product {
   url?: string
 }
 
-// Chat types
+// Chat types (unified with UI Message interface)
 export interface ChatMessage {
   id: string
-  role: 'user' | 'assistant'
+  sender: 'user' | 'assistant'  // Changed from 'role' to 'sender' for UI consistency
   content: string
-  imageUrl?: string
+  image?: string  // Changed from 'imageUrl' to 'image' for UI consistency
   timestamp: Date
 }
 
 export interface ChatSession {
   id: string
-  name: string
+  title: string  // Changed from 'name' to 'title' for UI consistency
   category?: string
   subcategory?: string
   messages: ChatMessage[]

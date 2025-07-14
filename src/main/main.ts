@@ -79,13 +79,19 @@ class MainApplication {
     })
 
     // Search operations (Algolia integration)
-    ipcMain.handle(IPC_CHANNELS.SEARCH_PRODUCTS, async (_event, query, filters) => {
-      return await this.handleProductSearch(query, filters)
+    ipcMain.handle(IPC_CHANNELS.SEARCH_PRODUCTS, async (_event, query, imageData) => {
+      return await this.handleProductSearch(query, imageData)
     })
   }
 
-  private async handleProductSearch(query: string, filters?: string) {
+  private async handleProductSearch(query: string, imageData?: string) {
     try {
+      // TODO: Integrate Gemini API for image analysis
+      // if (imageData) {
+      //   const analysisResult = await this.analyzeImageWithGemini(imageData)
+      //   query = this.enhanceQueryWithAnalysis(query, analysisResult)
+      // }
+
       // Algolia demo API search
       const response = await fetch(
         'https://latency-dsn.algolia.net/1/indexes/instant_search/query',
@@ -98,7 +104,6 @@ class MainApplication {
           },
           body: JSON.stringify({
             query,
-            filters: filters || '',
             hitsPerPage: 20,
             attributesToRetrieve: ['name', 'price', 'image', 'categories', 'url', 'objectID']
           })

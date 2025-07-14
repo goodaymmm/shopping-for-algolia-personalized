@@ -205,9 +205,9 @@ export class DatabaseService {
         
         messageStmt.run(
           sessionId,
-          message.role,
+          message.sender,
           message.content,
-          message.imageUrl || null,
+          message.image || null,
           null, // analysis_result - to be filled later
           null  // search_results - to be filled later
         )
@@ -238,7 +238,7 @@ export class DatabaseService {
       const rows = stmt.all() as any[]
       return rows.map(row => ({
         id: row.id.toString(),
-        name: row.session_name,
+        title: row.session_name,
         category: row.category,
         subcategory: row.subcategory,
         messages: [], // Will be loaded separately when needed
@@ -262,9 +262,9 @@ export class DatabaseService {
       const rows = stmt.all(sessionId) as any[]
       return rows.map(row => ({
         id: row.id.toString(),
-        role: row.role,
+        sender: row.role,
         content: row.content,
-        imageUrl: row.image_url,
+        image: row.image_url,
         timestamp: new Date(row.created_at)
       }))
     } catch (error) {

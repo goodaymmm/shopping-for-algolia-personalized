@@ -13,7 +13,7 @@ import {
   Sun,
   Monitor
 } from 'lucide-react'
-import { ChatSession } from '../../types/ui'
+import { ChatSession } from '../../types'
 import { useTheme } from '../../hooks/useTheme'
 
 type ViewType = 'chat' | 'history' | 'database' | 'settings'

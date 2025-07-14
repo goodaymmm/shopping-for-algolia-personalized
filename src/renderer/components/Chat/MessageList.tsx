@@ -42,21 +42,21 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading = 
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
+            className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
           >
             <div
               className={`
                 max-w-[85%] rounded-lg px-4 py-2.5
-                ${message.role === 'user'
+                ${message.sender === 'user'
                   ? 'bg-algolia-500 text-white'
                   : 'bg-neutral-100 dark:bg-neutral-850 text-neutral-900 dark:text-neutral-100'
                 }
               `}
             >
-              {message.imageUrl && (
+              {message.image && (
                 <div className="mb-2 overflow-hidden rounded-md">
                   <img
-                    src={message.imageUrl}
+                    src={message.image}
                     alt="Uploaded image"
                     className="max-w-full max-h-48 object-cover"
                   />
@@ -68,7 +68,7 @@ export const MessageList: React.FC<MessageListProps> = ({ messages, isLoading = 
               <div
                 className={`
                   text-xs mt-1
-                  ${message.role === 'user' 
+                  ${message.sender === 'user' 
                     ? 'text-algolia-200' 
                     : 'text-neutral-500 dark:text-neutral-400'
                   }

@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { ChatSession, Message } from '../types/ui'
+import { ChatSession, ChatMessage } from '../types'
 
 interface ChatSessionsState {
   sessions: ChatSession[]
@@ -9,11 +9,11 @@ interface ChatSessionsState {
   createNewSession: () => ChatSession
   deleteSession: (id: string) => void
   setCurrentSessionId: (id: string) => void
-  addMessageToSession: (sessionId: string, message: Message) => void
+  addMessageToSession: (sessionId: string, message: ChatMessage) => void
   updateSessionTitle: (sessionId: string, title: string) => void
 }
 
-const generateTitle = (messages: Message[]): string => {
+const generateTitle = (messages: ChatMessage[]): string => {
   const firstUserMessage = messages.find(m => m.sender === 'user')
   if (firstUserMessage) {
     return firstUserMessage.content.slice(0, 50) + (firstUserMessage.content.length > 50 ? '...' : '')

@@ -1,10 +1,10 @@
 import React, { useEffect, useRef } from 'react'
 import { ShoppingBag } from 'lucide-react'
-import { Message } from '../../types/ui'
+import { ChatMessage } from '../../types'
 import { Product } from '../../types'
 
 interface ChatContainerProps {
-  messages: Message[]
+  messages: ChatMessage[]
   searchResults?: Product[]
   showTimestamps: boolean
   fontSize: 'small' | 'medium' | 'large'

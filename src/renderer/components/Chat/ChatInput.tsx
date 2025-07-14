@@ -1,19 +1,21 @@
 import React, { useState, useRef } from 'react'
-import { Send, Paperclip, X, Image, Compass } from 'lucide-react'
+import { Send, Paperclip, X, Image } from 'lucide-react'
+import { DiscoverySettings } from './DiscoverySettings'
+import { DiscoveryPercentage } from '../../types'
 
 interface ChatInputProps {
   onSendMessage: (content: string, imageFile?: File) => void
   sendOnEnter: boolean
-  discoveryMode: boolean
-  onDiscoveryModeToggle: () => void
+  discoveryPercentage?: DiscoveryPercentage
+  onDiscoveryChange?: (value: DiscoveryPercentage) => void
   isLoading?: boolean
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({ 
   onSendMessage, 
   sendOnEnter,
-  discoveryMode,
-  onDiscoveryModeToggle,
+  discoveryPercentage = 0,
+  onDiscoveryChange,
   isLoading = false
 }) => {
   const [message, setMessage] = useState('')
@@ -187,23 +189,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           )}
         </form>
         
-        {/* Discovery Mode */}
-        <div className="mt-4 flex items-center justify-center">
-          <button
-            onClick={onDiscoveryModeToggle}
-            disabled={isLoading}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all disabled:opacity-50 ${
-              discoveryMode
-                ? 'bg-orange-500 text-white shadow-subtle'
-                : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700'
-            }`}
-          >
-            <Compass className="w-4 h-4" strokeWidth={1.5} />
-            <span className="text-sm font-medium">
-              Discovery Mode {discoveryMode ? 'ON' : 'OFF'}
-            </span>
-          </button>
-        </div>
+        {/* Discovery Settings */}
+        {onDiscoveryChange && (
+          <div className="mt-4 flex items-center justify-center">
+            <DiscoverySettings
+              value={discoveryPercentage}
+              onChange={onDiscoveryChange}
+            />
+          </div>
+        )}
         
         <div className="mt-3 text-xs text-center text-neutral-500 dark:text-neutral-400">
           {sendOnEnter 

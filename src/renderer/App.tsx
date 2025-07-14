@@ -6,7 +6,7 @@ import { Sidebar } from './components/Common/Sidebar'
 import { SettingsPanel } from './components/Settings/SettingsPanel'
 import { DatabaseStatsPanel } from './components/Database/DatabaseStatsPanel'
 import { ErrorBoundary } from './components/Common'
-import { ChatMessage, DiscoveryPercentage, Product } from './types'
+import { ChatMessage, Product } from './types'
 import { useTheme } from './hooks/useTheme'
 import { useSettings } from './hooks/useSettings'
 import { useChatSessions } from './hooks/useChatSessions'
@@ -16,7 +16,14 @@ type AppView = 'chat' | 'settings' | 'database-stats'
 
 export const App: React.FC = () => {
   const { theme, isDark, changeTheme } = useTheme()
-  const { settings, updateSettings } = useSettings()
+  const { 
+    fontSize,
+    sendOnEnter,
+    showTimestamps,
+    autoSave,
+    discoveryMode,
+    updateSettings 
+  } = useSettings()
   const {
     sessions,
     currentSession,
@@ -36,7 +43,7 @@ export const App: React.FC = () => {
     if (sessions.length === 0) {
       createNewSession()
     }
-  }, [])
+  }, [sessions.length, createNewSession])
 
   const handleSendMessage = async (content: string, imageFile?: File) => {
     let sessionId = currentSessionId
@@ -50,9 +57,9 @@ export const App: React.FC = () => {
     // Create user message
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
-      role: 'user',
+      sender: 'user',
       content,
-      imageUrl: imageFile ? URL.createObjectURL(imageFile) : undefined,
+      image: imageFile ? URL.createObjectURL(imageFile) : undefined,
       timestamp: new Date()
     }
 
@@ -72,7 +79,7 @@ export const App: React.FC = () => {
       // Create assistant response
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        role: 'assistant',
+        sender: 'assistant',
         content: imageFile 
           ? `I can see the image you've shared. Found ${products.length} similar products for you!`
           : `Found ${products.length} products matching "${content}"`,
@@ -96,7 +103,7 @@ export const App: React.FC = () => {
       
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        role: 'assistant',
+        sender: 'assistant',
         content: 'Sorry, there was an error searching for products. Please try again.',
         timestamp: new Date()
       }
@@ -150,14 +157,6 @@ export const App: React.FC = () => {
     }
   }
 
-  const handleDiscoveryModeToggle = async () => {
-    const newValue = settings.discoveryMode ? 0 : 5 as DiscoveryPercentage
-    updateSettings({ discoveryMode: newValue > 0 })
-    
-    if (window.electronAPI) {
-      await window.electronAPI.saveDiscoverySetting(newValue)
-    }
-  }
 
   const mapViewType = (view: AppView): ViewType => {
     switch (view) {
@@ -188,26 +187,37 @@ export const App: React.FC = () => {
           onSessionSelect={handleSessionSelect}
           onNewSession={handleNewSession}
           onDeleteSession={deleteSession}
-          onSettingsClick={handleSettingsClick}
-          onDatabaseStatsClick={handleDatabaseStatsClick}
         />
         
         <div className="flex flex-col flex-1">
           {currentView === 'chat' ? (
             <>
-              <ChatHeader />
+              <ChatHeader 
+                discoveryPercentage={discoveryMode ? 5 : 0}
+                onDiscoveryChange={(value) => {
+                  updateSettings({ discoveryMode: value > 0 })
+                  if (window.electronAPI) {
+                    window.electronAPI.saveDiscoverySetting(value)
+                  }
+                }}
+              />
               <ChatContainer 
                 messages={currentSession?.messages || []}
                 searchResults={searchResults}
-                showTimestamps={settings.showTimestamps}
-                fontSize={settings.fontSize}
+                showTimestamps={showTimestamps}
+                fontSize={fontSize}
                 isLoading={isLoading}
               />
               <ChatInput 
                 onSendMessage={handleSendMessage}
-                sendOnEnter={settings.sendOnEnter}
-                discoveryMode={settings.discoveryMode}
-                onDiscoveryModeToggle={handleDiscoveryModeToggle}
+                sendOnEnter={sendOnEnter}
+                discoveryPercentage={discoveryMode ? 5 : 0}
+                onDiscoveryChange={(value) => {
+                  updateSettings({ discoveryMode: value > 0 })
+                  if (window.electronAPI) {
+                    window.electronAPI.saveDiscoverySetting(value)
+                  }
+                }}
                 isLoading={isLoading}
               />
             </>
@@ -217,7 +227,14 @@ export const App: React.FC = () => {
             />
           ) : (
             <SettingsPanel
-              settings={settings}
+              settings={{
+                theme,
+                fontSize,
+                sendOnEnter,
+                showTimestamps,
+                autoSave,
+                discoveryMode
+              }}
               onSettingsChange={handleSettingsChange}
               onThemeChange={changeTheme}
               onBack={handleSettingsBack}

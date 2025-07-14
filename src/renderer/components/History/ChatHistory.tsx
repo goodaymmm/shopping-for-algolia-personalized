@@ -82,7 +82,7 @@ export const ChatHistory: React.FC = () => {
                         </div>
                         <div className="flex-1 min-w-0">
                           <h3 className="font-medium text-gray-900 truncate">
-                            {session.name}
+                            {session.title}
                           </h3>
                           {session.category && (
                             <span className="inline-block mt-1 px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">
