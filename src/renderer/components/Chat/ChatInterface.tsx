@@ -83,59 +83,80 @@ export const ChatInterface: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col bg-white dark:bg-dark-900">
         {/* Header with Discovery Settings */}
-        <div className="border-b border-gray-200 p-4">
-          <div className="mb-3">
-            <h2 className="text-xl font-semibold text-gray-900">AI Shopping Assistant</h2>
-            <p className="text-sm text-gray-600">Upload an image or describe what you're looking for</p>
-          </div>
-          
-          <DiscoverySettings
-            value={discoveryPercentage}
-            onChange={handleDiscoveryChange}
-          />
-        </div>
-
-        {/* Messages */}
-        <MessageList messages={messages} isLoading={isLoading} />
-
-        {/* Search Results */}
-        {searchResults.length > 0 && (
-          <div className="border-t border-gray-200 p-4 bg-gray-50">
-            <h3 className="text-sm font-medium text-gray-900 mb-3">
-              Found {searchResults.length} products
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-48 overflow-y-auto">
-              {searchResults.slice(0, 12).map((product) => (
-                <div
-                  key={product.id}
-                  className="bg-white rounded-lg p-2 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => {
-                    if (window.electronAPI) {
-                      window.electronAPI.saveProduct(product)
-                    }
-                  }}
-                >
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-20 object-cover rounded mb-2"
-                  />
-                  <p className="text-xs font-medium text-gray-900 line-clamp-2">
-                    {product.name}
-                  </p>
-                  <p className="text-xs text-algolia-600 font-semibold">
-                    ${product.price}
-                  </p>
-                </div>
-              ))}
+        <header className="border-b border-gray-200 dark:border-dark-800 bg-white dark:bg-dark-900">
+          <div className="px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  AI Shopping Assistant
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-dark-400 mt-1">
+                  Upload an image or describe what you're looking for
+                </p>
+              </div>
+              <DiscoverySettings
+                value={discoveryPercentage}
+                onChange={handleDiscoveryChange}
+              />
             </div>
           </div>
-        )}
+        </header>
 
-        {/* Input */}
-        <MessageInput onSendMessage={handleSendMessage} isLoading={isLoading} />
+        {/* Chat Area */}
+        <div className="flex-1 flex flex-col min-h-0">
+          {/* Messages Container */}
+          <div className="flex-1 overflow-hidden">
+            <MessageList messages={messages} isLoading={isLoading} />
+          </div>
+
+          {/* Search Results */}
+          {searchResults.length > 0 && (
+            <div className="border-t border-gray-200 dark:border-dark-800 bg-gray-50 dark:bg-dark-850 p-4">
+              <div className="max-w-5xl mx-auto">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                  <span className="inline-block w-2 h-2 bg-algolia-500 rounded-full animate-pulse"></span>
+                  Found {searchResults.length} products
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 max-h-64 overflow-y-auto scrollbar-thin">
+                  {searchResults.slice(0, 18).map((product) => (
+                    <div
+                      key={product.id}
+                      className="group bg-white dark:bg-dark-800 rounded-xl p-3 shadow-soft dark:shadow-dark-soft hover:shadow-medium dark:hover:shadow-dark-medium transition-all duration-200 cursor-pointer hover:scale-[1.02]"
+                      onClick={() => {
+                        if (window.electronAPI) {
+                          window.electronAPI.saveProduct(product)
+                        }
+                      }}
+                    >
+                      <div className="aspect-square mb-3 overflow-hidden rounded-lg bg-gray-100 dark:bg-dark-700">
+                        <img
+                          src={product.image}
+                          alt={product.name}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                      </div>
+                      <p className="text-xs font-medium text-gray-900 dark:text-white line-clamp-2 mb-1">
+                        {product.name}
+                      </p>
+                      <p className="text-sm font-bold text-algolia-600 dark:text-algolia-400">
+                        ${product.price}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Input Area */}
+          <div className="border-t border-gray-200 dark:border-dark-800 bg-white dark:bg-dark-900">
+            <div className="max-w-4xl mx-auto p-4">
+              <MessageInput onSendMessage={handleSendMessage} isLoading={isLoading} />
+            </div>
+          </div>
+        </div>
       </div>
     </ErrorBoundary>
   )

@@ -22,53 +22,56 @@ export const DiscoverySettings: React.FC<DiscoverySettingsProps> = ({
   ]
 
   return (
-    <div className={`flex items-center gap-3 p-3 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-100 ${className}`}>
-      <div className="flex items-center gap-2">
-        <Sparkles size={16} className="text-purple-600" />
-        <span className="text-sm font-medium text-gray-700">Discovery:</span>
+    <div className={`flex items-center gap-3 ${className}`}>
+      <div className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-dark-800 rounded-xl">
+        <Sparkles className="w-4 h-4 text-algolia-500" />
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Discovery</span>
+        
+        <div className="flex gap-1 ml-2">
+          {options.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => onChange(option.value)}
+              className={`
+                px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-200
+                ${value === option.value
+                  ? 'bg-algolia-500 text-white shadow-md transform scale-105'
+                  : 'bg-white dark:bg-dark-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-dark-600'
+                }
+              `}
+              title={option.description}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative ml-2">
+          <button
+            onMouseEnter={() => setShowTooltip(true)}
+            onMouseLeave={() => setShowTooltip(false)}
+            className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+          >
+            <Info size={16} />
+          </button>
+          
+          {showTooltip && (
+            <div className="absolute bottom-full mb-2 right-0 bg-gray-900 dark:bg-gray-800 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap z-50 shadow-xl animate-fade-in">
+              <div className="font-medium mb-1">Discovery Mode</div>
+              <div className="text-gray-300">
+                Explore new styles and trending items.<br />
+                Does not affect your preference learning.
+              </div>
+              <div className="absolute top-full right-4 transform -translate-y-1 border-4 border-transparent border-t-gray-900 dark:border-t-gray-800"></div>
+            </div>
+          )}
+        </div>
       </div>
       
-      <div className="flex gap-1">
-        {options.map((option) => (
-          <button
-            key={option.value}
-            onClick={() => onChange(option.value)}
-            className={`px-3 py-1 text-xs rounded-md transition-all duration-200 ${
-              value === option.value
-                ? 'bg-purple-600 text-white shadow-sm'
-                : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
-            }`}
-            title={option.description}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="relative">
-        <button
-          onMouseEnter={() => setShowTooltip(true)}
-          onMouseLeave={() => setShowTooltip(false)}
-          className="text-gray-500 hover:text-purple-600 transition-colors"
-        >
-          <Info size={16} />
-        </button>
-        
-        {showTooltip && (
-          <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap z-10 shadow-lg">
-            <div className="space-y-1">
-              <div className="font-medium">🎨 Discovery Mode</div>
-              <div>Explore new styles and trends</div>
-              <div className="text-gray-300">Does not affect learning data</div>
-            </div>
-            <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-800"></div>
-          </div>
-        )}
-      </div>
-
       {value > 0 && (
-        <div className="text-xs text-purple-600 font-medium">
-          ✨ Inspiration mode active
+        <div className="flex items-center gap-1.5 text-xs font-medium text-algolia-600 dark:text-algolia-400">
+          <span className="w-1.5 h-1.5 bg-algolia-500 rounded-full animate-pulse"></span>
+          Active
         </div>
       )}
     </div>
