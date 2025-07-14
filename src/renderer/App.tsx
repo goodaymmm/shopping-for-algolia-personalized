@@ -19,11 +19,11 @@ export const App: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      <div className="h-screen flex bg-gray-50 dark:bg-dark-950 transition-colors duration-200">
+      <div className="h-screen flex bg-white dark:bg-neutral-900 transition-colors duration-200">
         <Sidebar currentView={currentView} onNavigate={setCurrentView} />
         
-        <main className="flex-1 flex flex-col bg-gray-50 dark:bg-dark-950 overflow-hidden">
-          <div className="flex-1 animate-fade-in">
+        <main className="flex-1 flex flex-col bg-white dark:bg-neutral-900 overflow-hidden">
+          <div className="flex-1">
             {currentView === 'chat' && <ChatInterface />}
             {currentView === 'history' && <ChatHistory />}
             {currentView === 'database' && <MyDatabase />}

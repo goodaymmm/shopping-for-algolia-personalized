@@ -46,27 +46,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
   }
 
   return (
-    <aside className="w-64 bg-white dark:bg-dark-900 border-r border-gray-200 dark:border-dark-800 flex flex-col h-full">
-      {/* Logo Section */}
-      <div className="p-6 border-b border-gray-200 dark:border-dark-800">
+    <aside className="w-60 bg-neutral-50 dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 flex flex-col h-full">
+      {/* Logo Section - Minimal design */}
+      <div className="p-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-algolia-500 to-algolia-700 rounded-xl flex items-center justify-center shadow-lg shadow-algolia-500/20">
-            <ShoppingBag className="w-6 h-6 text-white" />
+          <div className="w-9 h-9 bg-algolia-500 rounded-md flex items-center justify-center">
+            <ShoppingBag className="w-5 h-5 text-white" strokeWidth={2} />
           </div>
           <div>
-            <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h1 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
               Shopping AI
             </h1>
-            <p className="text-xs text-gray-500 dark:text-dark-400">
-              Powered by Algolia
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              Algolia Search
             </p>
           </div>
         </div>
       </div>
       
-      {/* Navigation */}
-      <nav className="flex-1 p-3">
-        <div className="space-y-1">
+      {/* Navigation - Clean and minimal */}
+      <nav className="flex-1 px-3">
+        <div className="space-y-0.5">
           {menuItems.map((item) => {
             const Icon = item.icon
             const isActive = currentView === item.id
@@ -75,48 +75,43 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
                 key={item.id}
                 onClick={() => onNavigate(item.id as ViewType)}
                 className={`
-                  w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
-                  transition-all duration-200 group
+                  w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium
+                  transition-colors duration-200
                   ${isActive 
-                    ? 'bg-algolia-50 dark:bg-algolia-900/20 text-algolia-600 dark:text-algolia-400 shadow-sm' 
-                    : 'text-gray-700 dark:text-dark-300 hover:bg-gray-100 dark:hover:bg-dark-800'
+                    ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100' 
+                    : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 hover:bg-neutral-100 dark:hover:bg-neutral-800/50'
                   }
                 `}
               >
                 <Icon 
-                  size={20} 
-                  className={`
-                    transition-transform duration-200
-                    ${isActive ? 'scale-110' : 'group-hover:scale-110'}
-                  `} 
+                  size={18} 
+                  strokeWidth={isActive ? 2 : 1.5}
                 />
                 <span>{item.label}</span>
-                {isActive && (
-                  <div className="ml-auto w-1.5 h-1.5 bg-algolia-500 rounded-full animate-pulse-soft" />
-                )}
               </button>
             )
           })}
         </div>
       </nav>
       
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-200 dark:border-dark-800">
-        {/* Theme Toggle */}
+      {/* Footer - Minimal and clean */}
+      <div className="p-4 border-t border-neutral-200 dark:border-neutral-800">
+        {/* Theme Toggle - Subtle design */}
         <button
           onClick={cycleTheme}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
-                   text-gray-700 dark:text-dark-300 hover:bg-gray-100 dark:hover:bg-dark-800
-                   transition-all duration-200 group mb-3"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm
+                   text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100
+                   hover:bg-neutral-100 dark:hover:bg-neutral-800/50
+                   transition-colors duration-200"
           aria-label="Toggle theme"
         >
-          <ThemeIcon size={20} className="transition-transform duration-200 group-hover:scale-110" />
-          <span className="capitalize">{theme} Mode</span>
+          <ThemeIcon size={18} strokeWidth={1.5} />
+          <span className="capitalize">{theme} theme</span>
         </button>
         
-        {/* Version Info */}
-        <div className="text-xs text-gray-400 dark:text-dark-500 text-center">
-          Phase B • v1.0.0
+        {/* Version Info - Very subtle */}
+        <div className="text-xxs text-neutral-400 dark:text-neutral-600 text-center mt-4">
+          Version 1.0.0
         </div>
       </div>
     </aside>

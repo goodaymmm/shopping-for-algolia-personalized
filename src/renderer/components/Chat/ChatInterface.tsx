@@ -83,17 +83,17 @@ export const ChatInterface: React.FC = () => {
 
   return (
     <ErrorBoundary>
-      <div className="h-full flex flex-col bg-white dark:bg-dark-900">
-        {/* Header with Discovery Settings */}
-        <header className="border-b border-gray-200 dark:border-dark-800 bg-white dark:bg-dark-900">
+      <div className="h-full flex flex-col bg-white dark:bg-neutral-900">
+        {/* Header with Discovery Settings - Minimal design */}
+        <header className="border-b border-neutral-200 dark:border-neutral-800">
           <div className="px-6 py-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  AI Shopping Assistant
+                <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                  Shopping Assistant
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-dark-400 mt-1">
-                  Upload an image or describe what you're looking for
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                  Find products by description or image
                 </p>
               </div>
               <DiscoverySettings
@@ -111,36 +111,35 @@ export const ChatInterface: React.FC = () => {
             <MessageList messages={messages} isLoading={isLoading} />
           </div>
 
-          {/* Search Results */}
+          {/* Search Results - Minimal design */}
           {searchResults.length > 0 && (
-            <div className="border-t border-gray-200 dark:border-dark-800 bg-gray-50 dark:bg-dark-850 p-4">
-              <div className="max-w-5xl mx-auto">
-                <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                  <span className="inline-block w-2 h-2 bg-algolia-500 rounded-full animate-pulse"></span>
-                  Found {searchResults.length} products
+            <div className="border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-850 p-4">
+              <div className="max-w-6xl mx-auto">
+                <h3 className="text-sm font-medium text-neutral-700 dark:text-neutral-300 mb-3">
+                  {searchResults.length} results
                 </h3>
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 max-h-64 overflow-y-auto scrollbar-thin">
-                  {searchResults.slice(0, 18).map((product) => (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 max-h-80 overflow-y-auto scrollbar-thin">
+                  {searchResults.slice(0, 24).map((product) => (
                     <div
                       key={product.id}
-                      className="group bg-white dark:bg-dark-800 rounded-xl p-3 shadow-soft dark:shadow-dark-soft hover:shadow-medium dark:hover:shadow-dark-medium transition-all duration-200 cursor-pointer hover:scale-[1.02]"
+                      className="group bg-white dark:bg-neutral-800 rounded-md p-3 border border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600 transition-all duration-200 cursor-pointer"
                       onClick={() => {
                         if (window.electronAPI) {
                           window.electronAPI.saveProduct(product)
                         }
                       }}
                     >
-                      <div className="aspect-square mb-3 overflow-hidden rounded-lg bg-gray-100 dark:bg-dark-700">
+                      <div className="aspect-square mb-2 overflow-hidden rounded bg-neutral-100 dark:bg-neutral-900">
                         <img
                           src={product.image}
                           alt={product.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                          className="w-full h-full object-cover"
                         />
                       </div>
-                      <p className="text-xs font-medium text-gray-900 dark:text-white line-clamp-2 mb-1">
+                      <p className="text-xs text-neutral-700 dark:text-neutral-300 line-clamp-2 mb-1">
                         {product.name}
                       </p>
-                      <p className="text-sm font-bold text-algolia-600 dark:text-algolia-400">
+                      <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
                         ${product.price}
                       </p>
                     </div>
@@ -150,9 +149,9 @@ export const ChatInterface: React.FC = () => {
             </div>
           )}
 
-          {/* Input Area */}
-          <div className="border-t border-gray-200 dark:border-dark-800 bg-white dark:bg-dark-900">
-            <div className="max-w-4xl mx-auto p-4">
+          {/* Input Area - Clean design */}
+          <div className="border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+            <div className="max-w-3xl mx-auto p-4">
               <MessageInput onSendMessage={handleSendMessage} isLoading={isLoading} />
             </div>
           </div>

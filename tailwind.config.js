@@ -5,39 +5,69 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Refined, less saturated blue palette
         'algolia': {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          300: '#7dd3fc',
-          400: '#38bdf8',
-          500: '#5468ff',
-          600: '#4c5cdb',
-          700: '#3c4ab8',
-          800: '#2d3895',
-          900: '#1e2972',
-          950: '#141d4f'
+          50: '#f6f9ff',
+          100: '#ecf2ff',
+          200: '#d9e5ff',
+          300: '#b3ccff',
+          400: '#809fff',
+          500: '#5c7cfa',  // Primary - softer, more sophisticated
+          600: '#4263eb',
+          700: '#364fc7',
+          800: '#2b3f94',
+          900: '#1f2d5c',
         },
-        'dark': {
+        // Warmer, sophisticated neutral palette
+        'neutral': {
           50: '#fafafa',
-          100: '#f4f4f5',
-          200: '#e4e4e7',
-          300: '#d4d4d8',
-          400: '#a1a1aa',
-          500: '#71717a',
-          600: '#52525b',
-          700: '#3f3f46',
-          800: '#27272a',
+          100: '#f5f5f5',
+          200: '#ebebeb',
+          300: '#d6d6d6',
+          400: '#adadad',
+          500: '#858585',
+          600: '#5c5c5c',
+          700: '#333333',
+          800: '#1f1f1f',
           850: '#1a1a1a',
-          900: '#18181b',
-          950: '#0f0f0f'
+          900: '#141414',
+          950: '#0a0a0a',
         }
       },
+      fontFamily: {
+        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Helvetica', 'Arial', 'sans-serif', 'Apple Color Emoji', 'Segoe UI Emoji'],
+      },
+      fontSize: {
+        'xxs': ['0.625rem', { lineHeight: '0.875rem' }],  // 10px
+        'xs': ['0.75rem', { lineHeight: '1rem' }],        // 12px
+        'sm': ['0.875rem', { lineHeight: '1.25rem' }],    // 14px
+        'base': ['1rem', { lineHeight: '1.5rem' }],       // 16px
+        'lg': ['1.125rem', { lineHeight: '1.75rem' }],    // 18px
+      },
+      fontWeight: {
+        normal: '400',
+        medium: '500',
+        semibold: '600',
+      },
+      spacing: {
+        '0.5': '2px',
+        '1': '4px',
+        '1.5': '6px',
+        '2': '8px',
+        '2.5': '10px',
+        '3': '12px',
+        '4': '16px',
+        '5': '20px',
+        '6': '24px',
+        '8': '32px',
+        '10': '40px',
+        '12': '48px',
+        '16': '64px',
+      },
       animation: {
-        'fade-in': 'fadeIn 0.3s ease-in-out',
-        'slide-up': 'slideUp 0.3s ease-out',
-        'scale-in': 'scaleIn 0.2s ease-out',
-        'pulse-soft': 'pulseSoft 2s infinite',
+        'fade-in': 'fadeIn 200ms ease-out',
+        'slide-up': 'slideUp 200ms ease-out',
+        'scale-in': 'scaleIn 150ms ease-out',
       },
       keyframes: {
         fadeIn: {
@@ -45,31 +75,34 @@ export default {
           '100%': { opacity: '1' },
         },
         slideUp: {
-          '0%': { transform: 'translateY(10px)', opacity: '0' },
+          '0%': { transform: 'translateY(4px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
         scaleIn: {
-          '0%': { transform: 'scale(0.95)', opacity: '0' },
+          '0%': { transform: 'scale(0.98)', opacity: '0' },
           '100%': { transform: 'scale(1)', opacity: '1' },
         },
-        pulseSoft: {
-          '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '0.5' },
-        },
-      },
-      fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif']
       },
       boxShadow: {
-        'glow': '0 0 20px rgba(84, 104, 255, 0.3)',
-        'soft': '0 2px 8px rgba(0, 0, 0, 0.08)',
-        'medium': '0 4px 12px rgba(0, 0, 0, 0.12)',
-        'dark-soft': '0 2px 8px rgba(0, 0, 0, 0.3)',
-        'dark-medium': '0 4px 12px rgba(0, 0, 0, 0.5)',
+        'subtle': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+        'soft': '0 1px 3px 0 rgb(0 0 0 / 0.08)',
+        'medium': '0 2px 8px 0 rgb(0 0 0 / 0.10)',
+        'large': '0 4px 16px 0 rgb(0 0 0 / 0.12)',
+        'focus': '0 0 0 3px rgb(92 124 250 / 0.2)',
       },
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
+      borderRadius: {
+        'sm': '4px',
+        'DEFAULT': '6px',
+        'md': '8px',
+        'lg': '10px',
+        'xl': '12px',
+      },
+      transitionDuration: {
+        '200': '200ms',
+        '300': '300ms',
+      },
+      transitionTimingFunction: {
+        'out': 'cubic-bezier(0.33, 1, 0.68, 1)',
       },
     }
   },
