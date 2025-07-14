@@ -68,13 +68,19 @@ html {
 }
 
 body {
-  @apply bg-background text-foreground;
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
   overflow: hidden;
   font-size: 14px;
   font-weight: 400;
+  background-color: white;
+  color: #212121;
+}
+
+.dark body {
+  background-color: #1a1a1a;
+  color: #f5f5f5;
 }
 
 #root {
@@ -102,7 +108,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 *:focus-visible {
-  @apply ring-2 ring-ring ring-offset-2 ring-offset-background;
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(92 124 250 / 0.5);
 }
 
 /* Scrollbar styles */
@@ -185,7 +192,8 @@ input, textarea {
 
 /* Selection color */
 ::selection {
-  @apply bg-algolia-500/20 text-foreground;
+  background-color: rgb(92 124 250 / 0.2);
+  color: inherit;
 }
 
 /* Disable user select on UI elements */

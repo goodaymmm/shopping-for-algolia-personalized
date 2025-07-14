@@ -5,7 +5,9 @@ type Theme = 'light' | 'dark' | 'system'
 
 interface ThemeState {
   theme: Theme
+  isDark: boolean
   setTheme: (theme: Theme) => void
+  changeTheme: (theme: Theme) => void
 }
 
 const getSystemTheme = (): 'light' | 'dark' => {
@@ -21,22 +23,30 @@ const applyTheme = (theme: Theme) => {
   } else {
     root.classList.remove('dark')
   }
+  
+  return effectiveTheme === 'dark'
 }
 
 export const useTheme = create<ThemeState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       theme: 'system',
+      isDark: false,
       setTheme: (theme) => {
-        applyTheme(theme)
-        set({ theme })
+        const isDark = applyTheme(theme)
+        set({ theme, isDark })
+      },
+      changeTheme: (theme) => {
+        const isDark = applyTheme(theme)
+        set({ theme, isDark })
       },
     }),
     {
       name: 'theme-storage',
       onRehydrateStorage: () => (state) => {
         if (state) {
-          applyTheme(state.theme)
+          const isDark = applyTheme(state.theme)
+          state.isDark = isDark
         }
       },
     }
@@ -48,11 +58,13 @@ if (window.matchMedia) {
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
     const currentTheme = useTheme.getState().theme
     if (currentTheme === 'system') {
-      applyTheme('system')
+      const isDark = applyTheme('system')
+      useTheme.setState({ isDark })
     }
   })
 }
 
 // Initialize theme on load
 const savedTheme = useTheme.getState().theme
-applyTheme(savedTheme)
+const initialIsDark = applyTheme(savedTheme)
+useTheme.setState({ isDark: initialIsDark })
