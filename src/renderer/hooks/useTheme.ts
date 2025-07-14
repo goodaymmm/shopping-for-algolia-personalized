@@ -31,7 +31,7 @@ export const useTheme = create<ThemeState>()(
   persist(
     (set, get) => ({
       theme: 'system',
-      isDark: false,
+      isDark: applyTheme('system'),
       setTheme: (theme) => {
         const isDark = applyTheme(theme)
         set({ theme, isDark })

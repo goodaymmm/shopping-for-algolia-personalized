@@ -15,14 +15,7 @@ type AppView = 'chat' | 'settings' | 'database-stats'
 
 export const App: React.FC = () => {
   const { theme, isDark, changeTheme } = useTheme()
-  const { 
-    fontSize,
-    sendOnEnter,
-    showTimestamps,
-    autoSave,
-    discoveryMode,
-    updateSettings 
-  } = useSettings()
+  const { settings, updateSettings } = useSettings()
   const {
     sessions,
     currentSession,
@@ -36,6 +29,16 @@ export const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>('chat')
   const [searchResults, setSearchResults] = useState<Product[]>([])
   const [isLoading, setIsLoading] = useState(false)
+
+  // Initialize theme on mount
+  useEffect(() => {
+    const root = document.documentElement
+    if (isDark) {
+      root.classList.add('dark')
+    } else {
+      root.classList.remove('dark')
+    }
+  }, [isDark])
 
   // Create initial session if none exists
   useEffect(() => {
@@ -161,7 +164,7 @@ export const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <div className={`flex h-screen overflow-hidden ${
-        isDark ? 'dark bg-neutral-900' : 'bg-white'
+        isDark ? 'bg-gray-900' : 'bg-white'
       }`}>
         <Sidebar
           sessions={sessions}
