@@ -3,12 +3,15 @@
   "version": "1.0.0",
   "description": "AI-powered personalized shopping assistant with Gemini API image analysis and Algolia MCP integration",
   "main": "dist/main/main.js",
-  "type": "module",
   "homepage": ".",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && electron-builder",
-    "build:dev": "vite build",
+    "clean": "rimraf dist release",
+    "build": "npm run clean && npm run build:all && electron-builder",
+    "build:all": "npm run build:main && npm run build:renderer",
+    "build:main": "tsc -p tsconfig.main.json",
+    "build:renderer": "vite build",
+    "build:dev": "npm run clean && npm run build:all",
     "electron:dev": "electron dist/main/main.js",
     "preview": "vite preview",
     "lint": "eslint src --ext .ts,.tsx",
@@ -32,7 +35,6 @@
     "algoliasearch": "^5.32.0",
     "better-sqlite3": "^12.2.0",
     "clsx": "^2.1.1",
-    "electron": "^37.2.1",
     "keytar": "^7.9.0",
     "lucide-react": "^0.525.0",
     "react": "^19.1.0",
@@ -51,11 +53,52 @@
     "@typescript-eslint/parser": "^8.36.0",
     "@vitejs/plugin-react": "^4.6.0",
     "autoprefixer": "^10.4.21",
+    "electron": "^37.2.1",
     "electron-builder": "^26.0.12",
     "eslint": "^9.31.0",
     "postcss": "^8.5.6",
     "prettier": "^3.6.2",
+    "rimraf": "^6.0.1",
     "tailwindcss": "^4.1.11",
     "vite": "^7.0.4"
+  },
+  "build": {
+    "appId": "com.example.shopping-for-algolia-personalized",
+    "productName": "Shopping for AIgolia personalized",
+    "npmRebuild": true,
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "!dist/**/*.map",
+      "!dist/**/*.ts",
+      "node_modules/**/*",
+      "!node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!node_modules/**/*.d.ts"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*",
+      "node_modules/keytar/**/*"
+    ],
+    "extraMetadata": {
+      "main": "dist/main/main.js"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   }
 }

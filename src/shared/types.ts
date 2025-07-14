@@ -2,6 +2,20 @@
 
 export interface ElectronAPI {
   getAppVersion: () => string
+  
+  // Database operations
+  saveProduct: (product: Product) => Promise<{ success: boolean; id?: number }>
+  getProducts: () => Promise<Product[]>
+  saveChat: (sessionData: { name: string; category?: string }, message: ChatMessage) => Promise<{ success: boolean; sessionId?: number }>
+  getChatHistory: () => Promise<ChatSession[]>
+  getChatMessages: (sessionId: number) => Promise<ChatMessage[]>
+  
+  // Settings
+  saveDiscoverySetting: (percentage: DiscoveryPercentage) => Promise<{ success: boolean }>
+  getDiscoverySetting: () => Promise<DiscoveryPercentage>
+  
+  // Search
+  searchProducts: (query: string, filters?: string) => Promise<Product[]>
 }
 
 declare global {
@@ -9,6 +23,18 @@ declare global {
     electronAPI: ElectronAPI
   }
 }
+
+// IPC channel names
+export const IPC_CHANNELS = {
+  DB_SAVE_PRODUCT: 'db:save-product',
+  DB_GET_PRODUCTS: 'db:get-products', 
+  DB_SAVE_CHAT: 'db:save-chat',
+  DB_GET_CHAT_HISTORY: 'db:get-chat-history',
+  DB_GET_CHAT_MESSAGES: 'db:get-chat-messages',
+  SETTINGS_SAVE_DISCOVERY: 'settings:save-discovery',
+  SETTINGS_GET_DISCOVERY: 'settings:get-discovery',
+  SEARCH_PRODUCTS: 'search:products'
+} as const
 
 // Product types
 export interface Product {

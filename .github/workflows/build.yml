@@ -1,0 +1,91 @@
+name: Build Electron App
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        include:
+          - os: windows-latest
+            platform: win
+            artifact-name: windows
+            artifact-path: |
+              release/**/*.exe
+              release/**/win-unpacked/**
+          - os: ubuntu-latest
+            platform: linux
+            artifact-name: linux
+            artifact-path: |
+              release/**/*.AppImage
+              release/**/*.deb
+              release/**/*.rpm
+          - os: macos-latest
+            platform: mac
+            artifact-name: macos
+            artifact-path: |
+              release/**/*.dmg
+              release/**/*.zip
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build TypeScript
+        run: npm run build:dev
+
+      - name: Build Electron app
+        run: npx electron-builder --${{ matrix.platform }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: List build artifacts
+        shell: bash
+        run: |
+          echo "Contents of release directory:"
+          ls -la release/ || echo "No release directory"
+          find release -type f -name "*.exe" -o -name "*.AppImage" -o -name "*.dmg" 2>/dev/null || echo "No installers found"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact-name }}-build
+          path: ${{ matrix.artifact-path }}
+          retention-days: 7
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            windows-build/**/*.exe
+            linux-build/**/*.AppImage
+            macos-build/**/*.dmg
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
