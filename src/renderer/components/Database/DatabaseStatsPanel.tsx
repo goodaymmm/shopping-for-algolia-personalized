@@ -3,9 +3,10 @@ import { ArrowLeft, Database, TrendingUp, Users, ShoppingCart, Activity } from '
 
 interface DatabaseStatsPanelProps {
   onBack: () => void
+  isDark: boolean
 }
 
-export const DatabaseStatsPanel: React.FC<DatabaseStatsPanelProps> = ({ onBack }) => {
+export const DatabaseStatsPanel: React.FC<DatabaseStatsPanelProps> = ({ onBack, isDark }) => {
   // Mock data - will be replaced with real database queries
   const stats = {
     totalProducts: 156,

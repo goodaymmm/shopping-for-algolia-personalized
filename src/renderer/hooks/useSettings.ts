@@ -6,7 +6,7 @@ interface SettingsState extends AppSettings {
   updateSettings: (updates: Partial<AppSettings>) => void
 }
 
-export const useSettings = create<SettingsState>()(
+const useSettingsStore = create<SettingsState>()(
   persist(
     (set) => ({
       theme: 'system',
@@ -22,3 +22,13 @@ export const useSettings = create<SettingsState>()(
     }
   )
 )
+
+export const useSettings = () => {
+  const state = useSettingsStore()
+  const { updateSettings, ...settings } = state
+  
+  return {
+    settings: settings as AppSettings,
+    updateSettings
+  }
+}

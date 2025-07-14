@@ -1,35 +1,25 @@
 import React from 'react'
-import { DiscoverySettings } from './DiscoverySettings'
-import { DiscoveryPercentage } from '../../types'
 
 interface ChatHeaderProps {
-  discoveryPercentage?: DiscoveryPercentage
-  onDiscoveryChange?: (value: DiscoveryPercentage) => void
+  isDark: boolean
 }
 
-export const ChatHeader: React.FC<ChatHeaderProps> = ({
-  discoveryPercentage = 0,
-  onDiscoveryChange
-}) => {
+export const ChatHeader: React.FC<ChatHeaderProps> = ({ isDark }) => {
   return (
-    <header className="border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+    <header className={`border-b ${
+      isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-white'
+    }`}>
       <div className="px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">
-              Shopping Assistant
-            </h2>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
-              Find products by description or image
-            </p>
-          </div>
-          {onDiscoveryChange && (
-            <DiscoverySettings
-              value={discoveryPercentage}
-              onChange={onDiscoveryChange}
-            />
-          )}
-        </div>
+        <h1 className={`text-xl font-semibold ${
+          isDark ? 'text-white' : 'text-gray-900'
+        }`}>
+          Shopping Assistant
+        </h1>
+        <p className={`text-sm mt-1 ${
+          isDark ? 'text-gray-400' : 'text-gray-600'
+        }`}>
+          Find products by description or image
+        </p>
       </div>
     </header>
   )

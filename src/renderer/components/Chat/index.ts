@@ -1,4 +1,6 @@
 export { ChatInterface } from './ChatInterface'
-export { MessageList } from './MessageList'
-export { MessageInput } from './MessageInput'
+export { ChatMessage } from './ChatMessage'
+export { ChatContainer } from './ChatContainer'
+export { ChatInput } from './ChatInput'
+export { ChatHeader } from './ChatHeader'
 export { DiscoverySettings } from './DiscoverySettings'

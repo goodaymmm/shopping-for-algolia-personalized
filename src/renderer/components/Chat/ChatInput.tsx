@@ -1,50 +1,59 @@
 import React, { useState, useRef } from 'react'
-import { Send, Paperclip, X, Image } from 'lucide-react'
-import { DiscoverySettings } from './DiscoverySettings'
-import { DiscoveryPercentage } from '../../types'
+import { Send, Paperclip, X, Image, Compass } from 'lucide-react'
 
 interface ChatInputProps {
   onSendMessage: (content: string, imageFile?: File) => void
   sendOnEnter: boolean
-  discoveryPercentage?: DiscoveryPercentage
-  onDiscoveryChange?: (value: DiscoveryPercentage) => void
+  discoveryMode: boolean
+  onDiscoveryModeToggle: () => void
   isLoading?: boolean
+  isDark: boolean
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({ 
   onSendMessage, 
   sendOnEnter,
-  discoveryPercentage = 0,
-  onDiscoveryChange,
-  isLoading = false
+  discoveryMode,
+  onDiscoveryModeToggle,
+  isLoading = false,
+  isDark 
 }) => {
   const [message, setMessage] = useState('')
-  const [selectedImage, setSelectedImage] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [selectedImage, setSelectedImage] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if ((message.trim() || selectedImage) && !isLoading) {
-      onSendMessage(message, selectedImage || undefined)
+    if (message.trim() || selectedImage) {
+      const imageFile = selectedImage ? dataURLtoFile(selectedImage, 'image.png') : undefined
+      onSendMessage(message, imageFile)
       setMessage('')
       setSelectedImage(null)
-      setImagePreview(null)
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto'
       }
     }
   }
 
+  const dataURLtoFile = (dataurl: string, filename: string): File => {
+    const arr = dataurl.split(',')
+    const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png'
+    const bstr = atob(arr[1])
+    let n = bstr.length
+    const u8arr = new Uint8Array(n)
+    while(n--){
+      u8arr[n] = bstr.charCodeAt(n)
+    }
+    return new File([u8arr], filename, {type:mime})
+  }
+
   const handleImageSelect = (file: File) => {
     if (file.type.startsWith('image/')) {
-      setSelectedImage(file)
-      
       const reader = new FileReader()
       reader.onload = (e) => {
-        setImagePreview(e.target?.result as string)
+        setSelectedImage(e.target?.result as string)
       }
       reader.readAsDataURL(file)
     }
@@ -100,41 +109,38 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   }
 
-  const removeImage = () => {
-    setSelectedImage(null)
-    setImagePreview(null)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
-    }
-  }
-
   return (
-    <div className="border-t border-neutral-200 dark:border-neutral-800 p-6 bg-white dark:bg-neutral-900">
+    <div className={`border-t p-6 ${
+      isDark 
+        ? 'border-gray-700 bg-gray-800' 
+        : 'border-gray-200 bg-gray-50'
+    }`}>
       <div className="max-w-4xl mx-auto">
-        {imagePreview && (
+        {selectedImage && (
           <div className="mb-4 relative inline-block">
             <img 
-              src={imagePreview} 
+              src={selectedImage} 
               alt="Selected" 
-              className="h-24 w-24 object-cover rounded-lg border border-neutral-200 dark:border-neutral-700 shadow-subtle"
+              className="h-24 w-24 object-cover rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm"
             />
             <button
               type="button"
-              onClick={removeImage}
-              className="absolute -top-2 -right-2 w-6 h-6 bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 rounded-full flex items-center justify-center hover:bg-neutral-800 dark:hover:bg-neutral-200 transition-colors shadow-subtle"
-              disabled={isLoading}
+              onClick={() => setSelectedImage(null)}
+              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-sm"
             >
-              <X className="w-3 h-3" strokeWidth={2} />
+              <X className="w-3 h-3" />
             </button>
           </div>
         )}
         
         <form onSubmit={handleSubmit}>
           <div 
-            className={`relative flex items-end gap-3 p-4 border-2 rounded-xl transition-all shadow-subtle ${
+            className={`relative flex items-end gap-3 p-4 border-2 rounded-2xl transition-all shadow-sm ${
               isDragging 
-                ? 'border-algolia-300 bg-algolia-50 dark:bg-algolia-900/20' 
-                : 'border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-850 hover:border-neutral-300 dark:hover:border-neutral-600'
+                ? 'border-blue-300 bg-blue-50 dark:bg-blue-900/20' 
+                : isDark
+                  ? 'border-gray-600 bg-gray-900 hover:border-gray-500'
+                  : 'border-gray-200 bg-white hover:border-gray-300'
             }`}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
@@ -143,11 +149,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              disabled={isLoading}
-              className="flex-shrink-0 p-2 rounded-lg transition-colors text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 disabled:opacity-50"
+              className={`flex-shrink-0 p-2 rounded-lg transition-colors ${
+                isDark
+                  ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-800'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+              }`}
               title="Attach image"
             >
-              <Paperclip className="w-5 h-5" strokeWidth={1.5} />
+              <Paperclip className="w-5 h-5" />
             </button>
             
             <textarea
@@ -156,18 +165,21 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               onChange={handleTextareaChange}
               onKeyDown={handleKeyDown}
               placeholder="Ask about products..."
-              disabled={isLoading}
-              className="flex-1 bg-transparent resize-none outline-none min-h-[24px] max-h-32 py-1 text-sm text-neutral-900 dark:text-neutral-100 placeholder-neutral-500 dark:placeholder-neutral-400 disabled:opacity-50"
+              className={`flex-1 bg-transparent resize-none outline-none min-h-[24px] max-h-32 py-1 text-base ${
+                isDark 
+                  ? 'text-white placeholder-gray-400' 
+                  : 'text-gray-900 placeholder-gray-500'
+              }`}
               rows={1}
             />
             
             <button
               type="submit"
-              disabled={(!message.trim() && !selectedImage) || isLoading}
-              className="flex-shrink-0 p-2 bg-algolia-500 text-white rounded-lg hover:bg-algolia-600 disabled:bg-neutral-300 dark:disabled:bg-neutral-600 disabled:cursor-not-allowed transition-colors shadow-subtle"
+              disabled={!message.trim() && !selectedImage}
+              className="flex-shrink-0 p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-sm"
               title={sendOnEnter ? "Send message (Enter)" : "Send message (⌘+Enter)"}
             >
-              <Send className="w-5 h-5" strokeWidth={2} />
+              <Send className="w-5 h-5" />
             </button>
             
             <input
@@ -180,26 +192,37 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           </div>
           
           {isDragging && (
-            <div className="absolute inset-0 bg-algolia-100 dark:bg-algolia-900/50 bg-opacity-90 flex items-center justify-center rounded-xl border-2 border-dashed border-algolia-300">
+            <div className="absolute inset-0 bg-blue-100 dark:bg-blue-900/50 bg-opacity-90 flex items-center justify-center rounded-2xl border-2 border-dashed border-blue-300">
               <div className="text-center">
-                <Image className="w-8 h-8 text-algolia-500 mx-auto mb-2" strokeWidth={1.5} />
-                <p className="text-algolia-600 dark:text-algolia-400 font-medium">Drop image here</p>
+                <Image className="w-8 h-8 text-blue-500 mx-auto mb-2" />
+                <p className="text-blue-600 dark:text-blue-400 font-medium">Drop image here</p>
               </div>
             </div>
           )}
         </form>
         
-        {/* Discovery Settings */}
-        {onDiscoveryChange && (
-          <div className="mt-4 flex items-center justify-center">
-            <DiscoverySettings
-              value={discoveryPercentage}
-              onChange={onDiscoveryChange}
-            />
-          </div>
-        )}
+        {/* Discovery Mode */}
+        <div className="mt-4 flex items-center justify-center">
+          <button
+            onClick={onDiscoveryModeToggle}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+              discoveryMode
+                ? 'bg-orange-500 text-white shadow-sm'
+                : isDark
+                  ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
+            }`}
+          >
+            <Compass className="w-4 h-4" />
+            <span className="text-sm font-medium">
+              Discovery Mode {discoveryMode ? 'ON' : 'OFF'}
+            </span>
+          </button>
+        </div>
         
-        <div className="mt-3 text-xs text-center text-neutral-500 dark:text-neutral-400">
+        <div className={`mt-3 text-xs text-center ${
+          isDark ? 'text-gray-500' : 'text-gray-500'
+        }`}>
           {sendOnEnter 
             ? 'Press Enter to send • Shift+Enter for new line • Drag and drop images to upload'
             : 'Press ⌘+Enter to send • Drag and drop images to upload'

@@ -7,13 +7,15 @@ interface SettingsPanelProps {
   onSettingsChange: (updates: Partial<AppSettings>) => void
   onThemeChange: (theme: 'light' | 'dark' | 'system') => void
   onBack: () => void
+  isDark: boolean
 }
 
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   settings,
   onSettingsChange,
   onThemeChange,
-  onBack
+  onBack,
+  isDark
 }) => {
   const themes = [
     { value: 'light', label: 'Light', icon: Sun },

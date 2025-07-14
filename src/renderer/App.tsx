@@ -11,7 +11,6 @@ import { useTheme } from './hooks/useTheme'
 import { useSettings } from './hooks/useSettings'
 import { useChatSessions } from './hooks/useChatSessions'
 
-type ViewType = 'chat' | 'history' | 'database' | 'settings'
 type AppView = 'chat' | 'settings' | 'database-stats'
 
 export const App: React.FC = () => {
@@ -158,14 +157,6 @@ export const App: React.FC = () => {
   }
 
 
-  const mapViewType = (view: AppView): ViewType => {
-    switch (view) {
-      case 'chat': return 'chat'
-      case 'settings': return 'settings'
-      case 'database-stats': return 'database'
-      default: return 'chat'
-    }
-  }
 
   return (
     <ErrorBoundary>
@@ -173,71 +164,49 @@ export const App: React.FC = () => {
         isDark ? 'dark bg-neutral-900' : 'bg-white'
       }`}>
         <Sidebar
-          currentView={mapViewType(currentView)}
-          onNavigate={(view) => {
-            switch (view) {
-              case 'chat': setCurrentView('chat'); break
-              case 'settings': setCurrentView('settings'); break
-              case 'database': setCurrentView('database-stats'); break
-              case 'history': setCurrentView('chat'); break
-            }
-          }}
           sessions={sessions}
           currentSessionId={currentSessionId}
           onSessionSelect={handleSessionSelect}
           onNewSession={handleNewSession}
           onDeleteSession={deleteSession}
+          onSettingsClick={handleSettingsClick}
+          onDatabaseStatsClick={handleDatabaseStatsClick}
+          isDark={isDark}
         />
         
         <div className="flex flex-col flex-1">
           {currentView === 'chat' ? (
             <>
-              <ChatHeader 
-                discoveryPercentage={discoveryMode ? 5 : 0}
-                onDiscoveryChange={(value) => {
-                  updateSettings({ discoveryMode: value > 0 })
-                  if (window.electronAPI) {
-                    window.electronAPI.saveDiscoverySetting(value)
-                  }
-                }}
-              />
+              <ChatHeader isDark={isDark} />
               <ChatContainer 
                 messages={currentSession?.messages || []}
                 searchResults={searchResults}
-                showTimestamps={showTimestamps}
-                fontSize={fontSize}
+                showTimestamps={settings.showTimestamps}
+                fontSize={settings.fontSize}
                 isLoading={isLoading}
+                isDark={isDark}
               />
               <ChatInput 
                 onSendMessage={handleSendMessage}
-                sendOnEnter={sendOnEnter}
-                discoveryPercentage={discoveryMode ? 5 : 0}
-                onDiscoveryChange={(value) => {
-                  updateSettings({ discoveryMode: value > 0 })
-                  if (window.electronAPI) {
-                    window.electronAPI.saveDiscoverySetting(value)
-                  }
-                }}
+                sendOnEnter={settings.sendOnEnter}
+                discoveryMode={settings.discoveryMode}
+                onDiscoveryModeToggle={() => updateSettings({ discoveryMode: !settings.discoveryMode })}
                 isLoading={isLoading}
+                isDark={isDark}
               />
             </>
           ) : currentView === 'database-stats' ? (
             <DatabaseStatsPanel
               onBack={handleSettingsBack}
+              isDark={isDark}
             />
           ) : (
             <SettingsPanel
-              settings={{
-                theme,
-                fontSize,
-                sendOnEnter,
-                showTimestamps,
-                autoSave,
-                discoveryMode
-              }}
+              settings={settings}
               onSettingsChange={handleSettingsChange}
               onThemeChange={changeTheme}
               onBack={handleSettingsBack}
+              isDark={isDark}
             />
           )}
         </div>
