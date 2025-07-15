@@ -20,7 +20,7 @@ let html = fs.readFileSync(htmlPath, 'utf8');
 
 // Remove any existing script tags and add our own
 html = html.replace(/<script[^>]*><\/script>/g, '');
-html = html.replace('</head>', `    <script src="./assets/${jsFile}"></script>\n  </head>`);
+html = html.replace('</body>', `  <script src="./assets/${jsFile}" defer></script>\n</body>`);
 
 // Write the modified HTML
 fs.writeFileSync(htmlPath, html);
