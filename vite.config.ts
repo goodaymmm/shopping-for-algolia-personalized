@@ -5,20 +5,21 @@ import { resolve } from 'path';
 export default defineConfig({
   plugins: [react()],
   base: './',
-  root: resolve(__dirname, 'src/renderer'),
+  publicDir: resolve(__dirname, 'public'),
   build: {
     outDir: resolve(__dirname, 'dist/renderer'),
     emptyOutDir: true,
-    target: 'esnext',
     rollupOptions: {
-      input: resolve(__dirname, 'src/renderer/index.html'),
+      input: {
+        main: resolve(__dirname, 'src/renderer/main.tsx')
+      },
       output: {
         format: 'iife',
         inlineDynamicImports: true,
-        entryFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/main-[hash].js',
         chunkFileNames: 'assets/[name]-[hash].js',
-      },
-      external: [],
+        assetFileNames: 'assets/[name]-[hash].[ext]'
+      }
     }
   },
   resolve: {
