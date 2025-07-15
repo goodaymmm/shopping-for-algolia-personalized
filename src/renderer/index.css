@@ -2,6 +2,43 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  :root {
+    color-scheme: light dark;
+  }
+  
+  html.dark {
+    color-scheme: dark;
+  }
+}
+
+@layer components {
+  /* Project-based color system */
+  .app-bg-primary {
+    @apply bg-slate-50 dark:bg-slate-950;
+  }
+  
+  .app-bg-secondary {
+    @apply bg-white dark:bg-slate-900;
+  }
+  
+  .app-bg-tertiary {
+    @apply bg-gray-50 dark:bg-slate-800/50;
+  }
+  
+  .app-border {
+    @apply border-gray-200 dark:border-slate-700/50;
+  }
+  
+  .app-text-primary {
+    @apply text-gray-900 dark:text-gray-100;
+  }
+  
+  .app-text-secondary {
+    @apply text-gray-600 dark:text-gray-400;
+  }
+}
+
 /* Custom utility classes */
 .line-clamp-2 {
   display: -webkit-box;

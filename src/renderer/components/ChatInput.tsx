@@ -95,11 +95,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   return (
-    <div className={`border-t p-6 ${
-      isDark 
-        ? 'border-gray-700 bg-gray-800' 
-        : 'border-gray-200 bg-gray-50'
-    }`}>
+    <div className="border-t p-6 border-gray-200 dark:border-slate-700/50 bg-gray-50 dark:bg-slate-800/50">
       <div className="max-w-4xl mx-auto">
         {selectedImage && (
           <div className="mb-4 relative inline-block">
@@ -120,12 +116,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         
         <form onSubmit={handleSubmit}>
           <div 
-            className={`relative flex items-end gap-3 p-4 border-2 rounded-2xl transition-all shadow-md hover:shadow-lg ${
+            className={`relative flex items-end gap-3 p-4 border-2 rounded-2xl transition-all shadow-sm ${
               isDragging 
                 ? 'border-blue-300 bg-blue-50 dark:bg-blue-900/20' 
-                : isDark
-                  ? 'border-gray-600 bg-gray-900 hover:border-gray-500'
-                  : 'border-gray-200 bg-white hover:border-gray-300'
+                : 'border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800/50 hover:border-blue-500 dark:hover:border-blue-400'
             }`}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
@@ -134,11 +128,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className={`flex-shrink-0 p-2 rounded-lg transition-colors ${
-                isDark
-                  ? 'text-gray-400 hover:text-gray-300 hover:bg-gray-800'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-              }`}
+              className="flex-shrink-0 p-2 rounded-lg transition-colors text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700/50"
               title="Attach image"
             >
               <Paperclip className="w-5 h-5" />
@@ -150,18 +140,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               onChange={handleTextareaChange}
               onKeyDown={handleKeyDown}
               placeholder="Ask about products..."
-              className={`flex-1 bg-transparent resize-none outline-none min-h-[24px] max-h-32 py-1 text-base ${
-                isDark 
-                  ? 'text-white placeholder-gray-400' 
-                  : 'text-gray-900 placeholder-gray-500'
-              }`}
+              className="flex-1 bg-transparent resize-none outline-none min-h-[24px] max-h-32 py-1 text-base text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
               rows={1}
             />
             
             <button
               type="submit"
               disabled={!message.trim() && !selectedImage}
-              className="flex-shrink-0 p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg"
+              className="flex-shrink-0 p-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white rounded-lg disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg"
               title={sendOnEnter ? "Send message (Enter)" : "Send message (⌘+Enter)"}
             >
               <Send className="w-5 h-5" />
@@ -192,10 +178,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             onClick={onDiscoveryModeToggle}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
               discoveryMode
-                ? 'bg-orange-500 text-white shadow-md hover:shadow-lg'
-                : isDark
-                  ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600 shadow-sm hover:shadow-md'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm hover:shadow-md'
+                ? 'bg-gradient-to-r from-orange-500 to-orange-400 hover:from-orange-400 hover:to-orange-300 text-white shadow-md hover:shadow-lg'
+                : 'bg-white dark:bg-slate-800/50 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-700/50 border border-gray-200 dark:border-slate-600 shadow-sm hover:shadow-md backdrop-blur-sm'
             }`}
           >
             <Compass className="w-4 h-4" />
@@ -205,9 +189,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           </button>
         </div>
         
-        <div className={`mt-3 text-xs text-center ${
-          isDark ? 'text-gray-500' : 'text-gray-500'
-        }`}>
+        <div className="mt-3 text-xs text-center text-gray-500 dark:text-gray-400">
           {sendOnEnter 
             ? 'Press Enter to send • Shift+Enter for new line • Drag and drop images to upload'
             : 'Press ⌘+Enter to send • Drag and drop images to upload'

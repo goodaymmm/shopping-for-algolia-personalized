@@ -220,9 +220,7 @@ function App() {
 
   return (
     <ErrorBoundary isDark={isDark}>
-      <div className={`flex h-screen overflow-hidden ${
-        isDark ? 'dark bg-gray-900' : 'bg-white'
-      }`}>
+      <div className="flex h-screen overflow-hidden bg-white dark:bg-gray-900">
         <Sidebar
           sessions={sessions}
           currentSessionId={currentSessionId}

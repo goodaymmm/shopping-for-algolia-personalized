@@ -45,20 +45,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <div className={`w-80 h-full border-r flex flex-col ${
-      isDark 
-        ? 'bg-gray-900 border-gray-700' 
-        : 'bg-gray-50 border-gray-200'
-    }`}>
+    <div className="w-80 h-full border-r flex flex-col bg-gray-50 dark:bg-slate-900/95 border-gray-200 dark:border-slate-700/50">
       {/* Header */}
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <button
           onClick={onNewSession}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-            isDark
-              ? 'bg-gray-800 hover:bg-gray-700 text-white border border-gray-600 shadow-md hover:shadow-lg'
-              : 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-200 shadow-md hover:shadow-lg'
-          }`}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-200 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white shadow-sm"
         >
           <Plus className="w-5 h-5" />
           <span className="font-medium">New Chat</span>
@@ -76,11 +68,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             placeholder="Search chats..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className={`w-full pl-10 pr-4 py-2 rounded-lg border transition-all shadow-sm ${
-              isDark
-                ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-gray-500 focus:shadow-md'
-                : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500 focus:border-gray-300 focus:shadow-md'
-            } focus:outline-none`}
+            className="w-full pl-10 pr-4 py-2 rounded-lg border transition-colors duration-200 bg-white dark:bg-slate-800/50 border-gray-200 dark:border-slate-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50"
           />
         </div>
       </div>
@@ -91,14 +79,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {filteredSessions.map((session) => (
             <div
               key={session.id}
-              className={`group relative flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
+              className={`group relative flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors duration-200 ${
                 currentSessionId === session.id
-                  ? isDark
-                    ? 'bg-gray-800 border border-gray-600 shadow-md'
-                    : 'bg-white border border-gray-200 shadow-md'
-                  : isDark
-                    ? 'hover:bg-gray-800 hover:shadow-sm'
-                    : 'hover:bg-white hover:shadow-md'
+                  ? 'bg-slate-800/50 backdrop-blur-sm border border-slate-600/50'
+                  : 'hover:bg-slate-800/30 hover:backdrop-blur-sm'
               }`}
               onClick={() => onSessionSelect(session.id)}
             >
@@ -140,11 +124,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {onHistoryClick && (
           <button
             onClick={onHistoryClick}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all mb-2 ${
-              isDark
-                ? 'hover:bg-gray-800 text-gray-300 hover:text-white hover:shadow-sm'
-                : 'hover:bg-white hover:shadow-md text-gray-600 hover:text-gray-900'
-            }`}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-200 mb-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800/50"
           >
             <History className="w-5 h-5" />
             <span className="font-medium">Chat History</span>
@@ -154,11 +134,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {onDatabaseClick && (
           <button
             onClick={onDatabaseClick}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all mb-2 ${
-              isDark
-                ? 'hover:bg-gray-800 text-gray-300 hover:text-white hover:shadow-sm'
-                : 'hover:bg-white hover:shadow-md text-gray-600 hover:text-gray-900'
-            }`}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-200 mb-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800/50"
           >
             <Package className="w-5 h-5" />
             <span className="font-medium">My Database</span>
@@ -179,11 +155,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         
         <button
           onClick={onSettingsClick}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-            isDark
-              ? 'hover:bg-gray-800 text-gray-300 hover:text-white hover:shadow-sm'
-              : 'hover:bg-white hover:shadow-md text-gray-600 hover:text-gray-900'
-          }`}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-colors duration-200 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-slate-800/50"
         >
           <Settings className="w-5 h-5" />
           <span className="font-medium">Settings</span>

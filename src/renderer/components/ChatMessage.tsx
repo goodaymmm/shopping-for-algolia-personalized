@@ -40,12 +40,14 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               : 'bg-gray-50 text-gray-900 border border-gray-100'
         }`}>
           {message.image && (
-            <div className="mb-4 max-w-full overflow-hidden">
-              <img 
-                src={message.image} 
-                alt="Uploaded content" 
-                className="rounded-xl w-full h-auto max-h-80 object-cover shadow-md transition-all hover:shadow-lg cursor-pointer"
-              />
+            <div className="mb-4 relative">
+              <div className="max-w-sm mx-auto">
+                <img 
+                  src={message.image} 
+                  alt="Uploaded content" 
+                  className="rounded-xl w-full h-auto max-h-64 object-contain bg-gray-100 dark:bg-gray-800 cursor-pointer"
+                />
+              </div>
             </div>
           )}
           <div className="leading-relaxed whitespace-pre-wrap">
