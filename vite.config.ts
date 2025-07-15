@@ -9,8 +9,16 @@ export default defineConfig({
   build: {
     outDir: resolve(__dirname, 'dist/renderer'),
     emptyOutDir: true,
+    target: 'esnext',
     rollupOptions: {
-      input: resolve(__dirname, 'src/renderer/index.html')
+      input: resolve(__dirname, 'src/renderer/index.html'),
+      output: {
+        format: 'iife',
+        inlineDynamicImports: true,
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+      },
+      external: [],
     }
   },
   resolve: {
