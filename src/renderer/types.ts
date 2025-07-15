@@ -1,5 +1,5 @@
 // Re-export shared types
-export * from '../../shared/types'
+export * from '../shared/types'
 
 // Renderer-specific types
 export interface ImageFile {
@@ -14,10 +14,10 @@ export interface SearchResult {
 }
 
 export interface ChatState {
-  messages: ChatMessage[]
+  messages: Message[]
   isLoading: boolean
   currentSession?: string
 }
 
 // Import the shared types we need
-import { Product, ChatMessage } from '../../shared/types'
+import { Product, Message, ChatSession, AppSettings, AppView } from '../shared/types'

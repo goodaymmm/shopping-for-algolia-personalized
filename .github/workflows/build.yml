@@ -35,7 +35,7 @@ jobs:
         run: npm ci
 
       - name: Build TypeScript
-        run: npm run build:dev
+        run: npm run build:all
 
       - name: Build Electron app
         run: npx electron-builder --${{ matrix.platform }}

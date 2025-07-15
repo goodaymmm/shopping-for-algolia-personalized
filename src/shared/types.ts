@@ -5,10 +5,8 @@ export interface ElectronAPI {
   
   // Database operations
   saveProduct: (product: Product) => Promise<{ success: boolean; id?: number }>
-  getProducts: () => Promise<Product[]>
-  saveChat: (sessionData: { name: string; category?: string }, message: ChatMessage) => Promise<{ success: boolean; sessionId?: number }>
   getChatHistory: () => Promise<ChatSession[]>
-  getChatMessages: (sessionId: number) => Promise<ChatMessage[]>
+  saveChat: (sessionData: { name: string; category?: string }, message: Message) => Promise<{ success: boolean; sessionId?: number }>
   
   // Settings
   saveDiscoverySetting: (percentage: DiscoveryPercentage) => Promise<{ success: boolean }>
@@ -24,18 +22,6 @@ declare global {
   }
 }
 
-// IPC channel names
-export const IPC_CHANNELS = {
-  DB_SAVE_PRODUCT: 'db:save-product',
-  DB_GET_PRODUCTS: 'db:get-products', 
-  DB_SAVE_CHAT: 'db:save-chat',
-  DB_GET_CHAT_HISTORY: 'db:get-chat-history',
-  DB_GET_CHAT_MESSAGES: 'db:get-chat-messages',
-  SETTINGS_SAVE_DISCOVERY: 'settings:save-discovery',
-  SETTINGS_GET_DISCOVERY: 'settings:get-discovery',
-  SEARCH_PRODUCTS: 'search:products'
-} as const
-
 // Product types
 export interface Product {
   id: string
@@ -47,24 +33,36 @@ export interface Product {
   url?: string
 }
 
-// Chat types (unified with UI Message interface)
-export interface ChatMessage {
+// Chat types (following project base structure)
+export interface Message {
   id: string
-  sender: 'user' | 'assistant'  // Changed from 'role' to 'sender' for UI consistency
+  sender: 'user' | 'assistant'
   content: string
-  image?: string  // Changed from 'imageUrl' to 'image' for UI consistency
+  image?: string
   timestamp: Date
 }
 
 export interface ChatSession {
   id: string
-  title: string  // Changed from 'name' to 'title' for UI consistency
+  title: string
   category?: string
   subcategory?: string
-  messages: ChatMessage[]
+  messages: Message[]
   createdAt: Date
   updatedAt: Date
 }
+
+// Settings types
+export interface AppSettings {
+  theme: 'light' | 'dark' | 'system'
+  fontSize: 'small' | 'medium' | 'large'
+  sendOnEnter: boolean
+  showTimestamps: boolean
+  autoSave: boolean
+  discoveryMode: boolean
+}
+
+export type AppView = 'chat' | 'settings' | 'database-stats'
 
 // Discovery settings
 export type DiscoveryPercentage = 0 | 5 | 10

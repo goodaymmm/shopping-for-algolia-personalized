@@ -1,12 +1,12 @@
-import React from 'react'
-import { User, Bot } from 'lucide-react'
-import { ChatMessage as Message } from '../../types'
+import React from 'react';
+import { User, Bot } from 'lucide-react';
+import { Message } from '../types';
 
 interface ChatMessageProps {
-  message: Message
-  showTimestamp: boolean
-  fontSize: 'small' | 'medium' | 'large'
-  isDark: boolean
+  message: Message;
+  showTimestamp: boolean;
+  fontSize: 'small' | 'medium' | 'large';
+  isDark: boolean;
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({ 
@@ -15,13 +15,13 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   fontSize,
   isDark 
 }) => {
-  const isUser = message.sender === 'user'
+  const isUser = message.sender === 'user';
   
   const fontSizeClasses = {
     small: 'text-sm',
     medium: 'text-base',
     large: 'text-lg'
-  }
+  };
 
   return (
     <div className={`flex gap-4 mb-6 ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -67,5 +67,5 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
         </div>
       )}
     </div>
-  )
-}
+  );
+};

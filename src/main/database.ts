@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3'
 import { join } from 'path'
 import { app } from 'electron'
-import type { Product, ChatSession, ChatMessage, DiscoveryPercentage } from '../shared/types'
+import { Product, Message, ChatSession, DiscoveryPercentage } from '../shared/types'
 
 export class DatabaseService {
   private db: Database.Database
@@ -9,9 +9,6 @@ export class DatabaseService {
   constructor() {
     const dbPath = join(app.getPath('userData'), 'shopping-data.db')
     this.db = new Database(dbPath)
-    
-    // Enable foreign keys
-    this.db.pragma('foreign_keys = ON')
   }
 
   initialize() {
@@ -28,11 +25,11 @@ export class DatabaseService {
       )
     `)
 
-    // Chat sessions
+    // Chat sessions (following requirements document schema)
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS chat_sessions (
         id INTEGER PRIMARY KEY,
-        session_name TEXT NOT NULL,
+        session_name TEXT,
         category TEXT,
         subcategory TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -40,12 +37,12 @@ export class DatabaseService {
       )
     `)
 
-    // Chat messages
+    // Chat messages (following requirements document schema)
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS chat_messages (
         id INTEGER PRIMARY KEY,
-        session_id INTEGER NOT NULL REFERENCES chat_sessions(id) ON DELETE CASCADE,
-        role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+        session_id INTEGER REFERENCES chat_sessions(id),
+        role TEXT NOT NULL,
         content TEXT NOT NULL,
         image_url TEXT,
         analysis_result TEXT,
@@ -54,20 +51,20 @@ export class DatabaseService {
       )
     `)
 
-    // Saved products
+    // Saved products (following requirements document schema)
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS saved_products (
         id INTEGER PRIMARY KEY,
-        product_id TEXT NOT NULL UNIQUE,
+        product_id TEXT NOT NULL,
         name TEXT NOT NULL,
         description TEXT,
-        price REAL NOT NULL,
+        price REAL,
         image_url TEXT,
         category TEXT,
         subcategory TEXT,
         tags TEXT,
         algolia_data TEXT,
-        user_rating INTEGER CHECK (user_rating BETWEEN 1 AND 5),
+        user_rating INTEGER,
         notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
@@ -77,10 +74,10 @@ export class DatabaseService {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS ml_training_data (
         id INTEGER PRIMARY KEY,
-        user_query TEXT NOT NULL,
+        user_query TEXT,
         image_features TEXT,
-        selected_products TEXT NOT NULL,
-        user_feedback INTEGER CHECK (user_feedback BETWEEN 1 AND 5),
+        selected_products TEXT,
+        user_feedback INTEGER,
         session_context TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
@@ -90,226 +87,182 @@ export class DatabaseService {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS outlier_interactions (
         id INTEGER PRIMARY KEY,
-        product_id TEXT NOT NULL,
-        interaction_type TEXT NOT NULL CHECK (interaction_type IN ('view', 'click', 'save')),
-        timestamp INTEGER NOT NULL,
+        product_id TEXT,
+        interaction_type TEXT,
+        timestamp INTEGER,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `)
 
-    // Discovery settings
+    // User settings (including discovery settings)
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS user_settings (
         id INTEGER PRIMARY KEY,
-        setting_key TEXT UNIQUE NOT NULL,
-        setting_value TEXT NOT NULL,
+        setting_key TEXT UNIQUE,
+        setting_value TEXT,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `)
 
-    // Create indexes for better performance
+    // API configurations (encrypted)
     this.db.exec(`
-      CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id);
-      CREATE INDEX IF NOT EXISTS idx_saved_products_product_id ON saved_products(product_id);
-      CREATE INDEX IF NOT EXISTS idx_outlier_interactions_product_id ON outlier_interactions(product_id);
-      CREATE INDEX IF NOT EXISTS idx_user_settings_key ON user_settings(setting_key);
+      CREATE TABLE IF NOT EXISTS api_configs (
+        id INTEGER PRIMARY KEY,
+        provider TEXT NOT NULL,
+        encrypted_key TEXT NOT NULL,
+        settings TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
     `)
   }
 
   // Product operations
-  saveProduct(product: Product): { success: boolean; id?: number } {
-    try {
-      const stmt = this.db.prepare(`
-        INSERT OR REPLACE INTO saved_products 
-        (product_id, name, description, price, image_url, category, subcategory, tags, algolia_data)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `)
-      
-      const result = stmt.run(
-        product.id,
-        product.name,
-        product.description || null,
-        product.price,
-        product.image,
-        product.categories?.[0] || null,
-        product.categories?.[1] || null,
-        JSON.stringify(product.categories || []),
-        JSON.stringify(product)
-      )
-      
-      return { success: true, id: result.lastInsertRowid as number }
-    } catch (error) {
-      console.error('Failed to save product:', error)
-      return { success: false }
-    }
+  async saveProduct(product: Product) {
+    const stmt = this.db.prepare(`
+      INSERT INTO saved_products 
+      (product_id, name, description, price, image_url, category, tags, algolia_data)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+    return stmt.run(
+      product.id,
+      product.name,
+      product.description || '',
+      product.price,
+      product.image,
+      product.categories?.join(', ') || '',
+      JSON.stringify([]),
+      JSON.stringify(product)
+    )
   }
 
-  getProducts(): Product[] {
-    try {
-      const stmt = this.db.prepare(`
-        SELECT * FROM saved_products 
-        ORDER BY created_at DESC
-      `)
-      
-      const rows = stmt.all() as any[]
-      return rows.map(row => ({
-        id: row.product_id,
-        name: row.name,
-        description: row.description,
-        price: row.price,
-        image: row.image_url,
-        categories: JSON.parse(row.tags || '[]'),
-        url: JSON.parse(row.algolia_data || '{}').url
-      }))
-    } catch (error) {
-      console.error('Failed to get products:', error)
-      return []
-    }
+  async getProducts() {
+    const stmt = this.db.prepare(`
+      SELECT * FROM saved_products ORDER BY created_at DESC
+    `)
+    return stmt.all()
   }
 
   // Chat operations
-  saveChat(sessionData: { name: string; category?: string }, message: ChatMessage): { success: boolean; sessionId?: number } {
-    try {
-      const transaction = this.db.transaction(() => {
-        // Create or get session
-        let sessionId: number
-        const existingSession = this.db.prepare(`
-          SELECT id FROM chat_sessions 
-          WHERE session_name = ? 
-          ORDER BY created_at DESC 
-          LIMIT 1
-        `).get(sessionData.name) as any
+  async saveChat(sessionData: { name: string; category?: string }, message: Message) {
+    // First, create or get session
+    let sessionId: number
 
-        if (existingSession) {
-          sessionId = existingSession.id
-          // Update session timestamp
-          this.db.prepare(`
-            UPDATE chat_sessions 
-            SET updated_at = CURRENT_TIMESTAMP 
-            WHERE id = ?
-          `).run(sessionId)
-        } else {
-          // Create new session
-          const sessionResult = this.db.prepare(`
-            INSERT INTO chat_sessions (session_name, category) 
-            VALUES (?, ?)
-          `).run(sessionData.name, sessionData.category || null)
-          sessionId = sessionResult.lastInsertRowid as number
-        }
+    const existingSession = this.db.prepare(`
+      SELECT id FROM chat_sessions WHERE session_name = ?
+    `).get(sessionData.name)
 
-        // Save message
-        const messageStmt = this.db.prepare(`
-          INSERT INTO chat_messages (session_id, role, content, image_url, analysis_result, search_results)
-          VALUES (?, ?, ?, ?, ?, ?)
-        `)
-        
-        messageStmt.run(
-          sessionId,
-          message.sender,
-          message.content,
-          message.image || null,
-          null, // analysis_result - to be filled later
-          null  // search_results - to be filled later
-        )
-
-        return sessionId
-      })
-
-      const sessionId = transaction()
-      return { success: true, sessionId }
-    } catch (error) {
-      console.error('Failed to save chat:', error)
-      return { success: false }
+    if (existingSession) {
+      sessionId = (existingSession as any).id
+      // Update session timestamp
+      this.db.prepare(`
+        UPDATE chat_sessions SET updated_at = CURRENT_TIMESTAMP WHERE id = ?
+      `).run(sessionId)
+    } else {
+      const sessionResult = this.db.prepare(`
+        INSERT INTO chat_sessions (session_name, category)
+        VALUES (?, ?)
+      `).run(sessionData.name, sessionData.category || 'general')
+      sessionId = sessionResult.lastInsertRowid as number
     }
+
+    // Save message
+    const messageResult = this.db.prepare(`
+      INSERT INTO chat_messages (session_id, role, content, image_url)
+      VALUES (?, ?, ?, ?)
+    `).run(sessionId, message.sender, message.content, message.image || null)
+
+    return { sessionId, messageId: messageResult.lastInsertRowid }
   }
 
-  getChatHistory(): ChatSession[] {
-    try {
-      const stmt = this.db.prepare(`
-        SELECT cs.*, 
-               COUNT(cm.id) as message_count,
-               MAX(cm.created_at) as last_message_time
-        FROM chat_sessions cs
-        LEFT JOIN chat_messages cm ON cs.id = cm.session_id
-        GROUP BY cs.id
-        ORDER BY cs.updated_at DESC
-      `)
-      
-      const rows = stmt.all() as any[]
-      return rows.map(row => ({
-        id: row.id.toString(),
-        title: row.session_name,
-        category: row.category,
-        subcategory: row.subcategory,
-        messages: [], // Will be loaded separately when needed
-        createdAt: new Date(row.created_at),
-        updatedAt: new Date(row.updated_at)
-      }))
-    } catch (error) {
-      console.error('Failed to get chat history:', error)
-      return []
-    }
+  async getChatHistory(): Promise<ChatSession[]> {
+    const stmt = this.db.prepare(`
+      SELECT cs.*, 
+             COUNT(cm.id) as message_count,
+             MAX(cm.created_at) as last_message
+      FROM chat_sessions cs
+      LEFT JOIN chat_messages cm ON cs.id = cm.session_id
+      GROUP BY cs.id
+      ORDER BY cs.updated_at DESC
+    `)
+    const sessions = stmt.all()
+
+    return sessions.map((session: any) => ({
+      id: session.id.toString(),
+      title: session.session_name,
+      category: session.category,
+      subcategory: session.subcategory,
+      messages: [],
+      createdAt: new Date(session.created_at),
+      updatedAt: new Date(session.updated_at)
+    }))
   }
 
-  getChatMessages(sessionId: number): ChatMessage[] {
-    try {
-      const stmt = this.db.prepare(`
-        SELECT * FROM chat_messages 
-        WHERE session_id = ? 
-        ORDER BY created_at ASC
-      `)
-      
-      const rows = stmt.all(sessionId) as any[]
-      return rows.map(row => ({
-        id: row.id.toString(),
-        sender: row.role,
-        content: row.content,
-        image: row.image_url,
-        timestamp: new Date(row.created_at)
-      }))
-    } catch (error) {
-      console.error('Failed to get chat messages:', error)
-      return []
-    }
+  async getChatMessages(sessionId: number): Promise<Message[]> {
+    const stmt = this.db.prepare(`
+      SELECT * FROM chat_messages 
+      WHERE session_id = ? 
+      ORDER BY created_at ASC
+    `)
+    const messages = stmt.all(sessionId)
+
+    return messages.map((msg: any) => ({
+      id: msg.id.toString(),
+      sender: msg.role as 'user' | 'assistant',
+      content: msg.content,
+      image: msg.image_url,
+      timestamp: new Date(msg.created_at)
+    }))
   }
 
-  // Settings operations
-  saveDiscoverySetting(percentage: DiscoveryPercentage): { success: boolean } {
-    try {
-      const stmt = this.db.prepare(`
-        INSERT OR REPLACE INTO user_settings (setting_key, setting_value, updated_at)
-        VALUES ('outlier_percentage', ?, CURRENT_TIMESTAMP)
-      `)
-      
-      stmt.run(percentage.toString())
-      return { success: true }
-    } catch (error) {
-      console.error('Failed to save discovery setting:', error)
-      return { success: false }
-    }
+  // Discovery settings
+  async saveDiscoverySetting(percentage: DiscoveryPercentage) {
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO user_settings (setting_key, setting_value, updated_at)
+      VALUES ('outlier_percentage', ?, CURRENT_TIMESTAMP)
+    `)
+    return stmt.run(percentage.toString())
   }
 
-  getDiscoverySetting(): DiscoveryPercentage {
-    try {
-      const stmt = this.db.prepare(`
-        SELECT setting_value FROM user_settings 
-        WHERE setting_key = 'outlier_percentage'
-      `)
-      
-      const result = stmt.get() as any
-      if (result) {
-        const value = parseInt(result.setting_value)
-        return (value === 5 || value === 10) ? value as DiscoveryPercentage : 0
-      }
-      return 0
-    } catch (error) {
-      console.error('Failed to get discovery setting:', error)
-      return 0
-    }
+  async getDiscoverySetting(): Promise<DiscoveryPercentage> {
+    const stmt = this.db.prepare(`
+      SELECT setting_value FROM user_settings WHERE setting_key = 'outlier_percentage'
+    `)
+    const result = stmt.get() as any
+    return result ? (parseInt(result.setting_value) as DiscoveryPercentage) : 0
   }
 
-  // Cleanup method
-  close() {
-    this.db.close()
+  // ML data operations (for Phase C - advanced features)
+  async saveMLTrainingData(data: {
+    userQuery: string
+    imageFeatures?: any
+    selectedProducts: Product[]
+    userFeedback: number
+    sessionContext: any
+  }) {
+    const stmt = this.db.prepare(`
+      INSERT INTO ml_training_data 
+      (user_query, image_features, selected_products, user_feedback, session_context)
+      VALUES (?, ?, ?, ?, ?)
+    `)
+    return stmt.run(
+      data.userQuery,
+      JSON.stringify(data.imageFeatures || {}),
+      JSON.stringify(data.selectedProducts),
+      data.userFeedback,
+      JSON.stringify(data.sessionContext)
+    )
+  }
+
+  // Statistics
+  async getStats() {
+    const productCount = this.db.prepare('SELECT COUNT(*) as count FROM saved_products').get() as any
+    const sessionCount = this.db.prepare('SELECT COUNT(*) as count FROM chat_sessions').get() as any
+    const messageCount = this.db.prepare('SELECT COUNT(*) as count FROM chat_messages').get() as any
+
+    return {
+      totalProducts: productCount.count,
+      totalSessions: sessionCount.count,
+      totalMessages: messageCount.count
+    }
   }
 }

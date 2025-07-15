@@ -1,16 +1,16 @@
-import React from 'react'
-import { Plus, MessageSquare, Settings, Trash2, Search, Database } from 'lucide-react'
-import { ChatSession } from '../../types'
+import React from 'react';
+import { Plus, MessageSquare, Settings, Trash2, Search, Database } from 'lucide-react';
+import { ChatSession } from '../types';
 
 interface SidebarProps {
-  sessions: ChatSession[]
-  currentSessionId: string | null
-  onSessionSelect: (sessionId: string) => void
-  onNewSession: () => void
-  onDeleteSession: (sessionId: string) => void
-  onSettingsClick: () => void
-  onDatabaseStatsClick: () => void
-  isDark: boolean
+  sessions: ChatSession[];
+  currentSessionId: string | null;
+  onSessionSelect: (sessionId: string) => void;
+  onNewSession: () => void;
+  onDeleteSession: (sessionId: string) => void;
+  onSettingsClick: () => void;
+  onDatabaseStatsClick: () => void;
+  isDark: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -23,22 +23,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onDatabaseStatsClick,
   isDark
 }) => {
-  const [searchTerm, setSearchTerm] = React.useState('')
+  const [searchTerm, setSearchTerm] = React.useState('');
 
   const filteredSessions = sessions.filter(session =>
     session.title.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  );
 
   const formatDate = (date: Date) => {
-    const now = new Date()
-    const diff = now.getTime() - date.getTime()
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     
-    if (days === 0) return 'Today'
-    if (days === 1) return 'Yesterday'
-    if (days < 7) return `${days} days ago`
-    return date.toLocaleDateString()
-  }
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return `${days} days ago`;
+    return date.toLocaleDateString();
+  };
 
   return (
     <div className={`w-80 h-full border-r flex flex-col ${
@@ -115,8 +115,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               <button
                 onClick={(e) => {
-                  e.stopPropagation()
-                  onDeleteSession(session.id)
+                  e.stopPropagation();
+                  onDeleteSession(session.id);
                 }}
                 className={`opacity-0 group-hover:opacity-100 p-1 rounded transition-all ${
                   isDark
@@ -157,5 +157,5 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
     </div>
-  )
-}
+  );
+};

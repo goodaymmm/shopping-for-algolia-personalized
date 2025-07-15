@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AppSettings } from '../types/ui';
+import { AppSettings } from '../types';
 
 const defaultSettings: AppSettings = {
   theme: 'system',

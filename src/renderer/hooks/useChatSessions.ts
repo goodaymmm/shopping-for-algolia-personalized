@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChatSession, ChatMessage } from '../types';
+import { ChatSession, Message } from '../types';
 
 export const useChatSessions = () => {
   const [sessions, setSessions] = useState<ChatSession[]>(() => {
@@ -61,7 +61,7 @@ export const useChatSessions = () => {
     }
   };
 
-  const addMessageToSession = (sessionId: string, message: ChatMessage) => {
+  const addMessageToSession = (sessionId: string, message: Message) => {
     setSessions(prev => prev.map(session => {
       if (session.id === sessionId) {
         const updatedMessages = [...session.messages, message];

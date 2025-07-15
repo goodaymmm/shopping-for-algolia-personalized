@@ -1,13 +1,12 @@
-import React, { useState, useRef } from 'react'
-import { Send, Paperclip, X, Image, Compass } from 'lucide-react'
+import React, { useState, useRef } from 'react';
+import { Send, Paperclip, X, Image, Compass } from 'lucide-react';
 
 interface ChatInputProps {
-  onSendMessage: (content: string, imageFile?: File) => void
-  sendOnEnter: boolean
-  discoveryMode: boolean
-  onDiscoveryModeToggle: () => void
-  isLoading?: boolean
-  isDark: boolean
+  onSendMessage: (content: string, image?: string) => void;
+  sendOnEnter: boolean;
+  discoveryMode: boolean;
+  onDiscoveryModeToggle: () => void;
+  isDark: boolean;
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({ 
@@ -15,99 +14,85 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   sendOnEnter,
   discoveryMode,
   onDiscoveryModeToggle,
-  isLoading = false,
   isDark 
 }) => {
-  const [message, setMessage] = useState('')
-  const [selectedImage, setSelectedImage] = useState<string | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [message, setMessage] = useState('');
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
     if (message.trim() || selectedImage) {
-      const imageFile = selectedImage ? dataURLtoFile(selectedImage, 'image.png') : undefined
-      onSendMessage(message, imageFile)
-      setMessage('')
-      setSelectedImage(null)
+      onSendMessage(message, selectedImage || undefined);
+      setMessage('');
+      setSelectedImage(null);
       if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto'
+        textareaRef.current.style.height = 'auto';
       }
     }
-  }
-
-  const dataURLtoFile = (dataurl: string, filename: string): File => {
-    const arr = dataurl.split(',')
-    const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png'
-    const bstr = atob(arr[1])
-    let n = bstr.length
-    const u8arr = new Uint8Array(n)
-    while(n--){
-      u8arr[n] = bstr.charCodeAt(n)
-    }
-    return new File([u8arr], filename, {type:mime})
-  }
+  };
 
   const handleImageSelect = (file: File) => {
     if (file.type.startsWith('image/')) {
-      const reader = new FileReader()
+      const reader = new FileReader();
       reader.onload = (e) => {
-        setSelectedImage(e.target?.result as string)
-      }
-      reader.readAsDataURL(file)
+        setSelectedImage(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
     }
-  }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+    const file = e.target.files?.[0];
     if (file) {
-      handleImageSelect(file)
+      handleImageSelect(file);
     }
-  }
+  };
 
   const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-    const file = e.dataTransfer.files?.[0]
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
     if (file) {
-      handleImageSelect(file)
+      handleImageSelect(file);
     }
-  }
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }
+    e.preventDefault();
+    setIsDragging(true);
+  };
 
   const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }
+    e.preventDefault();
+    setIsDragging(false);
+  };
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setMessage(e.target.value)
+    setMessage(e.target.value);
     
     // Auto-resize textarea
     if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
-  }
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (sendOnEnter) {
       if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault()
-        handleSubmit(e as any)
+        e.preventDefault();
+        handleSubmit(e as any);
       }
     } else {
       if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault()
-        handleSubmit(e as any)
+        e.preventDefault();
+        handleSubmit(e as any);
       }
     }
-  }
+  };
 
   return (
     <div className={`border-t p-6 ${
@@ -230,5 +215,5 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
