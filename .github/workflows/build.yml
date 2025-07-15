@@ -34,6 +34,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Ensure Tailwind CSS v3 compatibility
+        run: |
+          # Remove Tailwind v4 postcss plugin if it exists
+          npm uninstall @tailwindcss/postcss --save-dev --force || true
+          
+          # Ensure Tailwind CSS v3 is installed
+          npm install tailwindcss@3.4.1 --save-dev --force
+          
+          # Fix postcss.config.js to use standard Tailwind v3 format
+          echo "module.exports = { plugins: { tailwindcss: {}, autoprefixer: {} } };" > postcss.config.js
+          
+          # Verify the fix
+          echo "PostCSS config after fix:"
+          cat postcss.config.js
+
       - name: Build TypeScript
         run: npm run build:all
 
