@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AppSettings } from '../types';
+import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 
 const defaultSettings: AppSettings = {
   theme: 'system',
@@ -12,12 +13,12 @@ const defaultSettings: AppSettings = {
 
 export const useSettings = () => {
   const [settings, setSettings] = useState<AppSettings>(() => {
-    const saved = localStorage.getItem('app-settings');
-    return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
+    const saved = safeGetItem<Partial<AppSettings>>('app-settings', {});
+    return { ...defaultSettings, ...saved };
   });
 
   useEffect(() => {
-    localStorage.setItem('app-settings', JSON.stringify(settings));
+    safeSetItem('app-settings', settings);
   }, [settings]);
 
   const updateSettings = (updates: Partial<AppSettings>) => {

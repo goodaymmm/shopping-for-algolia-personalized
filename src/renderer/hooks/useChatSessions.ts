@@ -1,33 +1,39 @@
 import { useState, useEffect } from 'react';
 import { ChatSession, Message } from '../types';
+import { safeGetItem, safeSetItem, safeRemoveItem } from '../utils/safeStorage';
 
 export const useChatSessions = () => {
   const [sessions, setSessions] = useState<ChatSession[]>(() => {
-    const saved = localStorage.getItem('chat-sessions');
-    return saved ? JSON.parse(saved).map((session: any) => ({
-      ...session,
-      createdAt: new Date(session.createdAt),
-      updatedAt: new Date(session.updatedAt),
-      messages: session.messages.map((msg: any) => ({
-        ...msg,
-        timestamp: new Date(msg.timestamp)
-      }))
-    })) : [];
+    const saved = safeGetItem<any[]>('chat-sessions', []);
+    try {
+      return saved.map((session: any) => ({
+        ...session,
+        createdAt: new Date(session.createdAt),
+        updatedAt: new Date(session.updatedAt),
+        messages: (session.messages || []).map((msg: any) => ({
+          ...msg,
+          timestamp: new Date(msg.timestamp)
+        }))
+      }));
+    } catch (error) {
+      console.error('Failed to parse chat sessions:', error);
+      return [];
+    }
   });
 
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(() => {
-    return localStorage.getItem('current-session-id');
+    return safeGetItem<string | null>('current-session-id', null);
   });
 
   useEffect(() => {
-    localStorage.setItem('chat-sessions', JSON.stringify(sessions));
+    safeSetItem('chat-sessions', sessions);
   }, [sessions]);
 
   useEffect(() => {
     if (currentSessionId) {
-      localStorage.setItem('current-session-id', currentSessionId);
+      safeSetItem('current-session-id', currentSessionId);
     } else {
-      localStorage.removeItem('current-session-id');
+      safeRemoveItem('current-session-id');
     }
   }, [currentSessionId]);
 

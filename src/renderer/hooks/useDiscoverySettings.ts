@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { DiscoveryPercentage } from '../types';
+import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 
 interface DiscoveryState {
   outlierPercentage: DiscoveryPercentage;
@@ -32,10 +33,12 @@ export const useDiscoverySettings = () => {
         }));
       } else {
         // Load from localStorage in development
-        const saved = localStorage.getItem('discoverySettings');
+        const settings = safeGetItem<{ outlierPercentage?: DiscoveryPercentage }>(
+          'discoverySettings',
+          { outlierPercentage: 0 }
+        );
         
-        if (saved) {
-          const settings = JSON.parse(saved);
+        if (settings && settings.outlierPercentage !== undefined) {
           setState(prev => ({
             ...prev,
             outlierPercentage: settings.outlierPercentage || 0,
@@ -84,7 +87,7 @@ export const useDiscoverySettings = () => {
       } else {
         // Save to localStorage in development
         const settings = { outlierPercentage: percentage };
-        localStorage.setItem('discoverySettings', JSON.stringify(settings));
+        safeSetItem('discoverySettings', settings);
         
         setState(prev => ({
           ...prev,
@@ -165,7 +168,7 @@ export const useDiscoverySettings = () => {
     // Also save this state
     if (!window.electronAPI) {
       const settings = { outlierPercentage: state.outlierPercentage };
-      localStorage.setItem('discoverySettings', JSON.stringify(settings));
+      safeSetItem('discoverySettings', settings);
     }
   }, [state.outlierPercentage]);
 

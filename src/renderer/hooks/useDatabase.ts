@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Product } from '../types';
+import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 
 interface DatabaseState {
   savedProducts: Product[];
@@ -50,8 +51,7 @@ export const useDatabase = () => {
         }));
       } else {
         // In development environment, use localStorage
-        const saved = localStorage.getItem('savedProducts');
-        const products = saved ? JSON.parse(saved) : [];
+        const products = safeGetItem<Product[]>('savedProducts', []);
         
         setState(prev => ({
           ...prev,
@@ -91,7 +91,7 @@ export const useDatabase = () => {
         // Save to localStorage in development
         setState(prev => {
           const updatedProducts = [...prev.savedProducts.filter(p => p.id !== product.id), product];
-          localStorage.setItem('savedProducts', JSON.stringify(updatedProducts));
+          safeSetItem('savedProducts', updatedProducts);
           
           return {
             ...prev,
@@ -128,7 +128,7 @@ export const useDatabase = () => {
         // Remove from localStorage in development
         setState(prev => {
           const updatedProducts = prev.savedProducts.filter(p => p.id !== productId);
-          localStorage.setItem('savedProducts', JSON.stringify(updatedProducts));
+          safeSetItem('savedProducts', updatedProducts);
           
           return {
             ...prev,
