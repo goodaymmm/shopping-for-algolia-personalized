@@ -1,14 +1,10 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import { MessageCircle, Calendar, ChevronRight } from 'lucide-react'
-import { LoadingSpinner, ErrorBoundary } from '../Common'
-import { useDatabaseStore } from '../../store'
+import { ErrorBoundary } from '../Common'
+import { useChatSessions } from '../../hooks/useChatSessions'
 
 export const ChatHistory: React.FC = () => {
-  const { chatHistory, isLoading, loadChatHistory } = useDatabaseStore()
-
-  useEffect(() => {
-    loadChatHistory()
-  }, [loadChatHistory])
+  const { sessions, setCurrentSessionId } = useChatSessions()
 
   const formatDate = (date: Date) => {
     const now = new Date()
@@ -24,12 +20,9 @@ export const ChatHistory: React.FC = () => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
 
-  if (isLoading) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <LoadingSpinner size="lg" text="Loading chat history..." />
-      </div>
-    )
+  const handleSessionClick = (sessionId: string) => {
+    setCurrentSessionId(sessionId)
+    // Navigate back to chat view - this would need to be handled by parent component
   }
 
   return (
@@ -41,21 +34,15 @@ export const ChatHistory: React.FC = () => {
             <div>
               <h2 className="text-2xl font-semibold text-gray-900">Chat History</h2>
               <p className="text-sm text-gray-600">
-                {chatHistory.length} conversation{chatHistory.length !== 1 ? 's' : ''}
+                {sessions.length} conversation{sessions.length !== 1 ? 's' : ''}
               </p>
             </div>
-            <button
-              onClick={loadChatHistory}
-              className="px-4 py-2 bg-algolia-500 text-white rounded-lg hover:bg-algolia-600 transition-colors"
-            >
-              Refresh
-            </button>
           </div>
         </div>
 
         {/* Chat List */}
         <div className="flex-1 overflow-y-auto">
-          {chatHistory.length === 0 ? (
+          {sessions.length === 0 ? (
             <div className="h-full flex items-center justify-center">
               <div className="text-center">
                 <div className="text-6xl mb-4">💬</div>
@@ -69,9 +56,10 @@ export const ChatHistory: React.FC = () => {
             </div>
           ) : (
             <div className="p-6 space-y-4">
-              {chatHistory.map((session) => (
+              {sessions.map((session) => (
                 <div
                   key={session.id}
+                  onClick={() => handleSessionClick(session.id)}
                   className="bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow cursor-pointer"
                 >
                   <div className="p-4">

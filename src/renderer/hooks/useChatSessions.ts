@@ -1,122 +1,98 @@
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import { ChatSession, ChatMessage } from '../types'
+import { useState, useEffect } from 'react';
+import { ChatSession, ChatMessage } from '../types';
 
-interface ChatSessionsState {
-  sessions: ChatSession[]
-  currentSessionId: string | null
-  currentSession: ChatSession | null
-  createNewSession: () => ChatSession
-  deleteSession: (id: string) => void
-  setCurrentSessionId: (id: string) => void
-  addMessageToSession: (sessionId: string, message: ChatMessage) => void
-  updateSessionTitle: (sessionId: string, title: string) => void
-}
+export const useChatSessions = () => {
+  const [sessions, setSessions] = useState<ChatSession[]>(() => {
+    const saved = localStorage.getItem('chat-sessions');
+    return saved ? JSON.parse(saved).map((session: any) => ({
+      ...session,
+      createdAt: new Date(session.createdAt),
+      updatedAt: new Date(session.updatedAt),
+      messages: session.messages.map((msg: any) => ({
+        ...msg,
+        timestamp: new Date(msg.timestamp)
+      }))
+    })) : [];
+  });
 
-const generateTitle = (messages: ChatMessage[]): string => {
-  const firstUserMessage = messages.find(m => m.sender === 'user')
-  if (firstUserMessage) {
-    return firstUserMessage.content.slice(0, 50) + (firstUserMessage.content.length > 50 ? '...' : '')
-  }
-  return 'New Chat'
-}
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(() => {
+    return localStorage.getItem('current-session-id');
+  });
 
-export const useChatSessions = create<ChatSessionsState>()(
-  persist(
-    (set, get) => ({
-      sessions: [],
-      currentSessionId: null,
-      currentSession: null,
-      
-      createNewSession: () => {
-        const id = Date.now().toString()
-        const newSession: ChatSession = {
-          id,
-          title: 'New Chat',
-          messages: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
+  useEffect(() => {
+    localStorage.setItem('chat-sessions', JSON.stringify(sessions));
+  }, [sessions]);
+
+  useEffect(() => {
+    if (currentSessionId) {
+      localStorage.setItem('current-session-id', currentSessionId);
+    } else {
+      localStorage.removeItem('current-session-id');
+    }
+  }, [currentSessionId]);
+
+  const createNewSession = () => {
+    const newSession: ChatSession = {
+      id: Date.now().toString(),
+      title: 'New Chat',
+      messages: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    
+    setSessions(prev => [newSession, ...prev]);
+    setCurrentSessionId(newSession.id);
+    return newSession;
+  };
+
+  const updateSession = (sessionId: string, updates: Partial<ChatSession>) => {
+    setSessions(prev => prev.map(session => 
+      session.id === sessionId 
+        ? { ...session, ...updates, updatedAt: new Date() }
+        : session
+    ));
+  };
+
+  const deleteSession = (sessionId: string) => {
+    setSessions(prev => prev.filter(session => session.id !== sessionId));
+    if (currentSessionId === sessionId) {
+      const remaining = sessions.filter(s => s.id !== sessionId);
+      setCurrentSessionId(remaining.length > 0 ? remaining[0].id : null);
+    }
+  };
+
+  const addMessageToSession = (sessionId: string, message: ChatMessage) => {
+    setSessions(prev => prev.map(session => {
+      if (session.id === sessionId) {
+        const updatedMessages = [...session.messages, message];
+        let title = session.title;
+        
+        // Auto-generate title from first user message
+        if (session.messages.length === 0 && message.sender === 'user') {
+          title = message.content.slice(0, 50) + (message.content.length > 50 ? '...' : '');
         }
         
-        set((state) => ({
-          sessions: [newSession, ...state.sessions],
-          currentSessionId: id,
-          currentSession: newSession,
-        }))
-        
-        return newSession
-      },
-      
-      deleteSession: (id) => {
-        set((state) => {
-          const newSessions = state.sessions.filter(s => s.id !== id)
-          const newCurrentSessionId = state.currentSessionId === id ? 
-            (newSessions.length > 0 ? newSessions[0].id : null) : 
-            state.currentSessionId
-          const newCurrentSession = newCurrentSessionId ? 
-            newSessions.find(s => s.id === newCurrentSessionId) || null : 
-            null
-          
-          return {
-            sessions: newSessions,
-            currentSessionId: newCurrentSessionId,
-            currentSession: newCurrentSession,
-          }
-        })
-      },
-      
-      setCurrentSessionId: (id) => {
-        const session = get().sessions.find(s => s.id === id)
-        set({
-          currentSessionId: id,
-          currentSession: session || null,
-        })
-      },
-      
-      addMessageToSession: (sessionId, message) => {
-        set((state) => {
-          const sessions = state.sessions.map(session => {
-            if (session.id === sessionId) {
-              const updatedMessages = [...session.messages, message]
-              const updatedSession = {
-                ...session,
-                messages: updatedMessages,
-                title: updatedMessages.length === 1 ? generateTitle(updatedMessages) : session.title,
-                updatedAt: new Date(),
-              }
-              return updatedSession
-            }
-            return session
-          })
-          
-          const currentSession = sessions.find(s => s.id === sessionId) || null
-          
-          return {
-            sessions,
-            currentSession: state.currentSessionId === sessionId ? currentSession : state.currentSession,
-          }
-        })
-      },
-      
-      updateSessionTitle: (sessionId, title) => {
-        set((state) => {
-          const sessions = state.sessions.map(session =>
-            session.id === sessionId ? { ...session, title, updatedAt: new Date() } : session
-          )
-          
-          const currentSession = state.currentSessionId === sessionId ? 
-            sessions.find(s => s.id === sessionId) || null : 
-            state.currentSession
-          
-          return {
-            sessions,
-            currentSession,
-          }
-        })
-      },
-    }),
-    {
-      name: 'chat-sessions',
-    }
-  )
-)
+        return {
+          ...session,
+          messages: updatedMessages,
+          title,
+          updatedAt: new Date(),
+        };
+      }
+      return session;
+    }));
+  };
+
+  const currentSession = sessions.find(s => s.id === currentSessionId) || null;
+
+  return {
+    sessions,
+    currentSession,
+    currentSessionId,
+    setCurrentSessionId,
+    createNewSession,
+    updateSession,
+    deleteSession,
+    addMessageToSession,
+  };
+};

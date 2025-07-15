@@ -1,14 +1,15 @@
 import React from 'react'
 import { Settings as SettingsIcon, Database, Sparkles, Info } from 'lucide-react'
 import { ErrorBoundary } from '../Common'
-import { DiscoverySettings } from '../Chat/DiscoverySettings'
-import { useDiscoverySettings, useDatabase } from '../../hooks'
 
 export const Settings: React.FC = () => {
-  const { discoveryPercentage, updateDiscoveryPercentage, getDiscoveryDescription } = useDiscoverySettings()
-  const { getProductStats } = useDatabase()
-  
-  const stats = getProductStats()
+  // Simplified for now - will be enhanced in Phase C
+  const stats = {
+    totalProducts: 0,
+    totalCategories: 0,
+    totalValue: 0,
+    averagePrice: 0
+  }
 
   return (
     <ErrorBoundary>
@@ -37,20 +38,13 @@ export const Settings: React.FC = () => {
             </div>
             
             <p className="text-sm text-gray-600 mb-4">
-              Control how much variety you want to see in search results. 
-              Discovery products are for inspiration only and don't affect your personalization learning.
+              Discovery mode will be available in Phase C when advanced personalization features are implemented.
             </p>
-            
-            <DiscoverySettings
-              value={discoveryPercentage}
-              onChange={updateDiscoveryPercentage}
-              className="mb-3"
-            />
             
             <div className="bg-gray-50 rounded-lg p-3">
               <p className="text-xs text-gray-600">
                 <Info size={12} className="inline mr-1" />
-                {getDiscoveryDescription(discoveryPercentage)}
+                Coming soon: Control variety in search results for inspiration products.
               </p>
             </div>
           </div>
