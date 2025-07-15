@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, MessageSquare, Settings, Trash2, Search, Database } from 'lucide-react';
+import { Plus, MessageSquare, Settings, Trash2, Search, Database, History, Package } from 'lucide-react';
 import { ChatSession } from '../types';
 
 interface SidebarProps {
@@ -10,6 +10,8 @@ interface SidebarProps {
   onDeleteSession: (sessionId: string) => void;
   onSettingsClick: () => void;
   onDatabaseStatsClick: () => void;
+  onHistoryClick?: () => void;
+  onDatabaseClick?: () => void;
   isDark: boolean;
 }
 
@@ -21,6 +23,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onDeleteSession,
   onSettingsClick,
   onDatabaseStatsClick,
+  onHistoryClick,
+  onDatabaseClick,
   isDark
 }) => {
   const [searchTerm, setSearchTerm] = React.useState('');
@@ -131,8 +135,36 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Settings */}
+      {/* Navigation */}
       <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+        {onHistoryClick && (
+          <button
+            onClick={onHistoryClick}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all mb-2 ${
+              isDark
+                ? 'hover:bg-gray-800 text-gray-300 hover:text-white'
+                : 'hover:bg-white hover:shadow-sm text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <History className="w-5 h-5" />
+            <span className="font-medium">Chat History</span>
+          </button>
+        )}
+        
+        {onDatabaseClick && (
+          <button
+            onClick={onDatabaseClick}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all mb-2 ${
+              isDark
+                ? 'hover:bg-gray-800 text-gray-300 hover:text-white'
+                : 'hover:bg-white hover:shadow-sm text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            <Package className="w-5 h-5" />
+            <span className="font-medium">My Database</span>
+          </button>
+        )}
+        
         <button
           onClick={onDatabaseStatsClick}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all mb-2 ${
@@ -142,8 +174,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           }`}
         >
           <Database className="w-5 h-5" />
-          <span className="font-medium">Database Statistics</span>
+          <span className="font-medium">Statistics</span>
         </button>
+        
         <button
           onClick={onSettingsClick}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${

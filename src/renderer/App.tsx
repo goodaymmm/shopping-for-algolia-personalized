@@ -5,6 +5,9 @@ import { ChatInput } from './components/ChatInput';
 import { Sidebar } from './components/Sidebar';
 import { SettingsPanel } from './components/SettingsPanel';
 import { DatabaseStatsPanel } from './components/DatabaseStatsPanel';
+import { ChatHistory } from './components/ChatHistory';
+import { MyDatabase } from './components/MyDatabase';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Message, AppView, Product } from './types';
 import { useTheme } from './hooks/useTheme';
 import { useSettings } from './hooks/useSettings';
@@ -56,13 +59,23 @@ function App() {
     setIsLoading(true);
 
     try {
-      // Search for products using Electron API
-      let imageData: string | undefined;
-      if (imageFile) {
-        imageData = await fileToBase64(imageFile);
-      }
+      let products = [];
+      
+      // Check if Electron API is available
+      if (window.electronAPI && window.electronAPI.searchProducts) {
+        // Search for products using Electron API
+        let imageData: string | undefined;
+        if (imageFile) {
+          imageData = await fileToBase64(imageFile);
+        }
 
-      const products = await window.electronAPI.searchProducts(content, imageData);
+        products = await window.electronAPI.searchProducts(content, imageData);
+      } else {
+        // Fallback for development environment
+        console.warn('Electron API not available, using mock data');
+        products = getMockProducts(content);
+      }
+      
       setSearchResults(products);
 
       // Create assistant response
@@ -77,8 +90,8 @@ function App() {
 
       addMessageToSession(sessionId, assistantMessage);
 
-      // Save chat to database
-      if (window.electronAPI) {
+      // Save chat to database (only if Electron API is available)
+      if (window.electronAPI && window.electronAPI.saveChat) {
         await window.electronAPI.saveChat(
           { 
             name: content.substring(0, 50) + '...', 
@@ -101,6 +114,39 @@ function App() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Mock products for development environment
+  const getMockProducts = (query: string) => {
+    return [
+      {
+        id: '1',
+        name: `${query} - Premium Product`,
+        description: `High-quality ${query} with excellent reviews`,
+        price: 99.99,
+        image: 'https://via.placeholder.com/300x300?text=Product+1',
+        categories: ['electronics', 'featured'],
+        url: '#'
+      },
+      {
+        id: '2',
+        name: `${query} - Best Seller`,
+        description: `Popular ${query} with great customer satisfaction`,
+        price: 79.99,
+        image: 'https://via.placeholder.com/300x300?text=Product+2',
+        categories: ['electronics', 'bestseller'],
+        url: '#'
+      },
+      {
+        id: '3',
+        name: `${query} - Budget Option`,
+        description: `Affordable ${query} with good value`,
+        price: 49.99,
+        image: 'https://via.placeholder.com/300x300?text=Product+3',
+        categories: ['electronics', 'budget'],
+        url: '#'
+      }
+    ];
   };
 
   const fileToBase64 = (file: File): Promise<string> => {
@@ -149,6 +195,14 @@ function App() {
     setCurrentView('database-stats');
   };
 
+  const handleHistoryClick = () => {
+    setCurrentView('history');
+  };
+
+  const handleDatabaseClick = () => {
+    setCurrentView('database');
+  };
+
   const handleSettingsBack = () => {
     setCurrentView('chat');
   };
@@ -165,57 +219,74 @@ function App() {
   };
 
   return (
-    <div className={`flex h-screen overflow-hidden ${
-      isDark ? 'dark bg-gray-900' : 'bg-white'
-    }`}>
-      <Sidebar
-        sessions={sessions}
-        currentSessionId={currentSessionId}
-        onSessionSelect={handleSessionSelect}
-        onNewSession={handleNewSession}
-        onDeleteSession={deleteSession}
-        onSettingsClick={handleSettingsClick}
-        onDatabaseStatsClick={handleDatabaseStatsClick}
-        isDark={isDark}
-      />
-      
-      <div className="flex flex-col flex-1">
-        {currentView === 'chat' ? (
-          <>
-            <ChatHeader isDark={isDark} />
-            <ChatContainer 
-              messages={currentSession?.messages || []}
-              searchResults={searchResults}
-              showTimestamps={settings.showTimestamps}
-              fontSize={settings.fontSize}
-              isLoading={isLoading}
+    <ErrorBoundary isDark={isDark}>
+      <div className={`flex h-screen overflow-hidden ${
+        isDark ? 'dark bg-gray-900' : 'bg-white'
+      }`}>
+        <Sidebar
+          sessions={sessions}
+          currentSessionId={currentSessionId}
+          onSessionSelect={handleSessionSelect}
+          onNewSession={handleNewSession}
+          onDeleteSession={deleteSession}
+          onSettingsClick={handleSettingsClick}
+          onDatabaseStatsClick={handleDatabaseStatsClick}
+          onHistoryClick={handleHistoryClick}
+          onDatabaseClick={handleDatabaseClick}
+          isDark={isDark}
+        />
+        
+        <div className="flex flex-col flex-1">
+          {currentView === 'chat' ? (
+            <>
+              <ChatHeader isDark={isDark} />
+              <ChatContainer 
+                messages={currentSession?.messages || []}
+                searchResults={searchResults}
+                showTimestamps={settings.showTimestamps}
+                fontSize={settings.fontSize}
+                isLoading={isLoading}
+                isDark={isDark}
+              />
+              <ChatInput 
+                onSendMessage={handleSendMessage}
+                sendOnEnter={settings.sendOnEnter}
+                discoveryMode={settings.discoveryMode}
+                onDiscoveryModeToggle={handleDiscoveryModeToggle}
+                isLoading={isLoading}
+                isDark={isDark}
+              />
+            </>
+          ) : currentView === 'history' ? (
+            <ChatHistory
+              sessions={sessions}
+              onSessionSelect={handleSessionSelect}
+              onSessionDelete={deleteSession}
+              onBack={handleSettingsBack}
               isDark={isDark}
             />
-            <ChatInput 
-              onSendMessage={handleSendMessage}
-              sendOnEnter={settings.sendOnEnter}
-              discoveryMode={settings.discoveryMode}
-              onDiscoveryModeToggle={handleDiscoveryModeToggle}
-              isLoading={isLoading}
+          ) : currentView === 'database' ? (
+            <MyDatabase
+              onBack={handleSettingsBack}
               isDark={isDark}
             />
-          </>
-        ) : currentView === 'database-stats' ? (
-          <DatabaseStatsPanel
-            onBack={handleSettingsBack}
-            isDark={isDark}
-          />
-        ) : (
-          <SettingsPanel
-            settings={settings}
-            onSettingsChange={handleSettingsChange}
-            onThemeChange={changeTheme}
-            onBack={handleSettingsBack}
-            isDark={isDark}
-          />
-        )}
+          ) : currentView === 'database-stats' ? (
+            <DatabaseStatsPanel
+              onBack={handleSettingsBack}
+              isDark={isDark}
+            />
+          ) : (
+            <SettingsPanel
+              settings={settings}
+              onSettingsChange={handleSettingsChange}
+              onThemeChange={changeTheme}
+              onBack={handleSettingsBack}
+              isDark={isDark}
+            />
+          )}
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }
 

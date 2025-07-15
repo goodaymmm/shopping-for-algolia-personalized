@@ -62,7 +62,7 @@ export interface AppSettings {
   discoveryMode: boolean
 }
 
-export type AppView = 'chat' | 'settings' | 'database-stats'
+export type AppView = 'chat' | 'settings' | 'database-stats' | 'history' | 'database'
 
 // Discovery settings
 export type DiscoveryPercentage = 0 | 5 | 10
