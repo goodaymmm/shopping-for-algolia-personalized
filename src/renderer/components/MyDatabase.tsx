@@ -73,6 +73,40 @@ export const MyDatabase: React.FC<MyDatabaseProps> = ({ onBack, isDark }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showInspiration, setShowInspiration] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Load saved products from database
+  useEffect(() => {
+    const loadSavedProducts = async () => {
+      if (window.electronAPI?.getProducts) {
+        setIsLoading(true);
+        try {
+          const savedProducts = await window.electronAPI.getProducts();
+          // Convert database products to component format
+          const formattedProducts = savedProducts.map((product: any) => ({
+            id: product.id,
+            name: product.name,
+            description: product.description || '',
+            price: product.price,
+            image: product.image_url || 'https://via.placeholder.com/300x300?text=No+Image',
+            categories: product.category ? product.category.split(', ') : [],
+            url: product.url || '#',
+            savedAt: new Date(product.created_at),
+            isInspiration: product.tags?.includes('inspiration') || false,
+            inspirationReason: 'different_style' as const,
+          }));
+          setProducts(formattedProducts);
+        } catch (error) {
+          console.error('Failed to load saved products:', error);
+          // Keep mock data on error
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadSavedProducts();
+  }, []);
 
   // Filter products based on search and category
   const filteredProducts = products.filter(product => {
@@ -101,8 +135,15 @@ export const MyDatabase: React.FC<MyDatabaseProps> = ({ onBack, isDark }) => {
     categories: new Set(products.flatMap(p => p.categories || [])).size,
   };
 
-  const handleRemoveProduct = (productId: string) => {
-    setProducts(prev => prev.filter(p => p.id !== productId));
+  const handleRemoveProduct = async (productId: string) => {
+    try {
+      if (window.electronAPI?.removeProduct) {
+        await window.electronAPI.removeProduct(productId);
+      }
+      setProducts(prev => prev.filter(p => p.id !== productId));
+    } catch (error) {
+      console.error('Failed to remove product:', error);
+    }
   };
 
   const handleExportData = () => {
@@ -267,7 +308,12 @@ export const MyDatabase: React.FC<MyDatabaseProps> = ({ onBack, isDark }) => {
 
       {/* Product Grid/List */}
       <div className="flex-1 overflow-y-auto p-4">
-        {filteredProducts.length === 0 ? (
+        {isLoading ? (
+          <div className={`text-center py-12 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+            <p className="text-lg mb-2">Loading products...</p>
+          </div>
+        ) : filteredProducts.length === 0 ? (
           <div className={`text-center py-12 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
             <Package size={48} className="mx-auto mb-4 opacity-50" />
             <p className="text-lg mb-2">No products found</p>

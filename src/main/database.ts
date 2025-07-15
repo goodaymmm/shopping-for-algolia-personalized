@@ -142,6 +142,13 @@ export class DatabaseService {
     return stmt.all()
   }
 
+  async removeProduct(productId: string) {
+    const stmt = this.db.prepare(`
+      DELETE FROM saved_products WHERE id = ?
+    `)
+    return stmt.run(productId)
+  }
+
   // Chat operations
   async saveChat(sessionData: { name: string; category?: string }, message: Message) {
     // First, create or get session

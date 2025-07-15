@@ -1,11 +1,15 @@
 import React, { useState, useRef } from 'react';
 import { Send, Paperclip, X, Image, Compass } from 'lucide-react';
+import { DiscoverySettings } from './DiscoverySettings';
+import { DiscoveryPercentage } from '../types';
 
 interface ChatInputProps {
   onSendMessage: (content: string, image?: string) => void;
   sendOnEnter: boolean;
   discoveryMode: boolean;
   onDiscoveryModeToggle: () => void;
+  discoveryPercentage: DiscoveryPercentage;
+  onDiscoveryPercentageChange: (percentage: DiscoveryPercentage) => void;
   isDark: boolean;
 }
 
@@ -14,6 +18,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   sendOnEnter,
   discoveryMode,
   onDiscoveryModeToggle,
+  discoveryPercentage,
+  onDiscoveryPercentageChange,
   isDark 
 }) => {
   const [message, setMessage] = useState('');
@@ -173,7 +179,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </form>
         
         {/* Discovery Mode */}
-        <div className="mt-4 flex items-center justify-center">
+        <div className="mt-4 flex items-center justify-center gap-3">
           <button
             onClick={onDiscoveryModeToggle}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
@@ -187,6 +193,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               Discovery Mode {discoveryMode ? 'ON' : 'OFF'}
             </span>
           </button>
+          
+          {discoveryMode && (
+            <DiscoverySettings
+              value={discoveryPercentage}
+              onChange={onDiscoveryPercentageChange}
+              className="ml-2"
+            />
+          )}
         </div>
         
         <div className="mt-3 text-xs text-center text-gray-500 dark:text-gray-400">

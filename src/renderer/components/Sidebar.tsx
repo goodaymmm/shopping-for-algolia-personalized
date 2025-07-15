@@ -9,7 +9,6 @@ interface SidebarProps {
   onNewSession: () => void;
   onDeleteSession: (sessionId: string) => void;
   onSettingsClick: () => void;
-  onDatabaseStatsClick: () => void;
   onHistoryClick?: () => void;
   onDatabaseClick?: () => void;
   isDark: boolean;
@@ -22,7 +21,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onNewSession,
   onDeleteSession,
   onSettingsClick,
-  onDatabaseStatsClick,
   onHistoryClick,
   onDatabaseClick,
   isDark
@@ -141,17 +139,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         )}
         
-        <button
-          onClick={onDatabaseStatsClick}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all mb-2 ${
-            isDark
-              ? 'hover:bg-gray-800 text-gray-300 hover:text-white'
-              : 'hover:bg-white hover:shadow-sm text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          <Database className="w-5 h-5" />
-          <span className="font-medium">Statistics</span>
-        </button>
         
         <button
           onClick={onSettingsClick}

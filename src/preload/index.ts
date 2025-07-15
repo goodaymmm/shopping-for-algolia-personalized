@@ -11,6 +11,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveProduct: (product: any) => 
     ipcRenderer.invoke('save-product', product),
   
+  getProducts: () => 
+    ipcRenderer.invoke('get-products'),
+  
+  removeProduct: (productId: string) => 
+    ipcRenderer.invoke('remove-product', productId),
+  
   getChatHistory: () => 
     ipcRenderer.invoke('get-chat-history'),
   

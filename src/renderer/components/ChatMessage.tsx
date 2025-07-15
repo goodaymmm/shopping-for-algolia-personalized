@@ -50,7 +50,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               </div>
             </div>
           )}
-          <div className="leading-relaxed whitespace-pre-wrap">
+          <div className={`leading-relaxed whitespace-pre-wrap ${fontSizeClasses[fontSize]}`}>
             {message.content}
           </div>
         </div>

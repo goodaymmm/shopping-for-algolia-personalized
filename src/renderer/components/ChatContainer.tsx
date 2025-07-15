@@ -1,19 +1,24 @@
 import React, { useEffect, useRef } from 'react';
 import { ChatMessage } from './ChatMessage';
-import { Message } from '../types';
-import { MessageSquare, Sparkles } from 'lucide-react';
+import { ProductCard } from './ProductCard';
+import { Message, Product } from '../types';
+import { MessageSquare, Sparkles, ShoppingBag } from 'lucide-react';
 
 interface ChatContainerProps {
   messages: Message[];
+  searchResults?: Product[];
   showTimestamps: boolean;
   fontSize: 'small' | 'medium' | 'large';
+  isLoading?: boolean;
   isDark: boolean;
 }
 
 export const ChatContainer: React.FC<ChatContainerProps> = ({ 
   messages, 
+  searchResults = [],
   showTimestamps, 
   fontSize,
+  isLoading = false,
   isDark 
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -86,6 +91,46 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
                 isDark={isDark}
               />
             ))}
+            
+            {/* Search Results Section */}
+            {searchResults.length > 0 && (
+              <div className="mt-6 px-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <ShoppingBag className="w-5 h-5 text-orange-500" />
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Product Results
+                  </h3>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {searchResults.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      onSave={async (product) => {
+                        try {
+                          if (window.electronAPI?.saveProduct) {
+                            await window.electronAPI.saveProduct(product);
+                          }
+                        } catch (error) {
+                          console.error('Failed to save product:', error);
+                        }
+                      }}
+                      showSaveButton={true}
+                      showRemoveButton={false}
+                      isDark={isDark}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Loading Indicator */}
+            {isLoading && (
+              <div className="flex justify-center items-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                <span className="ml-2 text-gray-600 dark:text-gray-400">Searching for products...</span>
+              </div>
+            )}
           </div>
         )}
         <div ref={messagesEndRef} />

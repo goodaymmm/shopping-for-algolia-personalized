@@ -102,6 +102,27 @@ class MainApplication {
       }
     })
 
+    // Get products from database
+    ipcMain.handle('get-products', async () => {
+      try {
+        return await this.database.getProducts()
+      } catch (error) {
+        console.error('Get products error:', error)
+        return []
+      }
+    })
+
+    // Remove product from database
+    ipcMain.handle('remove-product', async (event, productId: string) => {
+      try {
+        await this.database.removeProduct(productId)
+        return { success: true }
+      } catch (error) {
+        console.error('Remove product error:', error)
+        return { success: false, error: (error as Error).message }
+      }
+    })
+
     // Get chat history
     ipcMain.handle('get-chat-history', async () => {
       try {

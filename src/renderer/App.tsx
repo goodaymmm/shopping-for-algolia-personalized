@@ -4,11 +4,10 @@ import { ChatContainer } from './components/ChatContainer';
 import { ChatInput } from './components/ChatInput';
 import { Sidebar } from './components/Sidebar';
 import { SettingsPanel } from './components/SettingsPanel';
-import { DatabaseStatsPanel } from './components/DatabaseStatsPanel';
 import { ChatHistory } from './components/ChatHistory';
 import { MyDatabase } from './components/MyDatabase';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { Message, AppView, Product } from './types';
+import { Message, AppView, Product, DiscoveryPercentage } from './types';
 import { useTheme } from './hooks/useTheme';
 import { useSettings } from './hooks/useSettings';
 import { useChatSessions } from './hooks/useChatSessions';
@@ -29,6 +28,23 @@ function App() {
   const [currentView, setCurrentView] = useState<AppView>('chat');
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [discoveryPercentage, setDiscoveryPercentage] = useState<DiscoveryPercentage>(0);
+
+  // Load discovery percentage from Electron API
+  useEffect(() => {
+    const loadDiscoveryPercentage = async () => {
+      if (window.electronAPI?.getDiscoverySetting) {
+        try {
+          const percentage = await window.electronAPI.getDiscoverySetting();
+          setDiscoveryPercentage(percentage);
+        } catch (error) {
+          console.error('Failed to load discovery percentage:', error);
+        }
+      }
+    };
+
+    loadDiscoveryPercentage();
+  }, []);
 
   // Create initial session if none exists
   useEffect(() => {
@@ -37,7 +53,7 @@ function App() {
     }
   }, []);
 
-  const handleSendMessage = async (content: string, imageFile?: File) => {
+  const handleSendMessage = async (content: string, imageDataUrl?: string) => {
     let sessionId = currentSessionId;
     
     // Create new session if none exists
@@ -46,13 +62,13 @@ function App() {
       sessionId = newSession.id;
     }
 
-    // Create user message
+    // Create user message with image data URL
     const userMessage: Message = {
       id: Date.now().toString(),
       content,
       sender: 'user',
       timestamp: new Date(),
-      image: imageFile ? URL.createObjectURL(imageFile) : undefined,
+      image: imageDataUrl,
     };
 
     addMessageToSession(sessionId, userMessage);
@@ -65,15 +81,20 @@ function App() {
       if (window.electronAPI && window.electronAPI.searchProducts) {
         // Search for products using Electron API
         let imageData: string | undefined;
-        if (imageFile) {
-          imageData = await fileToBase64(imageFile);
+        if (imageDataUrl) {
+          // Extract base64 from data URL
+          imageData = imageDataUrl.split(',')[1];
         }
 
         products = await window.electronAPI.searchProducts(content, imageData);
       } else {
         // Fallback for development environment
         console.warn('Electron API not available, using mock data');
-        products = getMockProducts(content);
+        if (imageDataUrl) {
+          products = getMockImageAnalysisProducts(content, imageDataUrl);
+        } else {
+          products = getMockProducts(content);
+        }
       }
       
       setSearchResults(products);
@@ -81,8 +102,8 @@ function App() {
       // Create assistant response
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: imageFile 
-          ? `I can see the image you've shared. Found ${products.length} similar products for you!`
+        content: imageDataUrl 
+          ? `I can see the image you've shared. Based on the visual analysis, I found ${products.length} similar products for you!`
           : `Found ${products.length} products matching "${content}"`,
         sender: 'assistant',
         timestamp: new Date(),
@@ -149,6 +170,93 @@ function App() {
     ];
   };
 
+  // Mock image analysis products (simulating Gemini API response)
+  const getMockImageAnalysisProducts = (query: string, imageDataUrl: string) => {
+    // Mock image analysis - simulate different product types based on query
+    const mockAnalysisResults = [
+      {
+        category: 'fashion',
+        products: [
+          {
+            id: 'img-1',
+            name: 'Stylish Leather Jacket',
+            description: 'Premium leather jacket with modern design',
+            price: 199.99,
+            image: 'https://via.placeholder.com/300x300?text=Leather+Jacket',
+            categories: ['fashion', 'outerwear'],
+            url: '#'
+          },
+          {
+            id: 'img-2',
+            name: 'Designer Sunglasses',
+            description: 'Trendy sunglasses with UV protection',
+            price: 89.99,
+            image: 'https://via.placeholder.com/300x300?text=Sunglasses',
+            categories: ['fashion', 'accessories'],
+            url: '#'
+          }
+        ]
+      },
+      {
+        category: 'electronics',
+        products: [
+          {
+            id: 'img-3',
+            name: 'Wireless Headphones',
+            description: 'High-quality wireless headphones with noise cancellation',
+            price: 149.99,
+            image: 'https://via.placeholder.com/300x300?text=Headphones',
+            categories: ['electronics', 'audio'],
+            url: '#'
+          },
+          {
+            id: 'img-4',
+            name: 'Smart Watch',
+            description: 'Feature-rich smartwatch with fitness tracking',
+            price: 299.99,
+            image: 'https://via.placeholder.com/300x300?text=Smart+Watch',
+            categories: ['electronics', 'wearables'],
+            url: '#'
+          }
+        ]
+      },
+      {
+        category: 'home',
+        products: [
+          {
+            id: 'img-5',
+            name: 'Modern Table Lamp',
+            description: 'Elegant table lamp with adjustable brightness',
+            price: 79.99,
+            image: 'https://via.placeholder.com/300x300?text=Table+Lamp',
+            categories: ['home', 'lighting'],
+            url: '#'
+          },
+          {
+            id: 'img-6',
+            name: 'Decorative Vase',
+            description: 'Beautiful ceramic vase for home decoration',
+            price: 45.99,
+            image: 'https://via.placeholder.com/300x300?text=Vase',
+            categories: ['home', 'decor'],
+            url: '#'
+          }
+        ]
+      }
+    ];
+
+    // Simple logic to determine category based on query or default to electronics
+    let selectedCategory = 'electronics';
+    if (query.toLowerCase().includes('fashion') || query.toLowerCase().includes('clothes') || query.toLowerCase().includes('jacket')) {
+      selectedCategory = 'fashion';
+    } else if (query.toLowerCase().includes('home') || query.toLowerCase().includes('decor') || query.toLowerCase().includes('lamp')) {
+      selectedCategory = 'home';
+    }
+
+    const categoryData = mockAnalysisResults.find(cat => cat.category === selectedCategory);
+    return categoryData ? categoryData.products : mockAnalysisResults[0].products;
+  };
+
   const fileToBase64 = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -191,9 +299,6 @@ function App() {
     setCurrentView('settings');
   };
 
-  const handleDatabaseStatsClick = () => {
-    setCurrentView('database-stats');
-  };
 
   const handleHistoryClick = () => {
     setCurrentView('history');
@@ -218,6 +323,17 @@ function App() {
     updateSettings({ discoveryMode: !settings.discoveryMode });
   };
 
+  const handleDiscoveryPercentageChange = async (percentage: DiscoveryPercentage) => {
+    setDiscoveryPercentage(percentage);
+    if (window.electronAPI?.saveDiscoverySetting) {
+      try {
+        await window.electronAPI.saveDiscoverySetting(percentage);
+      } catch (error) {
+        console.error('Failed to save discovery percentage:', error);
+      }
+    }
+  };
+
   return (
     <ErrorBoundary isDark={isDark}>
       <div className="flex h-screen overflow-hidden bg-white dark:bg-gray-900">
@@ -228,7 +344,6 @@ function App() {
           onNewSession={handleNewSession}
           onDeleteSession={deleteSession}
           onSettingsClick={handleSettingsClick}
-          onDatabaseStatsClick={handleDatabaseStatsClick}
           onHistoryClick={handleHistoryClick}
           onDatabaseClick={handleDatabaseClick}
           isDark={isDark}
@@ -251,7 +366,8 @@ function App() {
                 sendOnEnter={settings.sendOnEnter}
                 discoveryMode={settings.discoveryMode}
                 onDiscoveryModeToggle={handleDiscoveryModeToggle}
-                isLoading={isLoading}
+                discoveryPercentage={discoveryPercentage}
+                onDiscoveryPercentageChange={handleDiscoveryPercentageChange}
                 isDark={isDark}
               />
             </>
@@ -265,11 +381,6 @@ function App() {
             />
           ) : currentView === 'database' ? (
             <MyDatabase
-              onBack={handleSettingsBack}
-              isDark={isDark}
-            />
-          ) : currentView === 'database-stats' ? (
-            <DatabaseStatsPanel
               onBack={handleSettingsBack}
               isDark={isDark}
             />
