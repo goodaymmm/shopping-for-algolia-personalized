@@ -40,7 +40,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-center py-16">
             <div className="max-w-md">
-              <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm ${
+              <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg ${
                 isDark 
                   ? 'bg-gradient-to-br from-orange-800 to-orange-900' 
                   : 'bg-gradient-to-br from-orange-100 to-orange-200'
@@ -60,8 +60,8 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
                 I'm Shopping AI, powered by Algolia Search. I can help you find products, compare prices, discover deals, and make informed shopping decisions.
               </p>
               <div className="grid grid-cols-1 gap-3 text-sm">
-                <div className={`rounded-lg p-3 text-left ${
-                  isDark ? 'bg-gray-800' : 'bg-gray-50'
+                <div className={`rounded-xl p-4 text-left shadow-sm hover:shadow-md transition-all ${
+                  isDark ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-100'
                 }`}>
                   <div className={`font-medium mb-1 ${
                     isDark ? 'text-white' : 'text-gray-900'
@@ -72,8 +72,8 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
                     Ask me anything or start a conversation
                   </div>
                 </div>
-                <div className={`rounded-lg p-3 text-left ${
-                  isDark ? 'bg-gray-800' : 'bg-gray-50'
+                <div className={`rounded-xl p-4 text-left shadow-sm hover:shadow-md transition-all ${
+                  isDark ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-100'
                 }`}>
                   <div className={`font-medium mb-1 ${
                     isDark ? 'text-white' : 'text-gray-900'
@@ -84,8 +84,8 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
                     Upload images for analysis and discussion
                   </div>
                 </div>
-                <div className={`rounded-lg p-3 text-left ${
-                  isDark ? 'bg-gray-800' : 'bg-gray-50'
+                <div className={`rounded-xl p-4 text-left shadow-sm hover:shadow-md transition-all ${
+                  isDark ? 'bg-gray-800 border border-gray-700' : 'bg-gray-50 border border-gray-100'
                 }`}>
                   <div className={`font-medium mb-1 ${
                     isDark ? 'text-white' : 'text-gray-900'

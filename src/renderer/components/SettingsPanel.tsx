@@ -72,11 +72,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   <button
                     key={value}
                     onClick={() => onThemeChange(value as Theme)}
-                    className={`flex items-center gap-2 p-3 rounded-lg border transition-all ${
+                    className={`flex items-center gap-2 p-3 rounded-xl border transition-all shadow-sm hover:shadow-md ${
                       settings.theme === value
                         ? isDark
-                          ? 'bg-gray-800 border-gray-600 text-white'
-                          : 'bg-blue-50 border-blue-200 text-blue-900'
+                          ? 'bg-gray-800 border-gray-600 text-white shadow-md'
+                          : 'bg-blue-50 border-blue-200 text-blue-900 shadow-md'
                         : isDark
                           ? 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-600'
                           : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'
@@ -98,7 +98,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               <select
                 value={settings.fontSize}
                 onChange={(e) => onSettingsChange({ fontSize: e.target.value as any })}
-                className={`w-full p-3 rounded-lg border transition-colors ${
+                className={`w-full p-3 rounded-xl border transition-all shadow-sm focus:shadow-md ${
                   isDark
                     ? 'bg-gray-800 border-gray-700 text-white'
                     : 'bg-white border-gray-200 text-gray-900'
@@ -122,7 +122,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </h2>
           
           <div className="space-y-4">
-            <div className={`flex items-center justify-between p-4 rounded-lg border ${
+            <div className={`flex items-center justify-between p-4 rounded-xl border shadow-sm ${
               isDark
                 ? 'bg-gray-800 border-gray-700'
                 : 'bg-gray-50 border-gray-200'
@@ -150,7 +150,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               </label>
             </div>
 
-            <div className={`flex items-center justify-between p-4 rounded-lg border ${
+            <div className={`flex items-center justify-between p-4 rounded-xl border shadow-sm ${
               isDark
                 ? 'bg-gray-800 border-gray-700'
                 : 'bg-gray-50 border-gray-200'
@@ -190,7 +190,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           </h2>
           
           <div className="space-y-4">
-            <div className={`flex items-center justify-between p-4 rounded-lg border ${
+            <div className={`flex items-center justify-between p-4 rounded-xl border shadow-sm ${
               isDark
                 ? 'bg-gray-800 border-gray-700'
                 : 'bg-gray-50 border-gray-200'
@@ -227,7 +227,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           }`}>
             About
           </h2>
-          <div className={`p-4 rounded-lg border ${
+          <div className={`p-4 rounded-xl border shadow-sm ${
             isDark
               ? 'bg-gray-800 border-gray-700'
               : 'bg-gray-50 border-gray-200'

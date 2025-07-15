@@ -106,12 +106,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <img 
               src={selectedImage} 
               alt="Selected" 
-              className="h-24 w-24 object-cover rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm"
+              className="h-24 w-24 object-cover rounded-xl border border-gray-200 dark:border-gray-600 shadow-md hover:shadow-lg transition-all"
             />
             <button
               type="button"
               onClick={() => setSelectedImage(null)}
-              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-sm"
+              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-all shadow-md hover:shadow-lg"
             >
               <X className="w-3 h-3" />
             </button>
@@ -120,7 +120,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         
         <form onSubmit={handleSubmit}>
           <div 
-            className={`relative flex items-end gap-3 p-4 border-2 rounded-2xl transition-all shadow-sm ${
+            className={`relative flex items-end gap-3 p-4 border-2 rounded-2xl transition-all shadow-md hover:shadow-lg ${
               isDragging 
                 ? 'border-blue-300 bg-blue-50 dark:bg-blue-900/20' 
                 : isDark
@@ -161,7 +161,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             <button
               type="submit"
               disabled={!message.trim() && !selectedImage}
-              className="flex-shrink-0 p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-sm"
+              className="flex-shrink-0 p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg"
               title={sendOnEnter ? "Send message (Enter)" : "Send message (⌘+Enter)"}
             >
               <Send className="w-5 h-5" />
@@ -190,12 +190,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         <div className="mt-4 flex items-center justify-center">
           <button
             onClick={onDiscoveryModeToggle}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all ${
               discoveryMode
-                ? 'bg-orange-500 text-white shadow-sm'
+                ? 'bg-orange-500 text-white shadow-md hover:shadow-lg'
                 : isDark
-                  ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
+                  ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-600 shadow-sm hover:shadow-md'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200 shadow-sm hover:shadow-md'
             }`}
           >
             <Compass className="w-4 h-4" />

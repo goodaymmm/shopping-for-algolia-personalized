@@ -26,13 +26,13 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   return (
     <div className={`flex gap-4 mb-6 ${isUser ? 'justify-end' : 'justify-start'}`}>
       {!isUser && (
-        <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-lg flex items-center justify-center shadow-sm">
+        <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center shadow-md">
           <Bot className="w-5 h-5 text-white" />
         </div>
       )}
       
       <div className={`max-w-2xl ${isUser ? 'order-1' : 'order-2'}`}>
-        <div className={`rounded-2xl px-5 py-4 shadow-sm ${fontSizeClasses[fontSize]} ${
+        <div className={`rounded-2xl px-5 py-4 shadow-md transition-all hover:shadow-lg ${fontSizeClasses[fontSize]} ${
           isUser 
             ? 'bg-blue-500 text-white ml-auto' 
             : isDark
@@ -40,11 +40,11 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               : 'bg-gray-50 text-gray-900 border border-gray-100'
         }`}>
           {message.image && (
-            <div className="mb-4">
+            <div className="mb-4 max-w-full overflow-hidden">
               <img 
                 src={message.image} 
                 alt="Uploaded content" 
-                className="rounded-xl max-w-full h-auto max-h-80 object-cover shadow-sm"
+                className="rounded-xl w-full h-auto max-h-80 object-cover shadow-md transition-all hover:shadow-lg cursor-pointer"
               />
             </div>
           )}
@@ -62,7 +62,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
       </div>
       
       {isUser && (
-        <div className="flex-shrink-0 w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center order-2 shadow-sm">
+        <div className="flex-shrink-0 w-8 h-8 bg-blue-500 rounded-xl flex items-center justify-center order-2 shadow-md">
           <User className="w-5 h-5 text-white" />
         </div>
       )}

@@ -56,8 +56,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={onNewSession}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
             isDark
-              ? 'bg-gray-800 hover:bg-gray-700 text-white border border-gray-600'
-              : 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-200 shadow-sm'
+              ? 'bg-gray-800 hover:bg-gray-700 text-white border border-gray-600 shadow-md hover:shadow-lg'
+              : 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-200 shadow-md hover:shadow-lg'
           }`}
         >
           <Plus className="w-5 h-5" />
@@ -76,10 +76,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             placeholder="Search chats..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className={`w-full pl-10 pr-4 py-2 rounded-lg border transition-colors ${
+            className={`w-full pl-10 pr-4 py-2 rounded-lg border transition-all shadow-sm ${
               isDark
-                ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-gray-500'
-                : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500 focus:border-gray-300'
+                ? 'bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-gray-500 focus:shadow-md'
+                : 'bg-white border-gray-200 text-gray-900 placeholder-gray-500 focus:border-gray-300 focus:shadow-md'
             } focus:outline-none`}
           />
         </div>
@@ -91,14 +91,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {filteredSessions.map((session) => (
             <div
               key={session.id}
-              className={`group relative flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-all ${
+              className={`group relative flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
                 currentSessionId === session.id
                   ? isDark
-                    ? 'bg-gray-800 border border-gray-600'
-                    : 'bg-white border border-gray-200 shadow-sm'
+                    ? 'bg-gray-800 border border-gray-600 shadow-md'
+                    : 'bg-white border border-gray-200 shadow-md'
                   : isDark
-                    ? 'hover:bg-gray-800'
-                    : 'hover:bg-white hover:shadow-sm'
+                    ? 'hover:bg-gray-800 hover:shadow-sm'
+                    : 'hover:bg-white hover:shadow-md'
               }`}
               onClick={() => onSessionSelect(session.id)}
             >
@@ -142,8 +142,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={onHistoryClick}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all mb-2 ${
               isDark
-                ? 'hover:bg-gray-800 text-gray-300 hover:text-white'
-                : 'hover:bg-white hover:shadow-sm text-gray-600 hover:text-gray-900'
+                ? 'hover:bg-gray-800 text-gray-300 hover:text-white hover:shadow-sm'
+                : 'hover:bg-white hover:shadow-md text-gray-600 hover:text-gray-900'
             }`}
           >
             <History className="w-5 h-5" />
@@ -156,8 +156,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={onDatabaseClick}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all mb-2 ${
               isDark
-                ? 'hover:bg-gray-800 text-gray-300 hover:text-white'
-                : 'hover:bg-white hover:shadow-sm text-gray-600 hover:text-gray-900'
+                ? 'hover:bg-gray-800 text-gray-300 hover:text-white hover:shadow-sm'
+                : 'hover:bg-white hover:shadow-md text-gray-600 hover:text-gray-900'
             }`}
           >
             <Package className="w-5 h-5" />
@@ -181,8 +181,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={onSettingsClick}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
             isDark
-              ? 'hover:bg-gray-800 text-gray-300 hover:text-white'
-              : 'hover:bg-white hover:shadow-sm text-gray-600 hover:text-gray-900'
+              ? 'hover:bg-gray-800 text-gray-300 hover:text-white hover:shadow-sm'
+              : 'hover:bg-white hover:shadow-md text-gray-600 hover:text-gray-900'
           }`}
         >
           <Settings className="w-5 h-5" />
