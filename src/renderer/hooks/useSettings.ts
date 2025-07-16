@@ -4,7 +4,6 @@ import { safeGetItem, safeSetItem } from '../utils/safeStorage';
 
 const defaultSettings: AppSettings = {
   theme: 'system',
-  fontSize: 'medium',
   sendOnEnter: true,
   showTimestamps: true,
   autoSave: true,

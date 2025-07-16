@@ -8,7 +8,6 @@ interface ChatContainerProps {
   messages: Message[];
   searchResults?: Product[];
   showTimestamps: boolean;
-  fontSize: 'small' | 'medium' | 'large';
   isLoading?: boolean;
   isDark: boolean;
   savedProductIds?: Set<string>;
@@ -20,7 +19,6 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
   messages, 
   searchResults = [],
   showTimestamps, 
-  fontSize,
   isLoading = false,
   isDark,
   savedProductIds = new Set(),
@@ -36,12 +34,6 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  const fontSizeClasses = {
-    small: 'text-sm',
-    medium: 'text-base',
-    large: 'text-lg'
-  };
 
   return (
     <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-gray-50 dark:from-slate-950 dark:to-slate-900">
@@ -93,7 +85,6 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
                 key={message.id} 
                 message={message} 
                 showTimestamp={showTimestamps}
-                fontSize={fontSize}
                 isDark={isDark}
               />
             ))}

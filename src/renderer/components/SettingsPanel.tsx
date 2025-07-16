@@ -171,20 +171,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                Font Size
-              </label>
-              <select
-                value={settings.fontSize}
-                onChange={(e) => onSettingsChange({ fontSize: e.target.value as any })}
-                className="w-full p-3 rounded-xl border transition-all shadow-sm focus:shadow-md bg-white dark:bg-slate-800/50 border-gray-200 dark:border-slate-600 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="small">Small</option>
-                <option value="medium">Medium</option>
-                <option value="large">Large</option>
-              </select>
-            </div>
           </div>
         </section>
 

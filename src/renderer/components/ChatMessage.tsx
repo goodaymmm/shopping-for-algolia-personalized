@@ -5,23 +5,15 @@ import { Message } from '../types';
 interface ChatMessageProps {
   message: Message;
   showTimestamp: boolean;
-  fontSize: 'small' | 'medium' | 'large';
   isDark: boolean;
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({ 
   message, 
   showTimestamp, 
-  fontSize,
   isDark 
 }) => {
   const isUser = message.sender === 'user';
-  
-  const fontSizeClasses = {
-    small: 'text-sm',
-    medium: 'text-base',
-    large: 'text-lg'
-  };
 
   return (
     <div className={`flex gap-4 mb-6 ${isUser ? 'justify-end' : 'justify-start'}`}>
@@ -32,7 +24,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
       )}
       
       <div className={`max-w-2xl ${isUser ? 'order-1' : 'order-2'}`}>
-        <div className={`rounded-2xl px-5 py-4 shadow-md transition-all hover:shadow-lg ${fontSizeClasses[fontSize]} ${
+        <div className={`rounded-2xl px-5 py-4 shadow-md transition-all hover:shadow-lg ${
           isUser 
             ? 'bg-blue-500 text-white ml-auto' 
             : isDark
@@ -50,7 +42,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               </div>
             </div>
           )}
-          <div className={`leading-relaxed whitespace-pre-wrap ${fontSizeClasses[fontSize]}`}>
+          <div className="leading-relaxed whitespace-pre-wrap">
             {message.content}
           </div>
         </div>

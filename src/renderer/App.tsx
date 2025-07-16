@@ -401,7 +401,6 @@ function App() {
                 messages={currentSession?.messages || []}
                 searchResults={searchResults}
                 showTimestamps={settings.showTimestamps}
-                fontSize={settings.fontSize}
                 isLoading={isLoading}
                 isDark={isDark}
                 savedProductIds={savedProductIds}

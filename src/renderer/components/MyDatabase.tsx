@@ -90,7 +90,7 @@ export const MyDatabase: React.FC<MyDatabaseProps> = ({ onBack, isDark }) => {
             price: product.price,
             image: product.image_url || 'https://via.placeholder.com/300x300?text=No+Image',
             categories: product.category ? product.category.split(', ') : [],
-            url: product.url || '#',
+            url: product.url || (product.algolia_data ? JSON.parse(product.algolia_data).url : null) || '#',
             savedAt: new Date(product.created_at),
             isInspiration: product.tags?.includes('inspiration') || false,
             inspirationReason: 'different_style' as const,

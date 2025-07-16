@@ -55,7 +55,6 @@ export interface ChatSession {
 // Settings types
 export interface AppSettings {
   theme: 'light' | 'dark' | 'system'
-  fontSize: 'small' | 'medium' | 'large'
   sendOnEnter: boolean
   showTimestamps: boolean
   autoSave: boolean
