@@ -121,8 +121,8 @@ export class DatabaseService {
   async saveProduct(product: Product) {
     const stmt = this.db.prepare(`
       INSERT INTO saved_products 
-      (product_id, name, description, price, image_url, url, category, tags, algolia_data)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      (product_id, name, description, price, image_url, url, category, subcategory, tags, algolia_data, user_rating, notes, custom_name)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     return stmt.run(
       product.id,
@@ -132,8 +132,12 @@ export class DatabaseService {
       product.image,
       product.url || '',
       product.categories?.join(', ') || '',
-      product.categories?.join(', ') || '',
-      JSON.stringify(product)
+      '', // subcategory
+      product.categories?.join(', ') || '', // tags
+      JSON.stringify(product),
+      null, // user_rating
+      '', // notes
+      product.name // custom_name
     )
   }
 

@@ -82,7 +82,13 @@ export const EditableProductCard: React.FC<EditableProductCardProps> = ({
         : 'bg-white border-gray-200 hover:bg-gray-50 hover:border-gray-300'
     } shadow-sm hover:shadow-md`}>
       {/* Product Image */}
-      <div className="relative aspect-square overflow-hidden rounded-t-lg">
+      <div 
+        className="relative aspect-square overflow-hidden rounded-t-lg cursor-pointer"
+        onClick={(e) => {
+          e.stopPropagation();
+          openProduct();
+        }}
+      >
         {!imageError ? (
           <>
             <img
