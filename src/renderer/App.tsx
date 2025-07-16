@@ -30,6 +30,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [discoveryPercentage, setDiscoveryPercentage] = useState<DiscoveryPercentage>(0);
   const [savedProductIds, setSavedProductIds] = useState<Set<string>>(new Set());
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   // Load discovery percentage from Electron API
   useEffect(() => {
@@ -319,11 +320,24 @@ function App() {
 
   const handleProductSave = async (product: Product) => {
     if (window.electronAPI?.saveProduct) {
-      const result = await window.electronAPI.saveProduct(product);
-      if (result.success) {
-        setSavedProductIds(prev => new Set([...prev, product.id]));
+      try {
+        const result = await window.electronAPI.saveProduct(product);
+        if (result.success) {
+          setSavedProductIds(prev => new Set([...prev, product.id]));
+          setSaveMessage({ type: 'success', text: 'Product saved successfully!' });
+          // Clear message after 3 seconds
+          setTimeout(() => setSaveMessage(null), 3000);
+        } else {
+          setSaveMessage({ type: 'error', text: result.error || 'Failed to save product' });
+          setTimeout(() => setSaveMessage(null), 3000);
+        }
+        return result;
+      } catch (error: any) {
+        const errorMessage = error.message || 'Failed to save product';
+        setSaveMessage({ type: 'error', text: errorMessage });
+        setTimeout(() => setSaveMessage(null), 3000);
+        return { success: false, error: errorMessage };
       }
-      return result;
     }
     return { success: false };
   };
@@ -406,6 +420,7 @@ function App() {
                 savedProductIds={savedProductIds}
                 onProductSave={handleProductSave}
                 onProductRemove={handleProductRemove}
+                saveMessage={saveMessage}
               />
               <ChatInput 
                 onSendMessage={handleSendMessage}

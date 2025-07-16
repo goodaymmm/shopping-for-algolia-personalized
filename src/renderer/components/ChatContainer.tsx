@@ -13,6 +13,7 @@ interface ChatContainerProps {
   savedProductIds?: Set<string>;
   onProductSave?: (product: Product) => Promise<{ success: boolean }>;
   onProductRemove?: (productId: string) => Promise<{ success: boolean }>;
+  saveMessage?: { type: 'success' | 'error'; text: string } | null;
 }
 
 export const ChatContainer: React.FC<ChatContainerProps> = ({ 
@@ -23,7 +24,8 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
   isDark,
   savedProductIds = new Set(),
   onProductSave,
-  onProductRemove
+  onProductRemove,
+  saveMessage
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -88,6 +90,20 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
                 isDark={isDark}
               />
             ))}
+            
+            {/* Save Message Notification */}
+            {saveMessage && (
+              <div className="px-6 my-4">
+                <div className={`p-3 rounded-lg flex items-center gap-2 ${
+                  saveMessage.type === 'success' 
+                    ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800'
+                    : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
+                }`}>
+                  {saveMessage.type === 'success' ? '✓' : '✗'}
+                  <span className="font-medium">{saveMessage.text}</span>
+                </div>
+              </div>
+            )}
             
             {/* Search Results Section */}
             {searchResults.length > 0 && (

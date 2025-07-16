@@ -55,7 +55,7 @@ export class DatabaseService {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS saved_products (
         id INTEGER PRIMARY KEY,
-        product_id TEXT NOT NULL,
+        product_id TEXT NOT NULL UNIQUE,
         name TEXT NOT NULL,
         description TEXT,
         price REAL,
@@ -67,6 +67,7 @@ export class DatabaseService {
         algolia_data TEXT,
         user_rating INTEGER,
         notes TEXT,
+        custom_name TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `)
@@ -119,6 +120,13 @@ export class DatabaseService {
 
   // Product operations
   async saveProduct(product: Product) {
+    // Check if product already exists
+    const existing = this.db.prepare('SELECT id FROM saved_products WHERE product_id = ?').get(product.id)
+    
+    if (existing) {
+      throw new Error('Product already saved')
+    }
+    
     const stmt = this.db.prepare(`
       INSERT INTO saved_products 
       (product_id, name, description, price, image_url, url, category, subcategory, tags, algolia_data, user_rating, notes, custom_name)

@@ -99,7 +99,12 @@ class MainApplication {
         return { success: true, id: result.lastInsertRowid }
       } catch (error) {
         console.error('Save product error:', error)
-        return { success: false, error: (error as Error).message }
+        const errorMessage = (error as Error).message
+        // Provide user-friendly error messages
+        if (errorMessage.includes('Product already saved')) {
+          return { success: false, error: 'This product is already in your database' }
+        }
+        return { success: false, error: errorMessage }
       }
     })
 
