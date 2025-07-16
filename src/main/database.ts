@@ -116,6 +116,24 @@ export class DatabaseService {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `)
+    // Run migrations for existing databases
+    this.migrateDatabase()
+  }
+
+  private migrateDatabase() {
+    try {
+      // Check if custom_name column exists in saved_products table
+      const tableInfo = this.db.prepare("PRAGMA table_info(saved_products)").all()
+      const hasCustomName = tableInfo.some((col: any) => col.name === 'custom_name')
+      
+      if (!hasCustomName) {
+        console.log('Migrating database: Adding custom_name column to saved_products table')
+        this.db.exec('ALTER TABLE saved_products ADD COLUMN custom_name TEXT')
+      }
+    } catch (error) {
+      console.error('Migration error:', error)
+      // If table doesn't exist, it will be created with the correct schema
+    }
   }
 
   // Product operations
@@ -127,26 +145,34 @@ export class DatabaseService {
       throw new Error('Product already saved')
     }
     
-    const stmt = this.db.prepare(`
-      INSERT INTO saved_products 
-      (product_id, name, description, price, image_url, url, category, subcategory, tags, algolia_data, user_rating, notes, custom_name)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `)
-    return stmt.run(
-      product.id,
-      product.name,
-      product.description || '',
-      product.price,
-      product.image,
-      product.url || '',
-      product.categories?.join(', ') || '',
-      '', // subcategory
-      product.categories?.join(', ') || '', // tags
-      JSON.stringify(product),
-      null, // user_rating
-      '', // notes
-      product.name // custom_name
-    )
+    try {
+      const stmt = this.db.prepare(`
+        INSERT INTO saved_products 
+        (product_id, name, description, price, image_url, url, category, subcategory, tags, algolia_data, user_rating, notes, custom_name)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `)
+      const result = stmt.run(
+        product.id,
+        product.name,
+        product.description || '',
+        product.price,
+        product.image,
+        product.url || '',
+        product.categories?.join(', ') || '',
+        '', // subcategory
+        product.categories?.join(', ') || '', // tags
+        JSON.stringify(product),
+        null, // user_rating
+        '', // notes
+        product.name // custom_name
+      )
+      console.log('Product saved successfully:', product.id)
+      return result
+    } catch (error) {
+      console.error('Database error while saving product:', error)
+      console.error('Product data:', product)
+      throw error
+    }
   }
 
   async getProducts() {

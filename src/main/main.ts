@@ -49,6 +49,12 @@ class MainApplication {
     }
   }
 
+  private getDefaultProductImage(): string {
+    // Base64 encoded default product image (gray box with "No Image" text)
+    // This is a small gray square that serves as a placeholder
+    return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2UwZTBlMCIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmaWxsPSIjOTk5Ij5ObyBJbWFnZTwvdGV4dD4KPC9zdmc+'
+  }
+
   private setupIPC() {
     // Search products using Algolia
     ipcMain.handle('search-products', async (event, query: string, imageData?: string) => {
@@ -82,7 +88,7 @@ class MainApplication {
           name: hit.name || 'Unknown Product',
           description: hit.description || '',
           price: hit.price || hit.salePrice || 0,
-          image: hit.image || 'https://via.placeholder.com/300x300?text=No+Image',
+          image: hit.image || this.getDefaultProductImage(),
           categories: hit.categories || [],
           url: hit.url || ''
         }))
