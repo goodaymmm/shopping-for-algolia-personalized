@@ -26,8 +26,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
   const handleSave = (e: React.MouseEvent) => {
     e.stopPropagation();
+    console.log('ProductCard handleSave clicked for product:', product);
     if (onSave) {
+      console.log('Calling onSave callback...');
       onSave(product);
+    } else {
+      console.warn('onSave callback is not provided');
     }
   };
 

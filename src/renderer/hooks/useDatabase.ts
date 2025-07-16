@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Product } from '../types';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
+import { MOCK_PRODUCT_IMAGES } from '../utils/defaultImages';
 
 interface DatabaseState {
   savedProducts: Product[];
@@ -29,7 +30,7 @@ export const useDatabase = () => {
             name: 'Premium Wireless Headphones',
             description: 'High-quality noise-canceling headphones',
             price: 299.99,
-            image: 'https://via.placeholder.com/300x300?text=Headphones',
+            image: MOCK_PRODUCT_IMAGES.headphones,
             categories: ['electronics', 'audio'],
             url: '#'
           },
@@ -38,7 +39,7 @@ export const useDatabase = () => {
             name: 'Smart Fitness Watch',
             description: 'Advanced fitness tracking with heart rate monitor',
             price: 199.99,
-            image: 'https://via.placeholder.com/300x300?text=Watch',
+            image: MOCK_PRODUCT_IMAGES.watch,
             categories: ['electronics', 'fitness'],
             url: '#'
           }

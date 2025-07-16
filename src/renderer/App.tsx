@@ -11,6 +11,7 @@ import { Message, AppView, Product, DiscoveryPercentage } from './types';
 import { useTheme } from './hooks/useTheme';
 import { useSettings } from './hooks/useSettings';
 import { useChatSessions } from './hooks/useChatSessions';
+import { DEFAULT_PRODUCT_IMAGE, MOCK_PRODUCT_IMAGES } from './utils/defaultImages';
 
 function App() {
   const { theme, isDark, changeTheme } = useTheme();
@@ -164,7 +165,7 @@ function App() {
         name: `${query} - Premium Product`,
         description: `High-quality ${query} with excellent reviews`,
         price: 99.99,
-        image: 'https://via.placeholder.com/300x300?text=Product+1',
+        image: MOCK_PRODUCT_IMAGES.generic,
         categories: ['electronics', 'featured'],
         url: '#'
       },
@@ -173,7 +174,7 @@ function App() {
         name: `${query} - Best Seller`,
         description: `Popular ${query} with great customer satisfaction`,
         price: 79.99,
-        image: 'https://via.placeholder.com/300x300?text=Product+2',
+        image: MOCK_PRODUCT_IMAGES.generic,
         categories: ['electronics', 'bestseller'],
         url: '#'
       },
@@ -182,7 +183,7 @@ function App() {
         name: `${query} - Budget Option`,
         description: `Affordable ${query} with good value`,
         price: 49.99,
-        image: 'https://via.placeholder.com/300x300?text=Product+3',
+        image: MOCK_PRODUCT_IMAGES.generic,
         categories: ['electronics', 'budget'],
         url: '#'
       }
@@ -201,7 +202,7 @@ function App() {
             name: 'Stylish Leather Jacket',
             description: 'Premium leather jacket with modern design',
             price: 199.99,
-            image: 'https://via.placeholder.com/300x300?text=Leather+Jacket',
+            image: MOCK_PRODUCT_IMAGES.jacket,
             categories: ['fashion', 'outerwear'],
             url: '#'
           },
@@ -210,7 +211,7 @@ function App() {
             name: 'Designer Sunglasses',
             description: 'Trendy sunglasses with UV protection',
             price: 89.99,
-            image: 'https://via.placeholder.com/300x300?text=Sunglasses',
+            image: MOCK_PRODUCT_IMAGES.sunglasses,
             categories: ['fashion', 'accessories'],
             url: '#'
           }
@@ -224,7 +225,7 @@ function App() {
             name: 'Wireless Headphones',
             description: 'High-quality wireless headphones with noise cancellation',
             price: 149.99,
-            image: 'https://via.placeholder.com/300x300?text=Headphones',
+            image: MOCK_PRODUCT_IMAGES.headphones,
             categories: ['electronics', 'audio'],
             url: '#'
           },
@@ -233,7 +234,7 @@ function App() {
             name: 'Smart Watch',
             description: 'Feature-rich smartwatch with fitness tracking',
             price: 299.99,
-            image: 'https://via.placeholder.com/300x300?text=Smart+Watch',
+            image: MOCK_PRODUCT_IMAGES.watch,
             categories: ['electronics', 'wearables'],
             url: '#'
           }
@@ -247,7 +248,7 @@ function App() {
             name: 'Modern Table Lamp',
             description: 'Elegant table lamp with adjustable brightness',
             price: 79.99,
-            image: 'https://via.placeholder.com/300x300?text=Table+Lamp',
+            image: MOCK_PRODUCT_IMAGES.lamp,
             categories: ['home', 'lighting'],
             url: '#'
           },
@@ -256,7 +257,7 @@ function App() {
             name: 'Decorative Vase',
             description: 'Beautiful ceramic vase for home decoration',
             price: 45.99,
-            image: 'https://via.placeholder.com/300x300?text=Vase',
+            image: MOCK_PRODUCT_IMAGES.vase,
             categories: ['home', 'decor'],
             url: '#'
           }
@@ -319,27 +320,39 @@ function App() {
   };
 
   const handleProductSave = async (product: Product) => {
-    if (window.electronAPI?.saveProduct) {
-      try {
-        const result = await window.electronAPI.saveProduct(product);
-        if (result.success) {
-          setSavedProductIds(prev => new Set([...prev, product.id]));
-          setSaveMessage({ type: 'success', text: 'Product saved successfully!' });
-          // Clear message after 3 seconds
-          setTimeout(() => setSaveMessage(null), 3000);
-        } else {
-          setSaveMessage({ type: 'error', text: result.error || 'Failed to save product' });
-          setTimeout(() => setSaveMessage(null), 3000);
-        }
-        return result;
-      } catch (error: any) {
-        const errorMessage = error.message || 'Failed to save product';
-        setSaveMessage({ type: 'error', text: errorMessage });
-        setTimeout(() => setSaveMessage(null), 3000);
-        return { success: false, error: errorMessage };
-      }
+    console.log('handleProductSave called with product:', product);
+    
+    if (!window.electronAPI?.saveProduct) {
+      console.error('electronAPI.saveProduct is not available');
+      setSaveMessage({ type: 'error', text: 'Save functionality not available' });
+      setTimeout(() => setSaveMessage(null), 3000);
+      return { success: false, error: 'electronAPI not available' };
     }
-    return { success: false };
+
+    try {
+      console.log('Calling electronAPI.saveProduct...');
+      const result = await window.electronAPI.saveProduct(product);
+      console.log('Save result:', result);
+      
+      if (result.success) {
+        setSavedProductIds(prev => new Set([...prev, product.id]));
+        setSaveMessage({ type: 'success', text: 'Product saved successfully!' });
+        console.log('Product saved successfully:', product.id);
+        // Clear message after 3 seconds
+        setTimeout(() => setSaveMessage(null), 3000);
+      } else {
+        console.error('Save failed:', result.error);
+        setSaveMessage({ type: 'error', text: result.error || 'Failed to save product' });
+        setTimeout(() => setSaveMessage(null), 3000);
+      }
+      return result;
+    } catch (error: any) {
+      console.error('Exception during save:', error);
+      const errorMessage = error.message || 'Failed to save product';
+      setSaveMessage({ type: 'error', text: errorMessage });
+      setTimeout(() => setSaveMessage(null), 3000);
+      return { success: false, error: errorMessage };
+    }
   };
 
   const handleProductRemove = async (productId: string) => {

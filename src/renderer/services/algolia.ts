@@ -1,4 +1,5 @@
 import { Product } from '../types';
+import { DEFAULT_PRODUCT_IMAGE } from '../utils/defaultImages';
 
 // Algolia demo configuration (from requirements document)
 interface AlgoliaConfig {
@@ -71,7 +72,7 @@ export class AlgoliaService {
         name: hit.name || 'Unknown Product',
         description: hit.description || '',
         price: hit.price || hit.salePrice || 0,
-        image: hit.image || 'https://via.placeholder.com/300x300?text=No+Image',
+        image: hit.image || DEFAULT_PRODUCT_IMAGE,
         categories: hit.categories || [],
         url: hit.url || ''
       }));
@@ -111,7 +112,7 @@ export class AlgoliaService {
         name: hit.name || 'Unknown Product',
         description: hit.description || '',
         price: hit.price || hit.salePrice || 0,
-        image: hit.image || 'https://via.placeholder.com/300x300?text=No+Image',
+        image: hit.image || DEFAULT_PRODUCT_IMAGE,
         categories: hit.categories || [],
         url: hit.url || ''
       }));

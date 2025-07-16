@@ -3,6 +3,7 @@ import { ArrowLeft, Search, Filter, Grid, List, Trash2, Download, Package, Tag }
 import { Product } from '../types';
 import { EditableProductCard } from './EditableProductCard';
 import { InspirationProductCard } from './InspirationProductCard';
+import { DEFAULT_PRODUCT_IMAGE, MOCK_PRODUCT_IMAGES } from '../utils/defaultImages';
 
 interface MyDatabaseProps {
   onBack: () => void;
@@ -16,7 +17,7 @@ const mockSavedProducts: (Product & { savedAt: Date; isInspiration?: boolean; in
     name: 'Premium Bluetooth Headphones',
     description: 'High-quality wireless headphones with noise cancellation',
     price: 299.99,
-    image: 'https://via.placeholder.com/300x300?text=Headphones',
+    image: MOCK_PRODUCT_IMAGES.headphones,
     categories: ['electronics', 'audio'],
     url: '#',
     savedAt: new Date('2024-01-15'),
@@ -26,7 +27,7 @@ const mockSavedProducts: (Product & { savedAt: Date; isInspiration?: boolean; in
     name: 'Vintage Leather Jacket',
     description: 'Classic brown leather jacket with vintage styling',
     price: 189.99,
-    image: 'https://via.placeholder.com/300x300?text=Jacket',
+    image: MOCK_PRODUCT_IMAGES.jacket,
     categories: ['fashion', 'outerwear'],
     url: '#',
     savedAt: new Date('2024-01-14'),
@@ -38,7 +39,7 @@ const mockSavedProducts: (Product & { savedAt: Date; isInspiration?: boolean; in
     name: 'Smart Watch Series 9',
     description: 'Advanced fitness tracking and smart features',
     price: 399.99,
-    image: 'https://via.placeholder.com/300x300?text=Watch',
+    image: MOCK_PRODUCT_IMAGES.watch,
     categories: ['electronics', 'wearables'],
     url: '#',
     savedAt: new Date('2024-01-13'),
@@ -48,7 +49,7 @@ const mockSavedProducts: (Product & { savedAt: Date; isInspiration?: boolean; in
     name: 'Artisan Coffee Mug Set',
     description: 'Handcrafted ceramic mugs with unique patterns',
     price: 45.99,
-    image: 'https://via.placeholder.com/300x300?text=Mugs',
+    image: MOCK_PRODUCT_IMAGES.mugs,
     categories: ['home', 'kitchen'],
     url: '#',
     savedAt: new Date('2024-01-12'),
@@ -60,7 +61,7 @@ const mockSavedProducts: (Product & { savedAt: Date; isInspiration?: boolean; in
     name: 'Gaming Mechanical Keyboard',
     description: 'RGB backlit mechanical keyboard for gaming',
     price: 129.99,
-    image: 'https://via.placeholder.com/300x300?text=Keyboard',
+    image: MOCK_PRODUCT_IMAGES.keyboard,
     categories: ['electronics', 'gaming'],
     url: '#',
     savedAt: new Date('2024-01-11'),
@@ -88,7 +89,7 @@ export const MyDatabase: React.FC<MyDatabaseProps> = ({ onBack, isDark }) => {
             name: product.name,
             description: product.description || '',
             price: product.price,
-            image: product.image_url || 'https://via.placeholder.com/300x300?text=No+Image',
+            image: product.image_url || DEFAULT_PRODUCT_IMAGE,
             categories: product.category ? product.category.split(', ') : [],
             url: product.url || (product.algolia_data ? JSON.parse(product.algolia_data).url : null) || '#',
             savedAt: new Date(product.created_at),
