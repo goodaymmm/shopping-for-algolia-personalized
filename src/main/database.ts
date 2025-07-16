@@ -149,6 +149,31 @@ export class DatabaseService {
     return stmt.run(productId)
   }
 
+  async updateProduct(productId: string, updates: { customName?: string; tags?: string }) {
+    const fields: string[] = []
+    const values: any[] = []
+    
+    if (updates.customName !== undefined) {
+      fields.push('custom_name = ?')
+      values.push(updates.customName)
+    }
+    
+    if (updates.tags !== undefined) {
+      fields.push('tags = ?')
+      values.push(updates.tags)
+    }
+    
+    if (fields.length === 0) return
+    
+    values.push(productId)
+    const stmt = this.db.prepare(`
+      UPDATE saved_products 
+      SET ${fields.join(', ')}
+      WHERE id = ?
+    `)
+    return stmt.run(...values)
+  }
+
   // Chat operations
   async saveChat(sessionData: { name: string; category?: string }, message: Message) {
     // First, create or get session
@@ -271,5 +296,47 @@ export class DatabaseService {
       totalSessions: sessionCount.count,
       totalMessages: messageCount.count
     }
+  }
+
+  // Database management methods
+  resetDatabase() {
+    // Drop all tables
+    this.db.exec(`
+      DROP TABLE IF EXISTS users;
+      DROP TABLE IF EXISTS chat_sessions;
+      DROP TABLE IF EXISTS chat_messages;
+      DROP TABLE IF EXISTS saved_products;
+      DROP TABLE IF EXISTS ml_training_data;
+      DROP TABLE IF EXISTS outlier_interactions;
+      DROP TABLE IF EXISTS user_settings;
+      DROP TABLE IF EXISTS api_configs;
+    `)
+    
+    // Recreate tables
+    this.createTables()
+  }
+
+  resetMLData() {
+    // Clear ML training data tables
+    this.db.exec(`
+      DELETE FROM ml_training_data;
+      DELETE FROM outlier_interactions;
+    `)
+  }
+
+  // API key management
+  async getAPIKeys() {
+    const stmt = this.db.prepare(`
+      SELECT provider, encrypted_key FROM api_configs
+    `)
+    return stmt.all() as Array<{ provider: string; encrypted_key: string }>
+  }
+
+  async saveAPIKey(provider: string, key: string) {
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO api_configs (provider, encrypted_key, created_at)
+      VALUES (?, ?, CURRENT_TIMESTAMP)
+    `)
+    return stmt.run(provider, key)
   }
 }

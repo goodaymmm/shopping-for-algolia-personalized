@@ -46,9 +46,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     setImageError(true);
   };
 
-  const openProduct = () => {
+  const openProduct = async () => {
     if (product.url && product.url !== '#') {
-      window.open(product.url, '_blank');
+      if (window.electronAPI?.openExternal) {
+        await window.electronAPI.openExternal(product.url);
+      } else {
+        window.open(product.url, '_blank');
+      }
     }
   };
 

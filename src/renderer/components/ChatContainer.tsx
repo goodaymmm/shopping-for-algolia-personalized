@@ -11,6 +11,9 @@ interface ChatContainerProps {
   fontSize: 'small' | 'medium' | 'large';
   isLoading?: boolean;
   isDark: boolean;
+  savedProductIds?: Set<string>;
+  onProductSave?: (product: Product) => Promise<{ success: boolean }>;
+  onProductRemove?: (productId: string) => Promise<{ success: boolean }>;
 }
 
 export const ChatContainer: React.FC<ChatContainerProps> = ({ 
@@ -19,7 +22,10 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
   showTimestamps, 
   fontSize,
   isLoading = false,
-  isDark 
+  isDark,
+  savedProductIds = new Set(),
+  onProductSave,
+  onProductRemove
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -106,13 +112,23 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
                     <ProductCard
                       key={product.id}
                       product={product}
+                      isSaved={savedProductIds.has(product.id)}
                       onSave={async (product) => {
                         try {
-                          if (window.electronAPI?.saveProduct) {
-                            await window.electronAPI.saveProduct(product);
+                          if (onProductSave) {
+                            await onProductSave(product);
                           }
                         } catch (error) {
                           console.error('Failed to save product:', error);
+                        }
+                      }}
+                      onRemove={async (productId) => {
+                        try {
+                          if (onProductRemove) {
+                            await onProductRemove(productId);
+                          }
+                        } catch (error) {
+                          console.error('Failed to remove product:', error);
                         }
                       }}
                       showSaveButton={true}

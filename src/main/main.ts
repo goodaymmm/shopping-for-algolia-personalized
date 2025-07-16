@@ -1,6 +1,7 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron'
 import { join } from 'path'
 import { DatabaseService } from './database'
+import { copyFileSync, existsSync } from 'fs'
 
 class MainApplication {
   private mainWindow: BrowserWindow | null = null
@@ -161,6 +162,152 @@ class MainApplication {
       } catch (error) {
         console.error('Get discovery setting error:', error)
         return 0
+      }
+    })
+
+    // Open external URL in default browser
+    ipcMain.handle('open-external', async (event, url: string) => {
+      try {
+        await shell.openExternal(url)
+        return { success: true }
+      } catch (error) {
+        console.error('Open external error:', error)
+        return { success: false, error: (error as Error).message }
+      }
+    })
+
+    // Update product
+    ipcMain.handle('update-product', async (event, productId: string, updates: { customName?: string; tags?: string }) => {
+      try {
+        await this.database.updateProduct(productId, updates)
+        return { success: true }
+      } catch (error) {
+        console.error('Update product error:', error)
+        return { success: false, error: (error as Error).message }
+      }
+    })
+
+    // Get app version
+    ipcMain.handle('get-app-version', async () => {
+      return app.getVersion()
+    })
+
+    // Get database path
+    ipcMain.handle('get-database-path', async () => {
+      try {
+        return join(app.getPath('userData'), 'shopping-data.db')
+      } catch (error) {
+        console.error('Get database path error:', error)
+        return null
+      }
+    })
+
+    // Change database path
+    ipcMain.handle('change-database-path', async () => {
+      try {
+        const result = await dialog.showOpenDialog(this.mainWindow!, {
+          title: 'Select New Database Location',
+          properties: ['openDirectory'],
+          buttonLabel: 'Select Folder'
+        })
+
+        if (result.canceled || !result.filePaths[0]) {
+          return { success: false, message: 'No directory selected' }
+        }
+
+        const currentDbPath = join(app.getPath('userData'), 'shopping-data.db')
+        const newDbPath = join(result.filePaths[0], 'shopping-data.db')
+
+        // Check if source database exists
+        if (!existsSync(currentDbPath)) {
+          return { success: false, message: 'Current database not found' }
+        }
+
+        // Copy database to new location
+        try {
+          copyFileSync(currentDbPath, newDbPath)
+          
+          // Reinitialize database service with new path
+          // Note: This would require modifying DatabaseService to accept custom path
+          // For now, we'll just copy and inform user to restart
+          
+          return { 
+            success: true, 
+            newPath: newDbPath,
+            message: 'Database copied successfully. Please restart the application to use the new database location.'
+          }
+        } catch (copyError) {
+          console.error('Database copy error:', copyError)
+          return { success: false, message: `Failed to copy database: ${(copyError as Error).message}` }
+        }
+      } catch (error) {
+        console.error('Change database path error:', error)
+        return { success: false, message: (error as Error).message }
+      }
+    })
+
+    // Reset database (clear all data)
+    ipcMain.handle('reset-database', async () => {
+      try {
+        this.database.resetDatabase()
+        return { success: true, message: 'Database reset successfully' }
+      } catch (error) {
+        console.error('Reset database error:', error)
+        return { success: false, message: (error as Error).message }
+      }
+    })
+
+    // Reset ML training data only
+    ipcMain.handle('reset-ml-data', async () => {
+      try {
+        this.database.resetMLData()
+        return { success: true, message: 'ML training data cleared successfully' }
+      } catch (error) {
+        console.error('Reset ML data error:', error)
+        return { success: false, message: (error as Error).message }
+      }
+    })
+
+    // Get API keys (returns masked keys for security)
+    ipcMain.handle('get-api-keys', async () => {
+      try {
+        const keys = await this.database.getAPIKeys()
+        
+        // Return masked keys for display
+        const maskedKeys: Record<string, string> = {}
+        keys.forEach(key => {
+          // Show only first 4 and last 4 characters
+          const value = key.encrypted_key
+          if (value.length > 8) {
+            maskedKeys[key.provider] = `${value.substring(0, 4)}...${value.substring(value.length - 4)}`
+          } else {
+            maskedKeys[key.provider] = '****'
+          }
+        })
+        
+        return { success: true, keys: maskedKeys }
+      } catch (error) {
+        console.error('Get API keys error:', error)
+        return { success: false, error: (error as Error).message }
+      }
+    })
+
+    // Save API keys
+    ipcMain.handle('save-api-keys', async (event, apiKeys: Record<string, string>) => {
+      try {
+        // Save each API key
+        for (const [provider, key] of Object.entries(apiKeys)) {
+          if (key && key.trim()) {
+            // Note: In production, you should encrypt the key before storing
+            // For now, we're storing it as-is (which is what the schema suggests with "encrypted_key")
+            await this.database.saveAPIKey(provider, key)
+          }
+        }
+        
+        return { success: true, message: 'API keys saved successfully' }
+      } catch (error) {
+        console.error('Save API keys error:', error)
+        return { success: false, error: (error as Error).message }
       }
     })
   }

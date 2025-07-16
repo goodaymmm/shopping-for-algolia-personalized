@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Search, Filter, Grid, List, Trash2, Download, Package, Tag } from 'lucide-react';
 import { Product } from '../types';
-import { ProductCard } from './ProductCard';
+import { EditableProductCard } from './EditableProductCard';
 import { InspirationProductCard } from './InspirationProductCard';
 
 interface MyDatabaseProps {
@@ -10,7 +10,7 @@ interface MyDatabaseProps {
 }
 
 // Mock saved products data
-const mockSavedProducts: (Product & { savedAt: Date; isInspiration?: boolean; inspirationReason?: 'trending' | 'different_style' | 'visual_appeal' })[] = [
+const mockSavedProducts: (Product & { savedAt: Date; isInspiration?: boolean; inspirationReason?: 'trending' | 'different_style' | 'visual_appeal'; customName?: string; tags?: string })[] = [
   {
     id: '1',
     name: 'Premium Bluetooth Headphones',
@@ -94,6 +94,8 @@ export const MyDatabase: React.FC<MyDatabaseProps> = ({ onBack, isDark }) => {
             savedAt: new Date(product.created_at),
             isInspiration: product.tags?.includes('inspiration') || false,
             inspirationReason: 'different_style' as const,
+            customName: product.custom_name || product.name,
+            tags: product.tags || '',
           }));
           setProducts(formattedProducts);
         } catch (error) {
@@ -143,6 +145,23 @@ export const MyDatabase: React.FC<MyDatabaseProps> = ({ onBack, isDark }) => {
       setProducts(prev => prev.filter(p => p.id !== productId));
     } catch (error) {
       console.error('Failed to remove product:', error);
+    }
+  };
+
+  const handleUpdateProduct = async (productId: string, updates: { customName?: string; tags?: string }) => {
+    try {
+      if (window.electronAPI?.updateProduct) {
+        const result = await window.electronAPI.updateProduct(productId, updates);
+        if (result.success) {
+          setProducts(prev => prev.map(p => 
+            p.id === productId 
+              ? { ...p, ...updates }
+              : p
+          ));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update product:', error);
     }
   };
 
@@ -338,21 +357,13 @@ export const MyDatabase: React.FC<MyDatabaseProps> = ({ onBack, isDark }) => {
                     isDark={isDark}
                   />
                 ) : (
-                  <ProductCard
+                  <EditableProductCard
                     product={product}
+                    onUpdate={handleUpdateProduct}
                     onRemove={handleRemoveProduct}
-                    showRemoveButton={true}
-                    showSaveButton={false}
                     isDark={isDark}
                   />
                 )}
-                
-                {/* Saved Date */}
-                <div className={`absolute bottom-2 right-2 px-2 py-1 rounded text-xs ${
-                  isDark ? 'bg-gray-800/80 text-gray-300' : 'bg-white/80 text-gray-600'
-                } backdrop-blur-sm`}>
-                  Saved {formatDate(product.savedAt)}
-                </div>
               </div>
             ))}
           </div>

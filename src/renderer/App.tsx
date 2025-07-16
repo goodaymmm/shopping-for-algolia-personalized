@@ -29,6 +29,7 @@ function App() {
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [discoveryPercentage, setDiscoveryPercentage] = useState<DiscoveryPercentage>(0);
+  const [savedProductIds, setSavedProductIds] = useState<Set<string>>(new Set());
 
   // Load discovery percentage from Electron API
   useEffect(() => {
@@ -45,6 +46,23 @@ function App() {
 
     loadDiscoveryPercentage();
   }, []);
+
+  // Load saved products
+  useEffect(() => {
+    const loadSavedProducts = async () => {
+      if (window.electronAPI?.getProducts) {
+        try {
+          const products = await window.electronAPI.getProducts();
+          const productIds = new Set(products.map((p: any) => p.id));
+          setSavedProductIds(productIds);
+        } catch (error) {
+          console.error('Failed to load saved products:', error);
+        }
+      }
+    };
+
+    loadSavedProducts();
+  }, [currentView]); // Reload when view changes to keep in sync
 
   // Create initial session if none exists
   useEffect(() => {
@@ -299,6 +317,32 @@ function App() {
     setCurrentView('settings');
   };
 
+  const handleProductSave = async (product: Product) => {
+    if (window.electronAPI?.saveProduct) {
+      const result = await window.electronAPI.saveProduct(product);
+      if (result.success) {
+        setSavedProductIds(prev => new Set([...prev, product.id]));
+      }
+      return result;
+    }
+    return { success: false };
+  };
+
+  const handleProductRemove = async (productId: string) => {
+    if (window.electronAPI?.removeProduct) {
+      const result = await window.electronAPI.removeProduct(productId);
+      if (result.success) {
+        setSavedProductIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(productId);
+          return newSet;
+        });
+      }
+      return result;
+    }
+    return { success: false };
+  };
+
 
   const handleHistoryClick = () => {
     setCurrentView('history');
@@ -360,6 +404,9 @@ function App() {
                 fontSize={settings.fontSize}
                 isLoading={isLoading}
                 isDark={isDark}
+                savedProductIds={savedProductIds}
+                onProductSave={handleProductSave}
+                onProductRemove={handleProductRemove}
               />
               <ChatInput 
                 onSendMessage={handleSendMessage}

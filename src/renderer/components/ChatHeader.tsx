@@ -1,28 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { MessageSquare, Minimize2, Square, X } from 'lucide-react';
-import { DiscoverySettings } from './DiscoverySettings';
-import { DiscoveryPercentage } from '../types';
 
 interface ChatHeaderProps {
   isDark: boolean;
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({ isDark }) => {
-  const [discoveryPercentage, setDiscoveryPercentage] = useState<DiscoveryPercentage>(0);
-
-  // Load discovery setting on mount
-  useEffect(() => {
-    if (window.electronAPI) {
-      window.electronAPI.getDiscoverySetting().then(setDiscoveryPercentage);
-    }
-  }, []);
-
-  const handleDiscoveryChange = async (percentage: DiscoveryPercentage) => {
-    setDiscoveryPercentage(percentage);
-    if (window.electronAPI) {
-      await window.electronAPI.saveDiscoverySetting(percentage);
-    }
-  };
 
   return (
     <div className={`border-b select-none ${
@@ -67,34 +50,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({ isDark }) => {
         </div>
       </div>
       
-      {/* App Header */}
-      <div className="px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center shadow-sm">
-              <MessageSquare className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h1 className={`text-xl font-semibold ${
-                isDark ? 'text-white' : 'text-gray-900'
-              }`}>
-                Shopping for AIgolia personalized
-              </h1>
-              <p className={`text-sm ${
-                isDark ? 'text-gray-400' : 'text-gray-500'
-              }`}>
-                AI-powered personalized shopping assistant
-              </p>
-            </div>
-          </div>
-          
-          {/* Discovery Settings */}
-          <DiscoverySettings
-            value={discoveryPercentage}
-            onChange={handleDiscoveryChange}
-          />
-        </div>
-      </div>
     </div>
   );
 };

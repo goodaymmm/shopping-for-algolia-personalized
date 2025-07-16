@@ -22,6 +22,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const [geminiApiKey, setGeminiApiKey] = useState<string>('');
   const [algoliaApiKey, setAlgoliaApiKey] = useState<string>('');
   const [isResetting, setIsResetting] = useState(false);
+  const [apiSaveMessage, setApiSaveMessage] = useState<string>('');
 
   // Load current settings on mount
   useEffect(() => {
@@ -29,15 +30,19 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       try {
         // Get database path
         if (window.electronAPI?.getDatabasePath) {
-          const path = await window.electronAPI.getDatabasePath();
-          setDatabasePath(path);
+          const result = await window.electronAPI.getDatabasePath();
+          if (result.success && result.path) {
+            setDatabasePath(result.path);
+          }
         }
         
         // Get API keys (if available)
-        if (window.electronAPI?.getApiKeys) {
-          const keys = await window.electronAPI.getApiKeys();
-          setGeminiApiKey(keys.gemini || '');
-          setAlgoliaApiKey(keys.algolia || '');
+        if (window.electronAPI?.getAPIKeys) {
+          const result = await window.electronAPI.getAPIKeys();
+          if (result.success && result.keys) {
+            setGeminiApiKey(result.keys.gemini || '');
+            setAlgoliaApiKey(result.keys.algolia || '');
+          }
         }
       } catch (error) {
         console.error('Failed to load settings:', error);
@@ -49,16 +54,20 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
   const handleSaveApiKeys = async () => {
     try {
-      if (window.electronAPI?.saveApiKeys) {
-        await window.electronAPI.saveApiKeys({
+      if (window.electronAPI?.saveAPIKeys) {
+        const result = await window.electronAPI.saveAPIKeys({
           gemini: geminiApiKey,
           algolia: algoliaApiKey
         });
-        // Show success message (you could add a toast here)
-        console.log('API keys saved successfully');
+        if (result.success) {
+          setApiSaveMessage('API keys saved successfully!');
+          setTimeout(() => setApiSaveMessage(''), 3000);
+        }
       }
     } catch (error) {
       console.error('Failed to save API keys:', error);
+      setApiSaveMessage('Failed to save API keys');
+      setTimeout(() => setApiSaveMessage(''), 3000);
     }
   };
 
@@ -98,9 +107,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const handleChangeDatabasePath = async () => {
     try {
       if (window.electronAPI?.changeDatabasePath) {
-        const newPath = await window.electronAPI.changeDatabasePath();
-        if (newPath) {
-          setDatabasePath(newPath);
+        const result = await window.electronAPI.changeDatabasePath();
+        if (result.success && result.message) {
+          alert(result.message);
+          // Reload the app to use the new database location
+          window.location.reload();
         }
       }
     } catch (error) {
@@ -357,6 +368,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               <Save className="w-4 h-4" />
               Save API Keys
             </button>
+            
+            {apiSaveMessage && (
+              <div className={`p-3 rounded-xl text-sm font-medium transition-all ${
+                apiSaveMessage.includes('success') 
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800' 
+                  : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
+              }`}>
+                {apiSaveMessage}
+              </div>
+            )}
           </div>
         </section>
 

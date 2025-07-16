@@ -32,5 +32,33 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // App info
   getAppVersion: () => 
-    ipcRenderer.invoke('get-app-version')
+    ipcRenderer.invoke('get-app-version'),
+
+  // External links
+  openExternal: (url: string) =>
+    ipcRenderer.invoke('open-external', url),
+
+  // Update product
+  updateProduct: (productId: string, updates: { customName?: string; tags?: string }) =>
+    ipcRenderer.invoke('update-product', productId, updates),
+
+  // Database management
+  getDatabasePath: () =>
+    ipcRenderer.invoke('get-database-path'),
+  
+  changeDatabasePath: () =>
+    ipcRenderer.invoke('change-database-path'),
+  
+  resetDatabase: () =>
+    ipcRenderer.invoke('reset-database'),
+  
+  resetMLData: () =>
+    ipcRenderer.invoke('reset-ml-data'),
+  
+  // API key management
+  getAPIKeys: () =>
+    ipcRenderer.invoke('get-api-keys'),
+  
+  saveAPIKeys: (apiKeys: Record<string, string>) =>
+    ipcRenderer.invoke('save-api-keys', apiKeys)
 })
