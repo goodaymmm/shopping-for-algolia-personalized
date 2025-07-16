@@ -130,6 +130,14 @@ export class DatabaseService {
         console.log('Migrating database: Adding custom_name column to saved_products table')
         this.db.exec('ALTER TABLE saved_products ADD COLUMN custom_name TEXT')
       }
+
+      // Check if url column exists in saved_products table
+      const hasUrl = tableInfo.some((col: any) => col.name === 'url')
+      
+      if (!hasUrl) {
+        console.log('Migrating database: Adding url column to saved_products table')
+        this.db.exec('ALTER TABLE saved_products ADD COLUMN url TEXT')
+      }
     } catch (error) {
       console.error('Migration error:', error)
       // If table doesn't exist, it will be created with the correct schema
