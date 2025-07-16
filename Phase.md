@@ -329,14 +329,16 @@ Gemini API画像解析、MLパイプライン、Claude Desktop MCP連携を実�
 
 #### 🚀 **作業開始前の確認事項**
 1. **Phase B機能確認**: 画像アップロード、Discovery設定、Settings画面が正常動作
-2. **GitHub Actions確認**: 最新のコミット（40b3633）のビルドが成功
+2. **GitHub Actions確認**: 最新のコミット（06274a9）のビルドが成功
 3. **モック機能確認**: 既存の画像解析モック機能の動作確認
+4. **API設定確認**: Settings画面でAPIキー管理機能の動作確認
 
 #### 🎯 **優先度1**: Gemini API実装
 - **開始ファイル**: `src/renderer/services/gemini.ts`を新規作成
 - **活用機能**: Settings画面のAPIキー設定機能（既に実装済み）
 - **置き換え対象**: `App.tsx`の`getMockImageAnalysisProducts`関数
 - **参考資料**: https://ai.google.dev/gemini-api/docs/image-understanding?hl=ja
+- **⚠️ 重要**: ユーザー個人がGoogle AI StudioでAPI キーを取得する必要あり
 
 #### 🎯 **優先度2**: MLパーソナライゼーション
 - **開始ファイル**: `src/main/personalization.ts`を新規作成
@@ -359,17 +361,20 @@ Gemini API画像解析、MLパイプライン、Claude Desktop MCP連携を実�
   - [ ] Settings画面のAPIキー設定を活用
   - [ ] API接続テスト機能を実装
   - [ ] セキュアなキー保存（keytar使用）
+  - [ ] **⚠️ ユーザー向けAPI取得ガイド**: Google AI StudioでのAPI キー取得手順
 
 - [ ] **画像解析実装**:
   - [ ] `src/renderer/services/gemini.ts` - GeminiServiceクラス作成
   - [ ] 既存モック解析を本物のAPIに置き換え
   - [ ] 画像解析（スタイル、色、素材、カテゴリ）
   - [ ] 検索キーワード生成とAlgolia連携
+  - [ ] **API キー未設定時のモック動作維持**
 
 - [ ] **エラーハンドリング強化**:
   - [ ] API制限・エラー時のフォールバック
   - [ ] ユーザーフレンドリーなエラーメッセージ
   - [ ] 設定画面でのAPI状態表示
+  - [ ] **API キー無効時の適切なエラー表示**
 
 #### Step C2: MLデータ生成パイプライン 🔄 **重要**
 - [ ] **パーソナライゼーションエンジン**:
@@ -456,6 +461,10 @@ npm run build  # exeファイル生成（AI機能統合版）
 2. **外れ値機能**: 明確にラベリングし、学習対象から除外
 3. **セキュリティ**: APIキーはkeytarで安全に保存
 4. **データ**: 全てローカルに保存（クラウド同期なし）
+5. **⚠️ API設定**: **ユーザー個人がAPI キーを取得・設定する必要あり**
+   - **Gemini API**: Google AI Studioで取得（個人アカウント必須）
+   - **Algolia API**: Algolia.comで取得（個人アカウント必須）
+   - **フォールバック**: API未設定時はモック/デモ機能で動作
 
 ### 開発コマンド
 ```bash
