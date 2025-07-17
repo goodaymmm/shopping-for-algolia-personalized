@@ -3,6 +3,7 @@ import { join } from 'path'
 import { DatabaseService } from './database'
 import { PersonalizationEngine, MLTrainingEvent } from './personalization'
 import { GeminiService, ImageAnalysis } from './gemini-service'
+import { AlgoliaMCPService } from './algolia-mcp-service'
 import { copyFileSync, existsSync } from 'fs'
 
 class MainApplication {
@@ -10,11 +11,13 @@ class MainApplication {
   private database: DatabaseService
   private personalization: PersonalizationEngine
   private geminiService: GeminiService
+  private algoliaMCPService: AlgoliaMCPService
 
   constructor() {
     this.database = new DatabaseService()
     this.personalization = new PersonalizationEngine(this.database.database)
     this.geminiService = new GeminiService()
+    this.algoliaMCPService = new AlgoliaMCPService()
     this.setupApp()
     this.setupIPC()
   }
@@ -92,39 +95,29 @@ class MainApplication {
           }
         }
 
-        // Use Algolia demo API for product search
-        const response = await fetch(
-          'https://latency-dsn.algolia.net/1/indexes/instant_search/query',
-          {
-            method: 'POST',
-            headers: {
-              'X-Algolia-API-Key': '6be0576ff61c053d5f9a3225e2a90f76',
-              'X-Algolia-Application-Id': 'latency',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              query: searchQuery,
-              hitsPerPage: 20,
-              attributesToRetrieve: ['name', 'price', 'image', 'categories', 'url', 'objectID']
-            })
-          }
-        )
-
-        const data = await response.json() as any
+        // Initialize Algolia MCP service with proper configuration
+        // Using a demo index that actually contains products
+        const algoliaMCPConfig = {
+          applicationId: 'latency',
+          apiKey: '6be0576ff61c053d5f9a3225e2a90f76',
+          indexName: 'bestbuy'  // Changed from 'instant_search' to 'bestbuy' which contains products
+        };
         
-        if (!data.hits) {
-          return []
-        }
+        await this.algoliaMCPService.initialize(algoliaMCPConfig);
 
-        let products = data.hits.map((hit: any) => ({
-          id: hit.objectID,
-          name: hit.name || 'Unknown Product',
-          description: hit.description || '',
-          price: hit.price || hit.salePrice || 0,
-          image: hit.image || this.getDefaultProductImage(),
-          categories: hit.categories || [],
-          url: hit.url || ''
-        }));
+        // Use Algolia MCP service for product search
+        let products = await this.algoliaMCPService.searchProducts(
+          searchQuery,
+          algoliaMCPConfig.indexName,
+          {
+            hitsPerPage: 20,
+            attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID']
+          }
+        );
+
+        if (!products || products.length === 0) {
+          return [];
+        }
 
         // Apply personalization scoring if we have ML data
         const userProfile = await this.personalization.getUserProfile();
@@ -369,19 +362,15 @@ class MainApplication {
       }
     })
 
-    // Save API keys
+    // Save API keys (Gemini only, Algolia handled via MCP)
     ipcMain.handle('save-api-keys', async (event, apiKeys: Record<string, string>) => {
       try {
-        // Save each API key
-        for (const [provider, key] of Object.entries(apiKeys)) {
-          if (key && key.trim()) {
-            // Note: In production, you should encrypt the key before storing
-            // For now, we're storing it as-is (which is what the schema suggests with "encrypted_key")
-            await this.database.saveAPIKey(provider, key)
-          }
+        // Save only Gemini API key (Algolia is handled via MCP)
+        if (apiKeys.gemini && apiKeys.gemini.trim()) {
+          await this.database.saveAPIKey('gemini', apiKeys.gemini)
         }
         
-        return { success: true, message: 'API keys saved successfully' }
+        return { success: true, message: 'API key saved successfully' }
       } catch (error) {
         console.error('Save API keys error:', error)
         return { success: false, error: (error as Error).message }

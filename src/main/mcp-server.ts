@@ -6,14 +6,16 @@ import {
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
 import { PersonalizationEngine } from './personalization';
-import { AlgoliaService } from '../renderer/services/algolia';
+import { AlgoliaMCPService } from './algolia-mcp-service';
 
 export class ShoppingMCPServer {
   private server: Server;
   private personalization: PersonalizationEngine;
+  private algoliaMCPService: AlgoliaMCPService;
 
   constructor(personalizationEngine: PersonalizationEngine) {
     this.personalization = personalizationEngine;
+    this.algoliaMCPService = new AlgoliaMCPService();
     
     this.server = new Server(
       {
@@ -124,8 +126,14 @@ You can still search, but results won't be personalized.`
         };
       }
 
+      // Initialize Algolia MCP service
+      await this.algoliaMCPService.initialize({
+        applicationId: 'latency',
+        apiKey: '6be0576ff61c053d5f9a3225e2a90f76',
+        indexName: 'bestbuy'
+      });
+
       // Create an optimized search query based on personalization
-      const algoliaService = new AlgoliaService();
       const optimizedQuery = this.optimizeQueryWithPersonalization(
         args.query,
         args.context,
@@ -133,7 +141,7 @@ You can still search, but results won't be personalized.`
       );
 
       // Perform search (read-only, no ML data saving)
-      const results = await algoliaService.searchProducts(optimizedQuery);
+      const results = await this.algoliaMCPService.searchProducts(optimizedQuery, 'bestbuy');
 
       // Score and rerank results based on user profile
       const scoredResults = await Promise.all(
@@ -208,7 +216,6 @@ The more you use the app, the better I can understand your preferences!`
   private async handleStyleSearch(args: any) {
     try {
       const userProfile = await this.personalization.getUserProfile();
-      const algoliaService = new AlgoliaService();
       
       // Build style-based search query
       let searchQuery = args.style;
@@ -228,7 +235,14 @@ The more you use the app, the better I can understand your preferences!`
         }
       }
 
-      const results = await algoliaService.searchProducts(searchQuery);
+      // Initialize Algolia MCP service
+      await this.algoliaMCPService.initialize({
+        applicationId: 'latency',
+        apiKey: '6be0576ff61c053d5f9a3225e2a90f76',
+        indexName: 'bestbuy'
+      });
+
+      const results = await this.algoliaMCPService.searchProducts(searchQuery, 'bestbuy');
       
       return {
         content: [{

@@ -13,7 +13,6 @@ import { useSettings } from './hooks/useSettings';
 import { useChatSessions } from './hooks/useChatSessions';
 import { DEFAULT_PRODUCT_IMAGE, MOCK_PRODUCT_IMAGES } from './utils/defaultImages';
 import { GeminiService, ImageAnalysis } from './services/gemini';
-import { AlgoliaService } from './services/algolia';
 import { OutlierMixer } from './services/outlier-mixer';
 
 function App() {
@@ -38,7 +37,6 @@ function App() {
 
   // Service instances for fallback when Electron API is not available
   const geminiService = new GeminiService();
-  const algoliaService = new AlgoliaService();
   const outlierMixer = new OutlierMixer();
 
   // Load discovery percentage from Electron API
@@ -134,28 +132,14 @@ function App() {
 
         products = await window.electronAPI.searchProducts(content, imageData);
       } else {
-        // Fallback for development environment - use Gemini API directly
-        console.warn('Electron API not available, using direct API integration');
+        // Fallback for development environment - use mock data
+        console.warn('Electron API not available, using mock products');
         if (imageDataUrl) {
-          try {
-            // Extract base64 from data URL
-            const imageData = imageDataUrl.split(',')[1];
-            
-            // Try Gemini API first
-            const analysis = await geminiService.analyzeImage(imageData, content);
-            
-            // Use analysis to search Algolia
-            const searchQuery = analysis.searchKeywords.join(' ') + ' ' + content;
-            products = await algoliaService.searchProducts(searchQuery);
-            
-            console.log('Real Gemini analysis:', analysis);
-          } catch (error) {
-            console.error('Gemini API failed:', error);
-            throw error; // Propagate error instead of using mock
-          }
+          // Mock image analysis products
+          products = getMockImageAnalysisProducts(content, imageDataUrl);
         } else {
-          // Text-only search
-          products = await algoliaService.searchProducts(content);
+          // Mock text search products
+          products = getMockProducts(content);
         }
       }
       

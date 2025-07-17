@@ -1,11 +1,9 @@
 import { Product, ProductWithContext, DiscoveryPercentage } from '../types';
-import { AlgoliaService } from './algolia';
+import { MOCK_PRODUCT_IMAGES } from '../utils/defaultImages';
 
 export class OutlierMixer {
-  private algoliaService: AlgoliaService;
-
   constructor() {
-    this.algoliaService = new AlgoliaService();
+    // No longer using direct Algolia service
   }
 
   async mixResults(
@@ -46,11 +44,8 @@ export class OutlierMixer {
     originalQuery?: string
   ): Promise<ProductWithContext[]> {
     try {
-      // Get diverse products with high ratings for inspiration
-      const diverseProducts = await this.algoliaService.searchProducts(
-        '', // Empty query for diversity
-        'customerReviewCount > 10' // High-rated products only
-      );
+      // Generate mock diverse products for inspiration
+      const diverseProducts = this.generateMockDiverseProducts(count * 2, originalQuery);
 
       // If we got products, select random ones for variety
       const shuffled = this.shuffleArray([...diverseProducts]);
@@ -69,6 +64,69 @@ export class OutlierMixer {
       console.error('Failed to get outlier products:', error);
       return [];
     }
+  }
+
+  private generateMockDiverseProducts(count: number, originalQuery?: string): Product[] {
+    const mockProducts: Product[] = [
+      {
+        id: 'diverse-1',
+        name: 'Trendy Wireless Earbuds',
+        description: 'Latest technology with premium sound quality',
+        price: 129.99,
+        image: MOCK_PRODUCT_IMAGES.headphones,
+        categories: ['electronics', 'audio', 'trending'],
+        url: '#'
+      },
+      {
+        id: 'diverse-2', 
+        name: 'Eco-Friendly Water Bottle',
+        description: 'Sustainable stainless steel with unique design',
+        price: 24.99,
+        image: MOCK_PRODUCT_IMAGES.generic,
+        categories: ['lifestyle', 'eco-friendly', 'unique'],
+        url: '#'
+      },
+      {
+        id: 'diverse-3',
+        name: 'Smart Fitness Tracker',
+        description: 'Advanced health monitoring with style',
+        price: 199.99,
+        image: MOCK_PRODUCT_IMAGES.watch,
+        categories: ['electronics', 'fitness', 'smart'],
+        url: '#'
+      },
+      {
+        id: 'diverse-4',
+        name: 'Artisan Coffee Beans',
+        description: 'Premium single-origin specialty roast',
+        price: 18.99,
+        image: MOCK_PRODUCT_IMAGES.generic,
+        categories: ['food', 'premium', 'artisan'],
+        url: '#'
+      },
+      {
+        id: 'diverse-5',
+        name: 'Minimalist Desk Lamp',
+        description: 'Modern LED lighting with adjustable brightness',
+        price: 79.99,
+        image: MOCK_PRODUCT_IMAGES.lamp,
+        categories: ['home', 'lighting', 'modern'],
+        url: '#'
+      },
+      {
+        id: 'diverse-6',
+        name: 'Vintage Leather Bag',
+        description: 'Handcrafted with timeless design',
+        price: 149.99,
+        image: MOCK_PRODUCT_IMAGES.generic,
+        categories: ['fashion', 'accessories', 'vintage'],
+        url: '#'
+      }
+    ];
+
+    // Shuffle and return requested count
+    const shuffled = this.shuffleArray([...mockProducts]);
+    return shuffled.slice(0, count);
   }
 
   private determineInspirationReason(

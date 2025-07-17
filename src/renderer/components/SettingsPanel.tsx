@@ -20,7 +20,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 }) => {
   const [databasePath, setDatabasePath] = useState<string>('');
   const [geminiApiKey, setGeminiApiKey] = useState<string>('');
-  const [algoliaApiKey, setAlgoliaApiKey] = useState<string>('');
   const [isResetting, setIsResetting] = useState(false);
   const [apiSaveMessage, setApiSaveMessage] = useState<string>('');
 
@@ -41,7 +40,6 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           const result = await window.electronAPI.getAPIKeys();
           if (result.success && result.keys) {
             setGeminiApiKey(result.keys.gemini || '');
-            setAlgoliaApiKey(result.keys.algolia || '');
           }
         }
       } catch (error) {
@@ -56,17 +54,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     try {
       if (window.electronAPI?.saveAPIKeys) {
         const result = await window.electronAPI.saveAPIKeys({
-          gemini: geminiApiKey,
-          algolia: algoliaApiKey
+          gemini: geminiApiKey
         });
         if (result.success) {
-          setApiSaveMessage('API keys saved successfully!');
+          setApiSaveMessage('API key saved successfully!');
           setTimeout(() => setApiSaveMessage(''), 3000);
         }
       }
     } catch (error) {
       console.error('Failed to save API keys:', error);
-      setApiSaveMessage('Failed to save API keys');
+      setApiSaveMessage('Failed to save API key');
       setTimeout(() => setApiSaveMessage(''), 3000);
     }
   };
@@ -331,19 +328,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               </p>
             </div>
             
-            <div>
-              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-                Algolia API Key
-              </label>
-              <input
-                type="password"
-                value={algoliaApiKey}
-                onChange={(e) => setAlgoliaApiKey(e.target.value)}
-                placeholder="Enter your Algolia API key"
-                className="w-full p-3 rounded-xl border transition-all shadow-sm focus:shadow-md bg-white dark:bg-slate-800/50 border-gray-200 dark:border-slate-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Required for product search functionality
+            <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                <strong>Note:</strong> Product search now uses Algolia MCP integration. No additional API keys needed for search functionality.
               </p>
             </div>
             
@@ -352,7 +339,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               className="flex items-center gap-2 px-4 py-3 rounded-xl bg-green-500 hover:bg-green-600 text-white transition-colors"
             >
               <Save className="w-4 h-4" />
-              Save API Keys
+              Save API Key
             </button>
             
             {apiSaveMessage && (
