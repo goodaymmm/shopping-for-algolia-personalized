@@ -36,7 +36,7 @@ export class GeminiService {
     try {
       // Simple test with minimal token usage
       const response = await this.client.models.generateContent({
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-2.5-flash',
         contents: 'Hello'
       });
       return response.text ? response.text.length > 0 : false;
@@ -55,7 +55,7 @@ export class GeminiService {
       const prompt = this.buildAnalysisPrompt(userQuery || '');
       
       const response = await this.client.models.generateContent({
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-2.5-flash',
         contents: [
           {
             parts: [
