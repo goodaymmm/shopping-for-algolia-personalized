@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Image analysis result interface (same as renderer)
 export interface ImageAnalysis {
@@ -14,14 +14,14 @@ export interface ImageAnalysis {
 }
 
 export class GeminiService {
-  private client: GoogleGenAI | null = null;
+  private client: GoogleGenerativeAI | null = null;
   private apiKey: string | null = null;
 
   async initialize(apiKey: string): Promise<boolean> {
     try {
-      console.log('[Gemini] Initializing with API key:', apiKey ? 'Present' : 'Missing');
+      console.log('[Gemini] Initializing with API key:', apiKey ? `Present (${apiKey.length} chars)` : 'Missing');
       this.apiKey = apiKey;
-      this.client = new GoogleGenAI({ apiKey });
+      this.client = new GoogleGenerativeAI(apiKey);
       console.log('[Gemini] Successfully initialized');
       return true;
     } catch (error) {
@@ -38,11 +38,10 @@ export class GeminiService {
     }
 
     try {
-      const response = await this.client.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: 'Hello'
-      });
-      const success = response.text ? response.text.length > 0 : false;
+      console.log('[Gemini] Sending test request...');
+      const model = this.client.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const response = await model.generateContent('Hello');
+      const success = response.response.text() ? response.response.text().length > 0 : false;
       console.log('[Gemini] Connection test result:', success ? 'Success' : 'Failed');
       return success;
     } catch (error) {
@@ -67,25 +66,19 @@ export class GeminiService {
       console.log('[Gemini] Using prompt:', prompt);
       
       console.log('[Gemini] Sending request to Gemini API...');
-      const response = await this.client.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [
-          {
-            parts: [
-              {
-                inlineData: {
-                  data: imageData,
-                  mimeType: 'image/jpeg'
-                }
-              },
-              { text: prompt }
-            ]
+      const model = this.client.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const response = await model.generateContent([
+        {
+          inlineData: {
+            data: imageData,
+            mimeType: 'image/jpeg'
           }
-        ]
-      });
+        },
+        prompt
+      ]);
 
       console.log('[Gemini] Received response from API');
-      const analysisText = response.text;
+      const analysisText = response.response.text();
       console.log('[Gemini] Response text length:', analysisText ? analysisText.length : 0);
 
       return this.parseAnalysisResult(analysisText || '');

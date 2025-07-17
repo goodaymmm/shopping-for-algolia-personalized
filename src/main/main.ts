@@ -396,14 +396,19 @@ class MainApplication {
     // Save API keys (Gemini only, Algolia handled via MCP)
     ipcMain.handle('save-api-keys', async (event, apiKeys: Record<string, string>) => {
       try {
+        console.log('[Main] Saving API keys:', Object.keys(apiKeys));
         // Save only Gemini API key (Algolia is handled via MCP)
         if (apiKeys.gemini && apiKeys.gemini.trim()) {
+          console.log('[Main] Saving Gemini API key...');
           await this.database.saveAPIKey('gemini', apiKeys.gemini)
+          console.log('[Main] Gemini API key saved successfully');
+        } else {
+          console.log('[Main] No Gemini API key provided or key is empty');
         }
         
         return { success: true, message: 'API key saved successfully' }
       } catch (error) {
-        console.error('Save API keys error:', error)
+        console.error('[Main] Save API keys error:', error)
         return { success: false, error: (error as Error).message }
       }
     })

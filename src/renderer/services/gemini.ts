@@ -1,4 +1,4 @@
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Image analysis result interface
 export interface ImageAnalysis {
@@ -14,13 +14,13 @@ export interface ImageAnalysis {
 }
 
 export class GeminiService {
-  private client: GoogleGenAI | null = null;
+  private client: GoogleGenerativeAI | null = null;
   private apiKey: string | null = null;
 
   async initialize(apiKey: string): Promise<boolean> {
     try {
       this.apiKey = apiKey;
-      this.client = new GoogleGenAI({ apiKey });
+      this.client = new GoogleGenerativeAI(apiKey);
       return true;
     } catch (error) {
       console.error('Failed to initialize Gemini API:', error);
@@ -35,11 +35,9 @@ export class GeminiService {
 
     try {
       // Simple test with minimal token usage
-      const response = await this.client.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: 'Hello'
-      });
-      return response.text ? response.text.length > 0 : false;
+      const model = this.client.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const response = await model.generateContent('Hello');
+      return response.response.text() ? response.response.text().length > 0 : false;
     } catch (error) {
       console.error('Gemini API connection test failed:', error);
       return false;
@@ -54,24 +52,18 @@ export class GeminiService {
     try {
       const prompt = this.buildAnalysisPrompt(userQuery || '');
       
-      const response = await this.client.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: [
-          {
-            parts: [
-              {
-                inlineData: {
-                  data: imageData,
-                  mimeType: 'image/jpeg'
-                }
-              },
-              { text: prompt }
-            ]
+      const model = this.client.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const response = await model.generateContent([
+        {
+          inlineData: {
+            data: imageData,
+            mimeType: 'image/jpeg'
           }
-        ]
-      });
+        },
+        prompt
+      ]);
 
-      const analysisText = response.text || '';
+      const analysisText = response.response.text() || '';
 
       return this.parseAnalysisResult(analysisText);
     } catch (error) {
@@ -82,18 +74,18 @@ export class GeminiService {
 
   private buildAnalysisPrompt(userQuery: string): string {
     return `
-画像に写っている商品を分析し、オンラインショッピングで類似商品を検索するための最適なキーワードを生成してください。
+Analyze the product in this image and generate optimal search keywords for finding similar products in online shopping.
 
-ユーザーのリクエスト: "${userQuery}"
+User's request: "${userQuery}"
 
-以下の形式で検索キーワードを5〜10個提供してください：
-- 商品のタイプ（例：スニーカー、ランニングシューズ、ブーツなど）
-- スタイル（例：カジュアル、スポーティ、フォーマルなど）
-- 色
-- ブランド（識別可能な場合）
-- 特徴的なデザイン要素
+Please provide 5-10 search keywords in the following format:
+- Product type (e.g., sneakers, running shoes, boots, etc.)
+- Style (e.g., casual, sporty, formal, etc.)
+- Colors
+- Brand (if identifiable)
+- Distinctive design features
 
-キーワードのみをスペース区切りで返してください。
+Return only the keywords separated by spaces.
     `;
   }
 

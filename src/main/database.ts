@@ -378,17 +378,23 @@ export class DatabaseService {
 
   // API key management
   async getAPIKeys() {
+    console.log('[Database] Getting API keys...');
     const stmt = this.db.prepare(`
       SELECT provider, encrypted_key FROM api_configs
     `)
-    return stmt.all() as Array<{ provider: string; encrypted_key: string }>
+    const result = stmt.all() as Array<{ provider: string; encrypted_key: string }>;
+    console.log('[Database] Retrieved API keys:', result.map(r => ({ provider: r.provider, keyLength: r.encrypted_key.length })));
+    return result;
   }
 
   async saveAPIKey(provider: string, key: string) {
+    console.log('[Database] Saving API key for provider:', provider, 'keyLength:', key.length);
     const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO api_configs (provider, encrypted_key, created_at)
       VALUES (?, ?, CURRENT_TIMESTAMP)
     `)
-    return stmt.run(provider, key)
+    const result = stmt.run(provider, key);
+    console.log('[Database] API key saved successfully');
+    return result;
   }
 }
