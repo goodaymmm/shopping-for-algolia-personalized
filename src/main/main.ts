@@ -1,14 +1,20 @@
 import { app, BrowserWindow, ipcMain, shell, dialog } from 'electron'
 import { join } from 'path'
 import { DatabaseService } from './database'
+import { PersonalizationEngine, MLTrainingEvent } from './personalization'
+import { GeminiService, ImageAnalysis } from './gemini-service'
 import { copyFileSync, existsSync } from 'fs'
 
 class MainApplication {
   private mainWindow: BrowserWindow | null = null
   private database: DatabaseService
+  private personalization: PersonalizationEngine
+  private geminiService: GeminiService
 
   constructor() {
     this.database = new DatabaseService()
+    this.personalization = new PersonalizationEngine(this.database.database)
+    this.geminiService = new GeminiService()
     this.setupApp()
     this.setupIPC()
   }
@@ -59,6 +65,33 @@ class MainApplication {
     // Search products using Algolia
     ipcMain.handle('search-products', async (event, query: string, imageData?: string) => {
       try {
+        let searchQuery = query;
+        let imageAnalysis: ImageAnalysis | null = null;
+
+        // If image data is provided, analyze it with Gemini API
+        if (imageData) {
+          try {
+            // Initialize Gemini service with API key if available
+            const apiKeysArray = await this.database.getAPIKeys();
+            const geminiKey = apiKeysArray.find(key => key.provider === 'gemini')?.encrypted_key;
+            if (geminiKey) {
+              await this.geminiService.initialize(geminiKey);
+              
+              // Analyze the image
+              imageAnalysis = await this.geminiService.analyzeImage(imageData, query);
+              
+              // Enhance search query with image analysis keywords
+              searchQuery = imageAnalysis.searchKeywords.join(' ') + ' ' + query;
+              
+              console.log('Gemini analysis result:', imageAnalysis);
+            } else {
+              console.warn('Gemini API key not available, skipping image analysis');
+            }
+          } catch (error) {
+            console.warn('Gemini image analysis failed, continuing with text search:', error);
+          }
+        }
+
         // Use Algolia demo API for product search
         const response = await fetch(
           'https://latency-dsn.algolia.net/1/indexes/instant_search/query',
@@ -70,7 +103,7 @@ class MainApplication {
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              query,
+              query: searchQuery,
               hitsPerPage: 20,
               attributesToRetrieve: ['name', 'price', 'image', 'categories', 'url', 'objectID']
             })
@@ -83,7 +116,7 @@ class MainApplication {
           return []
         }
 
-        return data.hits.map((hit: any) => ({
+        let products = data.hits.map((hit: any) => ({
           id: hit.objectID,
           name: hit.name || 'Unknown Product',
           description: hit.description || '',
@@ -91,7 +124,40 @@ class MainApplication {
           image: hit.image || this.getDefaultProductImage(),
           categories: hit.categories || [],
           url: hit.url || ''
-        }))
+        }));
+
+        // Apply personalization scoring if we have ML data
+        const userProfile = await this.personalization.getUserProfile();
+        if (userProfile.confidenceLevel > 0.1) {
+          // Score each product based on user preferences
+          const scoredProducts = await Promise.all(
+            products.map(async (product: any) => ({
+              ...product,
+              personalizedScore: await this.personalization.calculateProductScore(product, userProfile)
+            }))
+          );
+
+          // Sort by personalized score
+          products = scoredProducts.sort((a, b) => b.personalizedScore - a.personalizedScore);
+        }
+
+        // Track search interaction for ML learning
+        if (imageAnalysis) {
+          await this.personalization.trackUserInteraction({
+            eventType: 'search',
+            productId: products[0]?.id || 'unknown',
+            timestamp: Date.now(),
+            context: {
+              searchQuery: query,
+              imageFeatures: imageAnalysis
+            },
+            weight: 0.2,
+            source: 'standalone-app'
+          });
+        }
+
+        return products;
+
       } catch (error) {
         console.error('Product search error:', error)
         return []
@@ -318,6 +384,99 @@ class MainApplication {
         return { success: true, message: 'API keys saved successfully' }
       } catch (error) {
         console.error('Save API keys error:', error)
+        return { success: false, error: (error as Error).message }
+      }
+    })
+
+    // Track product view interaction
+    ipcMain.handle('track-product-view', async (event, productId: string, timeSpent: number) => {
+      try {
+        await this.personalization.trackUserInteraction({
+          eventType: 'view',
+          productId,
+          timestamp: Date.now(),
+          context: { timeSpent },
+          weight: 0.3 + (timeSpent / 10) * 0.1,
+          source: 'standalone-app'
+        })
+        return { success: true }
+      } catch (error) {
+        console.error('Track product view error:', error)
+        return { success: false, error: (error as Error).message }
+      }
+    })
+
+    // Track product click interaction
+    ipcMain.handle('track-product-click', async (event, productId: string, url: string) => {
+      try {
+        await this.personalization.trackUserInteraction({
+          eventType: 'click',
+          productId,
+          timestamp: Date.now(),
+          context: { url },
+          weight: 0.5,
+          source: 'standalone-app'
+        })
+        return { success: true }
+      } catch (error) {
+        console.error('Track product click error:', error)
+        return { success: false, error: (error as Error).message }
+      }
+    })
+
+    // Enhanced save-product handler with ML tracking
+    ipcMain.handle('save-product-with-tracking', async (event, product: any) => {
+      try {
+        // Save the product
+        const saveResult = await this.database.saveProduct(product)
+        
+        if (saveResult.lastInsertRowid) {
+          // Track the save interaction
+          await this.personalization.trackUserInteraction({
+            eventType: 'save',
+            productId: product.id,
+            timestamp: Date.now(),
+            context: { 
+              category: product.category || product.categories?.[0],
+              price: product.price 
+            },
+            weight: 1.0,
+            source: 'standalone-app'
+          })
+        }
+        
+        return saveResult
+      } catch (error) {
+        console.error('Save product with tracking error:', error)
+        return { success: false, error: (error as Error).message }
+      }
+    })
+
+    // Track product removal
+    ipcMain.handle('track-product-remove', async (event, productId: string) => {
+      try {
+        await this.personalization.trackUserInteraction({
+          eventType: 'remove',
+          productId,
+          timestamp: Date.now(),
+          context: {},
+          weight: -0.8,
+          source: 'standalone-app'
+        })
+        return { success: true }
+      } catch (error) {
+        console.error('Track product remove error:', error)
+        return { success: false, error: (error as Error).message }
+      }
+    })
+
+    // Get personalization profile for MCP
+    ipcMain.handle('get-personalization-profile', async (event) => {
+      try {
+        const profile = await this.personalization.exportForClaudeDesktop()
+        return { success: true, profile }
+      } catch (error) {
+        console.error('Get personalization profile error:', error)
         return { success: false, error: (error as Error).message }
       }
     })

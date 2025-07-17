@@ -63,11 +63,11 @@ export class AlgoliaService {
 
       const data = await response.json();
       
-      if (!data.hits) {
+      if (!(data as any).hits) {
         return [];
       }
 
-      return data.hits.map((hit: any) => ({
+      return (data as any).hits.map((hit: any) => ({
         id: hit.objectID,
         name: hit.name || 'Unknown Product',
         description: hit.description || '',
@@ -103,11 +103,11 @@ export class AlgoliaService {
 
       const data = await response.json();
       
-      if (!data.hits) {
+      if (!(data as any).hits) {
         return [];
       }
 
-      return data.hits.map((hit: any) => ({
+      return (data as any).hits.map((hit: any) => ({
         id: hit.objectID,
         name: hit.name || 'Unknown Product',
         description: hit.description || '',

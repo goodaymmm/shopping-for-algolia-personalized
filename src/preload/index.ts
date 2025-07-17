@@ -60,5 +60,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('get-api-keys'),
   
   saveAPIKeys: (apiKeys: Record<string, string>) =>
-    ipcRenderer.invoke('save-api-keys', apiKeys)
+    ipcRenderer.invoke('save-api-keys', apiKeys),
+
+  // ML interaction tracking
+  trackProductView: (productId: string, timeSpent: number) =>
+    ipcRenderer.invoke('track-product-view', productId, timeSpent),
+  
+  trackProductClick: (productId: string, url: string) =>
+    ipcRenderer.invoke('track-product-click', productId, url),
+  
+  saveProductWithTracking: (product: any) =>
+    ipcRenderer.invoke('save-product-with-tracking', product),
+  
+  trackProductRemove: (productId: string) =>
+    ipcRenderer.invoke('track-product-remove', productId),
+  
+  getPersonalizationProfile: () =>
+    ipcRenderer.invoke('get-personalization-profile')
 })

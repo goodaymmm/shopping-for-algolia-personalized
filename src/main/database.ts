@@ -11,6 +11,10 @@ export class DatabaseService {
     this.db = new Database(dbPath)
   }
 
+  get database(): Database.Database {
+    return this.db
+  }
+
   initialize() {
     this.createTables()
   }

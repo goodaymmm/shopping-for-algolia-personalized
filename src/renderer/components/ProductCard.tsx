@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
-import { Heart, ExternalLink, ShoppingCart, Star, Tag } from 'lucide-react';
-import { Product } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
+import { Heart, ExternalLink, ShoppingCart, Star, Tag, Sparkles } from 'lucide-react';
+import { Product, ProductWithContext, ProductDisplayType } from '../types';
 
 interface ProductCardProps {
-  product: Product;
+  product: Product | ProductWithContext;
   onSave?: (product: Product) => void;
   onRemove?: (productId: string) => void;
   isSaved?: boolean;
   showSaveButton?: boolean;
   showRemoveButton?: boolean;
   isDark?: boolean;
+  enableMLTracking?: boolean;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -19,26 +20,57 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   isSaved = false,
   showSaveButton = true,
   showRemoveButton = false,
-  isDark = false
+  isDark = false,
+  enableMLTracking = true
 }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const viewStartTime = useRef<number>(Date.now());
+  const hasTrackedView = useRef<boolean>(false);
+  
+  // Extract product data and display info
+  const productData = 'product' in product ? product.product : product;
+  const displayType: ProductDisplayType = 'displayType' in product ? product.displayType : 'personalized';
+  const inspirationReason = 'inspirationReason' in product ? product.inspirationReason : undefined;
 
-  const handleSave = (e: React.MouseEvent) => {
+  const handleSave = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    console.log('ProductCard handleSave clicked for product:', product);
+    console.log('ProductCard handleSave clicked for product:', productData);
+    
+    if (enableMLTracking && window.electronAPI?.saveProductWithTracking) {
+      // Use ML-enabled save for personalization learning
+      try {
+        const result = await window.electronAPI.saveProductWithTracking(productData);
+        if (result.success) {
+          console.log('Product saved with ML tracking');
+        }
+      } catch (error) {
+        console.error('Failed to save product with tracking:', error);
+      }
+    }
+    
     if (onSave) {
       console.log('Calling onSave callback...');
-      onSave(product);
+      onSave(productData);
     } else {
       console.warn('onSave callback is not provided');
     }
   };
 
-  const handleRemove = (e: React.MouseEvent) => {
+  const handleRemove = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    if (enableMLTracking && window.electronAPI?.trackProductRemove) {
+      // Track removal for ML learning
+      try {
+        await window.electronAPI.trackProductRemove(productData.id);
+      } catch (error) {
+        console.error('Failed to track product removal:', error);
+      }
+    }
+    
     if (onRemove) {
-      onRemove(product.id);
+      onRemove(productData.id);
     }
   };
 
@@ -51,11 +83,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   const openProduct = async () => {
-    if (product.url && product.url !== '#') {
+    if (productData.url && productData.url !== '#') {
+      // Track click for ML learning
+      if (enableMLTracking && window.electronAPI?.trackProductClick) {
+        try {
+          await window.electronAPI.trackProductClick(productData.id, productData.url);
+        } catch (error) {
+          console.error('Failed to track product click:', error);
+        }
+      }
+      
       if (window.electronAPI?.openExternal) {
-        await window.electronAPI.openExternal(product.url);
+        await window.electronAPI.openExternal(productData.url);
       } else {
-        window.open(product.url, '_blank');
+        window.open(productData.url, '_blank');
       }
     }
   };
@@ -66,6 +107,34 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       currency: 'USD'
     }).format(price);
   };
+  
+  // Track view time for ML learning
+  useEffect(() => {
+    if (!enableMLTracking || hasTrackedView.current) return;
+    
+    const trackView = async () => {
+      const timeSpent = Date.now() - viewStartTime.current;
+      
+      if (timeSpent > 1000 && window.electronAPI?.trackProductView) { // Only track if viewed for >1s
+        try {
+          await window.electronAPI.trackProductView(productData.id, Math.floor(timeSpent / 1000));
+          hasTrackedView.current = true;
+        } catch (error) {
+          console.error('Failed to track product view:', error);
+        }
+      }
+    };
+    
+    // Track view after component unmounts or after 10 seconds
+    const timer = setTimeout(trackView, 10000);
+    
+    return () => {
+      clearTimeout(timer);
+      if (!hasTrackedView.current) {
+        trackView();
+      }
+    };
+  }, [productData.id, enableMLTracking]);
 
   return (
     <div 
@@ -81,8 +150,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {!imageError ? (
           <>
             <img
-              src={product.image}
-              alt={product.name}
+              src={productData.image}
+              alt={productData.name}
               className={`w-full h-full object-cover transition-all duration-300 ${
                 imageLoaded ? 'opacity-100' : 'opacity-0'
               } group-hover:scale-105`}
@@ -140,7 +209,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </button>
           )}
 
-          {product.url && product.url !== '#' && (
+          {productData.url && productData.url !== '#' && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -165,9 +234,26 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               ? 'bg-green-900/80 text-green-200' 
               : 'bg-green-100/80 text-green-800'
           } backdrop-blur-sm`}>
-            {formatPrice(product.price)}
+            {formatPrice(productData.price)}
           </span>
         </div>
+        
+        {/* Display Type Badge */}
+        {displayType === 'inspiration' && (
+          <div className="absolute top-2 left-2">
+            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+              isDark 
+                ? 'bg-purple-900/80 text-purple-200' 
+                : 'bg-purple-100/80 text-purple-700'
+            } backdrop-blur-sm`}>
+              <Sparkles size={12} />
+              {inspirationReason === 'trending' && 'Trending'}
+              {inspirationReason === 'different_style' && 'New Style'}
+              {inspirationReason === 'visual_appeal' && 'Featured'}
+              {!inspirationReason && 'Inspiration'}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Product Info */}
@@ -175,38 +261,38 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <h3 className={`font-semibold mb-2 line-clamp-2 ${
           isDark ? 'text-white' : 'text-gray-900'
         }`}>
-          {product.name}
+          {productData.name}
         </h3>
         
-        {product.description && (
+        {productData.description && (
           <p className={`text-sm mb-3 line-clamp-2 ${
             isDark ? 'text-gray-400' : 'text-gray-600'
           }`}>
-            {product.description}
+            {productData.description}
           </p>
         )}
 
         {/* Categories */}
-        {product.categories && product.categories.length > 0 && (
+        {productData.categories && productData.categories.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-3">
-            {product.categories.slice(0, 3).map((category) => (
+            {productData.categories.slice(0, 3).map((category) => (
               <span
                 key={category}
                 className={`inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full ${
                   isDark 
-                    ? 'bg-purple-900/50 text-purple-200' 
-                    : 'bg-purple-100 text-purple-700'
+                    ? 'bg-gray-700/50 text-gray-300' 
+                    : 'bg-gray-100 text-gray-600'
                 }`}
               >
                 <Tag size={10} />
                 {category}
               </span>
             ))}
-            {product.categories.length > 3 && (
+            {productData.categories.length > 3 && (
               <span className={`px-2 py-1 text-xs rounded-full ${
                 isDark ? 'text-gray-400' : 'text-gray-500'
               }`}>
-                +{product.categories.length - 3} more
+                +{productData.categories.length - 3} more
               </span>
             )}
           </div>

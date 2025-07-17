@@ -31,6 +31,7 @@
   "author": "Shopping for AIgolia personalized",
   "license": "MIT",
   "dependencies": {
+    "@google/genai": "^1.10.0",
     "@modelcontextprotocol/sdk": "^1.15.1",
     "algoliasearch": "^5.32.0",
     "better-sqlite3": "^12.2.0",

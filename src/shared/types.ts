@@ -5,6 +5,9 @@ export interface ElectronAPI {
   
   // Database operations
   saveProduct: (product: Product) => Promise<{ success: boolean; id?: number }>
+  getProducts: () => Promise<Product[]>
+  removeProduct: (productId: string) => Promise<{ success: boolean }>
+  updateProduct: (productId: string, updates: { customName?: string; tags?: string }) => Promise<{ success: boolean }>
   getChatHistory: () => Promise<ChatSession[]>
   saveChat: (sessionData: { name: string; category?: string }, message: Message) => Promise<{ success: boolean; sessionId?: number }>
   
@@ -14,6 +17,26 @@ export interface ElectronAPI {
   
   // Search
   searchProducts: (query: string, imageData?: string) => Promise<Product[]>
+  
+  // External links
+  openExternal: (url: string) => Promise<void>
+  
+  // Database management
+  getDatabasePath: () => Promise<{ success: boolean; path?: string }>
+  changeDatabasePath: () => Promise<{ success: boolean }>
+  resetDatabase: () => Promise<{ success: boolean }>
+  resetMLData: () => Promise<{ success: boolean }>
+  
+  // API key management
+  getAPIKeys: () => Promise<{ success: boolean; keys?: Record<string, string> }>
+  saveAPIKeys: (apiKeys: Record<string, string>) => Promise<{ success: boolean }>
+  
+  // ML interaction tracking
+  trackProductView: (productId: string, timeSpent: number) => Promise<{ success: boolean }>
+  trackProductClick: (productId: string, url: string) => Promise<{ success: boolean }>
+  saveProductWithTracking: (product: Product) => Promise<{ success: boolean; id?: number }>
+  trackProductRemove: (productId: string) => Promise<{ success: boolean }>
+  getPersonalizationProfile: () => Promise<{ success: boolean; profile?: any }>
 }
 
 declare global {

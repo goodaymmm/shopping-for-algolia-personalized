@@ -1,12 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { ChatMessage } from './ChatMessage';
 import { ProductCard } from './ProductCard';
-import { Message, Product } from '../types';
+import { Message, Product, ProductWithContext } from '../types';
 import { MessageSquare, Sparkles, ShoppingBag } from 'lucide-react';
 
 interface ChatContainerProps {
   messages: Message[];
-  searchResults?: Product[];
+  searchResults?: (Product | ProductWithContext)[];
   showTimestamps: boolean;
   isLoading?: boolean;
   isDark: boolean;
@@ -106,46 +106,122 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
             )}
             
             {/* Search Results Section */}
-            {searchResults.length > 0 && (
-              <div className="mt-6 px-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <ShoppingBag className="w-5 h-5 text-orange-500" />
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Product Results
-                  </h3>
+            {searchResults.length > 0 && (() => {
+              // Separate personalized and inspiration products
+              const personalizedProducts = searchResults.filter(p => 
+                !('displayType' in p) || p.displayType === 'personalized'
+              );
+              const inspirationProducts = searchResults.filter(p => 
+                'displayType' in p && p.displayType === 'inspiration'
+              );
+              
+              return (
+                <div className="mt-6 px-6 space-y-6">
+                  {/* Personalized Results */}
+                  {personalizedProducts.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-4">
+                        <ShoppingBag className="w-5 h-5 text-orange-500" />
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                          Recommended for You
+                        </h3>
+                        <span className="px-2 py-1 text-xs rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200">
+                          Personalized
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {personalizedProducts.map((product) => {
+                          const productData = 'product' in product ? product.product : product;
+                          return (
+                            <ProductCard
+                              key={productData.id}
+                              product={product}
+                              isSaved={savedProductIds.has(productData.id)}
+                              onSave={async (product) => {
+                                try {
+                                  if (onProductSave) {
+                                    await onProductSave(product);
+                                  }
+                                } catch (error) {
+                                  console.error('Failed to save product:', error);
+                                }
+                              }}
+                              onRemove={async (productId) => {
+                                try {
+                                  if (onProductRemove) {
+                                    await onProductRemove(productId);
+                                  }
+                                } catch (error) {
+                                  console.error('Failed to remove product:', error);
+                                }
+                              }}
+                              showSaveButton={true}
+                              showRemoveButton={false}
+                              isDark={isDark}
+                              enableMLTracking={true}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Inspiration Results */}
+                  {inspirationProducts.length > 0 && (
+                    <div>
+                      <div className="flex items-center gap-2 mb-4">
+                        <Sparkles className="w-5 h-5 text-purple-500" />
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                          Inspiration & Discovery
+                        </h3>
+                        <span className="px-2 py-1 text-xs rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200">
+                          Diverse
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {inspirationProducts.map((product) => {
+                          const productData = product.product;
+                          return (
+                            <ProductCard
+                              key={productData.id}
+                              product={product}
+                              isSaved={savedProductIds.has(productData.id)}
+                              onSave={async (product) => {
+                                try {
+                                  if (onProductSave) {
+                                    await onProductSave(product);
+                                  }
+                                } catch (error) {
+                                  console.error('Failed to save product:', error);
+                                }
+                              }}
+                              onRemove={async (productId) => {
+                                try {
+                                  if (onProductRemove) {
+                                    await onProductRemove(productId);
+                                  }
+                                } catch (error) {
+                                  console.error('Failed to remove product:', error);
+                                }
+                              }}
+                              showSaveButton={true}
+                              showRemoveButton={false}
+                              isDark={isDark}
+                              enableMLTracking={false} // Disable ML tracking for inspiration items
+                            />
+                          );
+                        })}
+                      </div>
+                      <div className="mt-3 text-center">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          💡 These items won't affect your personalization preferences
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {searchResults.map((product) => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      isSaved={savedProductIds.has(product.id)}
-                      onSave={async (product) => {
-                        try {
-                          if (onProductSave) {
-                            await onProductSave(product);
-                          }
-                        } catch (error) {
-                          console.error('Failed to save product:', error);
-                        }
-                      }}
-                      onRemove={async (productId) => {
-                        try {
-                          if (onProductRemove) {
-                            await onProductRemove(productId);
-                          }
-                        } catch (error) {
-                          console.error('Failed to remove product:', error);
-                        }
-                      }}
-                      showSaveButton={true}
-                      showRemoveButton={false}
-                      isDark={isDark}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
+              );
+            })()}
             
             {/* Loading Indicator */}
             {isLoading && (

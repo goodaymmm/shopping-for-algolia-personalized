@@ -7,11 +7,14 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { ChatHistory } from './components/ChatHistory';
 import { MyDatabase } from './components/MyDatabase';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { Message, AppView, Product, DiscoveryPercentage } from './types';
+import { Message, AppView, Product, ProductWithContext, DiscoveryPercentage } from './types';
 import { useTheme } from './hooks/useTheme';
 import { useSettings } from './hooks/useSettings';
 import { useChatSessions } from './hooks/useChatSessions';
 import { DEFAULT_PRODUCT_IMAGE, MOCK_PRODUCT_IMAGES } from './utils/defaultImages';
+import { GeminiService, ImageAnalysis } from './services/gemini';
+import { AlgoliaService } from './services/algolia';
+import { OutlierMixer } from './services/outlier-mixer';
 
 function App() {
   const { theme, isDark, changeTheme } = useTheme();
@@ -27,11 +30,16 @@ function App() {
   } = useChatSessions();
 
   const [currentView, setCurrentView] = useState<AppView>('chat');
-  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [searchResults, setSearchResults] = useState<(Product | ProductWithContext)[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [discoveryPercentage, setDiscoveryPercentage] = useState<DiscoveryPercentage>(0);
   const [savedProductIds, setSavedProductIds] = useState<Set<string>>(new Set());
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  // Service instances for fallback when Electron API is not available
+  const geminiService = new GeminiService();
+  const algoliaService = new AlgoliaService();
+  const outlierMixer = new OutlierMixer();
 
   // Load discovery percentage from Electron API
   useEffect(() => {
@@ -47,6 +55,24 @@ function App() {
     };
 
     loadDiscoveryPercentage();
+  }, []);
+
+  // Initialize Gemini service with API key
+  useEffect(() => {
+    const initializeGeminiService = async () => {
+      if (window.electronAPI?.getAPIKeys) {
+        try {
+          const result = await window.electronAPI.getAPIKeys();
+          if (result.success && result.keys && result.keys.gemini) {
+            await geminiService.initialize(result.keys.gemini);
+          }
+        } catch (error) {
+          console.error('Failed to initialize Gemini service:', error);
+        }
+      }
+    };
+
+    initializeGeminiService();
   }, []);
 
   // Load saved products
@@ -108,23 +134,72 @@ function App() {
 
         products = await window.electronAPI.searchProducts(content, imageData);
       } else {
-        // Fallback for development environment
-        console.warn('Electron API not available, using mock data');
+        // Fallback for development environment - use Gemini API directly
+        console.warn('Electron API not available, using direct API integration');
         if (imageDataUrl) {
-          products = getMockImageAnalysisProducts(content, imageDataUrl);
+          try {
+            // Extract base64 from data URL
+            const imageData = imageDataUrl.split(',')[1];
+            
+            // Try Gemini API first
+            const analysis = await geminiService.analyzeImage(imageData, content);
+            
+            // Use analysis to search Algolia
+            const searchQuery = analysis.searchKeywords.join(' ') + ' ' + content;
+            products = await algoliaService.searchProducts(searchQuery);
+            
+            console.log('Real Gemini analysis:', analysis);
+          } catch (error) {
+            console.warn('Gemini API failed, falling back to mock:', error);
+            // Fallback to mock analysis
+            const mockAnalysis = GeminiService.getMockAnalysis(content);
+            const searchQuery = mockAnalysis.searchKeywords.join(' ') + ' ' + content;
+            products = await algoliaService.searchProducts(searchQuery);
+          }
         } else {
-          products = getMockProducts(content);
+          // Text-only search
+          products = await algoliaService.searchProducts(content);
         }
       }
       
-      setSearchResults(products);
+      // Apply discovery mixing for diverse recommendations
+      let finalResults: (Product | ProductWithContext)[];
+      if (discoveryPercentage > 0 && products.length > 0) {
+        try {
+          finalResults = await outlierMixer.mixResults(products, discoveryPercentage, content);
+          console.log(`Applied ${discoveryPercentage}% discovery mixing:`, {
+            total: finalResults.length,
+            personalized: finalResults.filter(p => !('displayType' in p) || p.displayType === 'personalized').length,
+            inspiration: finalResults.filter(p => 'displayType' in p && p.displayType === 'inspiration').length
+          });
+        } catch (error) {
+          console.warn('Discovery mixing failed, using original results:', error);
+          finalResults = products;
+        }
+      } else {
+        finalResults = products;
+      }
+      
+      setSearchResults(finalResults);
 
       // Create assistant response
+      const personalizedCount = finalResults.filter(p => !('displayType' in p) || p.displayType === 'personalized').length;
+      const inspirationCount = finalResults.filter(p => 'displayType' in p && p.displayType === 'inspiration').length;
+      
+      let responseText = '';
+      if (imageDataUrl) {
+        responseText = `I can see the image you've shared. Based on the visual analysis, I found ${finalResults.length} products for you!`;
+      } else {
+        responseText = `Found ${finalResults.length} products matching "${content}"`;
+      }
+      
+      if (inspirationCount > 0) {
+        responseText += ` This includes ${personalizedCount} personalized recommendations and ${inspirationCount} inspiration items for discovery.`;
+      }
+      
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: imageDataUrl 
-          ? `I can see the image you've shared. Based on the visual analysis, I found ${products.length} similar products for you!`
-          : `Found ${products.length} products matching "${content}"`,
+        content: responseText,
         sender: 'assistant',
         timestamp: new Date(),
       };
