@@ -67,31 +67,43 @@ class MainApplication {
   private setupIPC() {
     // Search products using Algolia
     ipcMain.handle('search-products', async (event, query: string, imageData?: string) => {
+      console.log('[Search] Starting product search...');
+      console.log('[Search] Query:', query);
+      console.log('[Search] Has image data:', !!imageData);
+      
       try {
         let searchQuery = query;
         let imageAnalysis: ImageAnalysis | null = null;
 
         // If image data is provided, analyze it with Gemini API
         if (imageData) {
+          console.log('[Search] Processing image data...');
           try {
             // Initialize Gemini service with API key if available
             const apiKeysArray = await this.database.getAPIKeys();
+            console.log('[Search] Retrieved API keys, count:', apiKeysArray.length);
+            
             const geminiKey = apiKeysArray.find(key => key.provider === 'gemini')?.encrypted_key;
+            console.log('[Search] Gemini key available:', !!geminiKey);
+            
             if (geminiKey) {
+              console.log('[Search] Initializing Gemini service...');
               await this.geminiService.initialize(geminiKey);
               
               // Analyze the image
+              console.log('[Search] Analyzing image with Gemini...');
               imageAnalysis = await this.geminiService.analyzeImage(imageData, query);
               
               // Enhance search query with image analysis keywords
+              const originalQuery = searchQuery;
               searchQuery = imageAnalysis.searchKeywords.join(' ') + ' ' + query;
-              
-              console.log('Gemini analysis result:', imageAnalysis);
+              console.log('[Search] Enhanced search query:', originalQuery, '->', searchQuery);
+              console.log('[Search] Image analysis keywords:', imageAnalysis.searchKeywords);
             } else {
-              console.warn('Gemini API key not available, skipping image analysis');
+              console.warn('[Search] Gemini API key not available, skipping image analysis');
             }
           } catch (error) {
-            console.warn('Gemini image analysis failed, continuing with text search:', error);
+            console.warn('[Search] Gemini image analysis failed, continuing with text search:', error);
           }
         }
 
@@ -103,9 +115,11 @@ class MainApplication {
           indexName: 'bestbuy'  // Changed from 'instant_search' to 'bestbuy' which contains products
         };
         
+        console.log('[Search] Initializing Algolia MCP service...');
         await this.algoliaMCPService.initialize(algoliaMCPConfig);
 
         // Use Algolia MCP service for product search
+        console.log('[Search] Searching Algolia with query:', searchQuery);
         let products = await this.algoliaMCPService.searchProducts(
           searchQuery,
           algoliaMCPConfig.indexName,
@@ -115,13 +129,20 @@ class MainApplication {
           }
         );
 
+        console.log('[Search] Algolia search results:', products ? products.length : 0, 'products');
+        
         if (!products || products.length === 0) {
+          console.log('[Search] No products found, returning empty array');
           return [];
         }
 
         // Apply personalization scoring if we have ML data
+        console.log('[Search] Checking user profile for personalization...');
         const userProfile = await this.personalization.getUserProfile();
+        console.log('[Search] User profile confidence level:', userProfile.confidenceLevel);
+        
         if (userProfile.confidenceLevel > 0.1) {
+          console.log('[Search] Applying personalization scoring...');
           // Score each product based on user preferences
           const scoredProducts = await Promise.all(
             products.map(async (product: any) => ({
@@ -132,10 +153,14 @@ class MainApplication {
 
           // Sort by personalized score
           products = scoredProducts.sort((a, b) => b.personalizedScore - a.personalizedScore);
+          console.log('[Search] Applied personalization scoring to', products.length, 'products');
+        } else {
+          console.log('[Search] Skipping personalization (insufficient confidence)');
         }
 
         // Track search interaction for ML learning
         if (imageAnalysis) {
+          console.log('[Search] Tracking search interaction for ML learning...');
           await this.personalization.trackUserInteraction({
             eventType: 'search',
             productId: products[0]?.id || 'unknown',
@@ -149,11 +174,17 @@ class MainApplication {
           });
         }
 
+        console.log('[Search] Returning', products.length, 'products');
         return products;
 
       } catch (error) {
-        console.error('Product search error:', error)
-        return []
+        console.error('[Search] Product search error:', error);
+        console.error('[Search] Error details:', {
+          message: (error as Error).message,
+          stack: (error as Error).stack,
+          name: (error as Error).name
+        });
+        return [];
       }
     })
 

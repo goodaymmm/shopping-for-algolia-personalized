@@ -66,10 +66,16 @@ export class AlgoliaMCPService {
 
   async initialize(config: AlgoliaConfig): Promise<boolean> {
     try {
+      console.log('[AlgoliaMCP] Initializing with config:', {
+        applicationId: config.applicationId,
+        indexName: config.indexName,
+        hasApiKey: !!config.apiKey
+      });
       this.config = config;
+      console.log('[AlgoliaMCP] Successfully initialized');
       return true;
     } catch (error) {
-      console.error('Failed to initialize Algolia MCP service:', error);
+      console.error('[AlgoliaMCP] Failed to initialize:', error);
       return false;
     }
   }
@@ -196,11 +202,19 @@ export class AlgoliaMCPService {
     filters?: string;
     attributesToRetrieve?: string[];
   }): Promise<Product[]> {
+    console.log('[AlgoliaMCP] Starting search...');
+    console.log('[AlgoliaMCP] Query:', query);
+    console.log('[AlgoliaMCP] Index:', indexName);
+    console.log('[AlgoliaMCP] Params:', additionalParams);
+    
     if (!this.config) {
-      throw new Error('Algolia MCP service not initialized');
+      const error = 'Algolia MCP service not initialized';
+      console.error('[AlgoliaMCP]', error);
+      throw new Error(error);
     }
 
     try {
+      console.log('[AlgoliaMCP] Calling handleSearchForHits...');
       const searchResult = await this.handleSearchForHits({
         indexName,
         query,
@@ -211,10 +225,18 @@ export class AlgoliaMCPService {
         filters: additionalParams?.filters
       });
 
+      console.log('[AlgoliaMCP] Search result received');
       const resultText = searchResult.content[0].text as string;
+      console.log('[AlgoliaMCP] Result text length:', resultText.length);
+      
       const data = JSON.parse(resultText) as AlgoliaMCPSearchResult;
+      console.log('[AlgoliaMCP] Parsed data:', {
+        hits: data.hits?.length || 0,
+        nbHits: data.nbHits,
+        processingTimeMS: data.processingTimeMS
+      });
 
-      return data.hits.map(hit => ({
+      const products = data.hits.map(hit => ({
         id: hit.objectID,
         name: hit.name || 'Unknown Product',
         description: hit.description || '',
@@ -223,8 +245,16 @@ export class AlgoliaMCPService {
         categories: hit.categories || [],
         url: hit.url || ''
       }));
+      
+      console.log('[AlgoliaMCP] Returning', products.length, 'products');
+      return products;
     } catch (error) {
-      console.error('Algolia MCP product search error:', error);
+      console.error('[AlgoliaMCP] Product search error:', error);
+      console.error('[AlgoliaMCP] Error details:', {
+        message: (error as Error).message,
+        stack: (error as Error).stack,
+        name: (error as Error).name
+      });
       return [];
     }
   }

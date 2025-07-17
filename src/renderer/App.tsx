@@ -164,15 +164,15 @@ function App() {
       let responseText = '';
       if (finalResults.length === 0) {
         if (imageDataUrl) {
-          responseText = `画像を分析しましたが、商品が見つかりませんでした。検索キーワードを調整してもう一度お試しください。`;
+          responseText = `I analyzed the image but couldn't find any products. Please try adjusting your search keywords.`;
         } else {
-          responseText = `"${content}" に一致する商品が見つかりませんでした。`;
+          responseText = `No products found matching "${content}".`;
         }
       } else {
         if (imageDataUrl) {
-          responseText = `画像を分析し、${finalResults.length}件の商品を見つけました！`;
+          responseText = `I analyzed the image and found ${finalResults.length} products!`;
         } else {
-          responseText = `"${content}" に一致する${finalResults.length}件の商品を見つけました。`;
+          responseText = `Found ${finalResults.length} products matching "${content}".`;
         }
       }
       
@@ -202,9 +202,23 @@ function App() {
     } catch (error) {
       console.error('Search error:', error);
       
+      let errorText = 'An error occurred while searching for products.';
+      
+      if (error.message?.includes('API key') || error.message?.includes('authentication')) {
+        errorText = 'API authentication failed. Please check if your API keys are properly configured in Settings.';
+      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        errorText = 'Network error occurred. Please check your internet connection and try again.';
+      } else if (error.message?.includes('Gemini')) {
+        errorText = 'Image analysis failed. Please try again or search without the image.';
+      } else if (error.message?.includes('Algolia')) {
+        errorText = 'Product search service unavailable. Please try again later.';
+      } else {
+        errorText = 'An unexpected error occurred. Please try again or check the console for details.';
+      }
+      
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: '商品検索中にエラーが発生しました。APIキーが正しく設定されているか確認してください。',
+        content: errorText,
         sender: 'assistant',
         timestamp: new Date(),
       };

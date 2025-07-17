@@ -19,17 +19,21 @@ export class GeminiService {
 
   async initialize(apiKey: string): Promise<boolean> {
     try {
+      console.log('[Gemini] Initializing with API key:', apiKey ? 'Present' : 'Missing');
       this.apiKey = apiKey;
       this.client = new GoogleGenAI({ apiKey });
+      console.log('[Gemini] Successfully initialized');
       return true;
     } catch (error) {
-      console.error('Failed to initialize Gemini API:', error);
+      console.error('[Gemini] Failed to initialize:', error);
       return false;
     }
   }
 
   async testConnection(): Promise<boolean> {
+    console.log('[Gemini] Testing connection...');
     if (!this.client) {
+      console.log('[Gemini] Connection test failed: client not initialized');
       return false;
     }
 
@@ -38,21 +42,31 @@ export class GeminiService {
         model: 'gemini-2.5-flash',
         contents: 'Hello'
       });
-      return response.text ? response.text.length > 0 : false;
+      const success = response.text ? response.text.length > 0 : false;
+      console.log('[Gemini] Connection test result:', success ? 'Success' : 'Failed');
+      return success;
     } catch (error) {
-      console.error('Gemini API connection test failed:', error);
+      console.error('[Gemini] Connection test failed:', error);
       return false;
     }
   }
 
   async analyzeImage(imageData: string, userQuery?: string): Promise<ImageAnalysis> {
+    console.log('[Gemini] Starting image analysis...');
+    console.log('[Gemini] User query:', userQuery || 'None');
+    console.log('[Gemini] Image data length:', imageData ? imageData.length : 0);
+    
     if (!this.client) {
-      throw new Error('Gemini client not initialized. Please set API key first.');
+      const error = 'Gemini client not initialized. Please set API key first.';
+      console.error('[Gemini]', error);
+      throw new Error(error);
     }
 
     try {
       const prompt = this.buildAnalysisPrompt(userQuery || '');
+      console.log('[Gemini] Using prompt:', prompt);
       
+      console.log('[Gemini] Sending request to Gemini API...');
       const response = await this.client.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: [
@@ -70,84 +84,85 @@ export class GeminiService {
         ]
       });
 
+      console.log('[Gemini] Received response from API');
       const analysisText = response.text;
+      console.log('[Gemini] Response text length:', analysisText ? analysisText.length : 0);
 
       return this.parseAnalysisResult(analysisText || '');
     } catch (error) {
-      console.error('Gemini image analysis failed:', error);
+      console.error('[Gemini] Image analysis failed:', error);
+      console.error('[Gemini] Error details:', {
+        message: (error as Error).message,
+        stack: (error as Error).stack,
+        name: (error as Error).name
+      });
       throw error;
     }
   }
 
   private buildAnalysisPrompt(userQuery: string): string {
     return `
-Analyze this product image for e-commerce shopping. Extract the following information and respond in JSON format:
+Analyze the product in this image and generate optimal search keywords for finding similar products in online shopping.
 
-{
-  "style": "product style (casual, formal, sporty, elegant, etc.)",
-  "colors": ["dominant color 1", "color 2", "color 3"],
-  "materials": ["material 1", "material 2"],
-  "occasion": "suitable occasion (work, casual, party, outdoor, etc.)",
-  "priceRange": "estimated price range (budget, mid-range, premium, luxury)",
-  "category": "product category (clothing, shoes, electronics, home, accessories, etc.)",
-  "confidence": 0.95,
-  "searchKeywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"],
-  "description": "Brief description of the product"
-}
+User's request: "${userQuery}"
 
-User's specific request: "${userQuery}"
+Please provide 5-10 search keywords in the following format:
+- Product type (e.g., sneakers, running shoes, boots, etc.)
+- Style (e.g., casual, sporty, formal, etc.)
+- Colors
+- Brand (if identifiable)
+- Distinctive design features
 
-Focus on:
-1. Visual style and aesthetic
-2. Color palette (up to 3 main colors)
-3. Material/fabric if visible
-4. Appropriate use context
-5. Quality indicators for price estimation
-6. Product categorization
-7. Search-optimized keywords for product matching
-
-Respond only with valid JSON.
+Return only the keywords separated by spaces.
     `;
   }
 
   private parseAnalysisResult(analysisText: string): ImageAnalysis {
+    console.log('[Gemini] Raw analysis text:', analysisText);
+    
     try {
-      // Clean the response text to extract JSON
-      const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON found in response');
+      // Parse keywords from simple text response
+      const keywords = analysisText.trim().split(/\s+/).filter(word => word.length > 0);
+      
+      console.log('[Gemini] Extracted keywords:', keywords);
+      
+      if (keywords.length === 0) {
+        throw new Error('No keywords found in response');
       }
 
-      const jsonString = jsonMatch[0];
-      const parsed = JSON.parse(jsonString);
-
-      // Validate and provide defaults
-      return {
-        style: parsed.style || 'casual',
-        colors: Array.isArray(parsed.colors) ? parsed.colors.slice(0, 3) : ['gray'],
-        materials: Array.isArray(parsed.materials) ? parsed.materials.slice(0, 2) : ['unknown'],
-        occasion: parsed.occasion || 'casual',
-        priceRange: parsed.priceRange || 'mid-range',
-        category: parsed.category || 'general',
-        confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.8,
-        searchKeywords: Array.isArray(parsed.searchKeywords) ? parsed.searchKeywords.slice(0, 5) : ['product'],
-        description: parsed.description || 'Product image analysis'
+      // Return simplified analysis with focus on search keywords
+      const result = {
+        style: '',
+        colors: [],
+        materials: [],
+        occasion: '',
+        priceRange: '',
+        category: '',
+        confidence: 0.9,
+        searchKeywords: keywords,
+        description: `Image analysis: ${keywords.join(', ')}`
       };
-    } catch (error) {
-      console.error('Failed to parse Gemini analysis result:', error);
       
-      // Fallback analysis
-      return {
-        style: 'casual',
-        colors: ['gray', 'black'],
-        materials: ['unknown'],
-        occasion: 'casual',
-        priceRange: 'mid-range',
-        category: 'general',
-        confidence: 0.3,
-        searchKeywords: ['product', 'item'],
-        description: 'Analysis failed - using fallback data'
+      console.log('[Gemini] Parsed result:', result);
+      return result;
+    } catch (error) {
+      console.error('[Gemini] Failed to parse analysis result:', error);
+      
+      // Return error state with no keywords
+      const fallbackResult = {
+        style: '',
+        colors: [],
+        materials: [],
+        occasion: '',
+        priceRange: '',
+        category: '',
+        confidence: 0,
+        searchKeywords: [],
+        description: 'Image analysis failed'
       };
+      
+      console.log('[Gemini] Using fallback result:', fallbackResult);
+      return fallbackResult;
     }
   }
 }
