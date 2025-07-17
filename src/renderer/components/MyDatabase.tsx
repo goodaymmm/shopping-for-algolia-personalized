@@ -3,73 +3,16 @@ import { ArrowLeft, Search, Filter, Grid, List, Trash2, Download, Package, Tag }
 import { Product } from '../types';
 import { EditableProductCard } from './EditableProductCard';
 import { InspirationProductCard } from './InspirationProductCard';
-import { DEFAULT_PRODUCT_IMAGE, MOCK_PRODUCT_IMAGES } from '../utils/defaultImages';
+import { DEFAULT_PRODUCT_IMAGE } from '../utils/defaultImages';
 
 interface MyDatabaseProps {
   onBack: () => void;
   isDark: boolean;
 }
 
-// Mock saved products data
-const mockSavedProducts: (Product & { savedAt: Date; isInspiration?: boolean; inspirationReason?: 'trending' | 'different_style' | 'visual_appeal'; customName?: string; tags?: string })[] = [
-  {
-    id: '1',
-    name: 'Premium Bluetooth Headphones',
-    description: 'High-quality wireless headphones with noise cancellation',
-    price: 299.99,
-    image: MOCK_PRODUCT_IMAGES.headphones,
-    categories: ['electronics', 'audio'],
-    url: '#',
-    savedAt: new Date('2024-01-15'),
-  },
-  {
-    id: '2',
-    name: 'Vintage Leather Jacket',
-    description: 'Classic brown leather jacket with vintage styling',
-    price: 189.99,
-    image: MOCK_PRODUCT_IMAGES.jacket,
-    categories: ['fashion', 'outerwear'],
-    url: '#',
-    savedAt: new Date('2024-01-14'),
-    isInspiration: true,
-    inspirationReason: 'different_style' as const,
-  },
-  {
-    id: '3',
-    name: 'Smart Watch Series 9',
-    description: 'Advanced fitness tracking and smart features',
-    price: 399.99,
-    image: MOCK_PRODUCT_IMAGES.watch,
-    categories: ['electronics', 'wearables'],
-    url: '#',
-    savedAt: new Date('2024-01-13'),
-  },
-  {
-    id: '4',
-    name: 'Artisan Coffee Mug Set',
-    description: 'Handcrafted ceramic mugs with unique patterns',
-    price: 45.99,
-    image: MOCK_PRODUCT_IMAGES.mugs,
-    categories: ['home', 'kitchen'],
-    url: '#',
-    savedAt: new Date('2024-01-12'),
-    isInspiration: true,
-    inspirationReason: 'visual_appeal' as const,
-  },
-  {
-    id: '5',
-    name: 'Gaming Mechanical Keyboard',
-    description: 'RGB backlit mechanical keyboard for gaming',
-    price: 129.99,
-    image: MOCK_PRODUCT_IMAGES.keyboard,
-    categories: ['electronics', 'gaming'],
-    url: '#',
-    savedAt: new Date('2024-01-11'),
-  },
-];
 
 export const MyDatabase: React.FC<MyDatabaseProps> = ({ onBack, isDark }) => {
-  const [products, setProducts] = useState(mockSavedProducts);
+  const [products, setProducts] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');

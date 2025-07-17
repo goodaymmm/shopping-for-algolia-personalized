@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Product } from '../types';
 import { safeGetItem, safeSetItem } from '../utils/safeStorage';
-import { MOCK_PRODUCT_IMAGES } from '../utils/defaultImages';
 
 interface DatabaseState {
   savedProducts: Product[];
@@ -21,33 +20,13 @@ export const useDatabase = () => {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
-      if (window.electronAPI && window.electronAPI.getChatHistory) {
+      if (window.electronAPI && window.electronAPI.getProducts) {
         // In Electron environment, get from database
-        // For now, we'll use mock data since we don't have a specific "getSavedProducts" API
-        const mockProducts: Product[] = [
-          {
-            id: 'saved-1',
-            name: 'Premium Wireless Headphones',
-            description: 'High-quality noise-canceling headphones',
-            price: 299.99,
-            image: MOCK_PRODUCT_IMAGES.headphones,
-            categories: ['electronics', 'audio'],
-            url: '#'
-          },
-          {
-            id: 'saved-2',
-            name: 'Smart Fitness Watch',
-            description: 'Advanced fitness tracking with heart rate monitor',
-            price: 199.99,
-            image: MOCK_PRODUCT_IMAGES.watch,
-            categories: ['electronics', 'fitness'],
-            url: '#'
-          }
-        ];
+        const products = await window.electronAPI.getProducts();
         
         setState(prev => ({
           ...prev,
-          savedProducts: mockProducts,
+          savedProducts: products,
           isLoading: false
         }));
       } else {

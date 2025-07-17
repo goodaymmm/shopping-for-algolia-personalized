@@ -82,72 +82,56 @@ export class GeminiService {
 
   private buildAnalysisPrompt(userQuery: string): string {
     return `
-Analyze this product image for e-commerce shopping. Extract the following information and respond in JSON format:
+画像に写っている商品を分析し、オンラインショッピングで類似商品を検索するための最適なキーワードを生成してください。
 
-{
-  "style": "product style (casual, formal, sporty, elegant, etc.)",
-  "colors": ["dominant color 1", "color 2", "color 3"],
-  "materials": ["material 1", "material 2"],
-  "occasion": "suitable occasion (work, casual, party, outdoor, etc.)",
-  "priceRange": "estimated price range (budget, mid-range, premium, luxury)",
-  "category": "product category (clothing, shoes, electronics, home, accessories, etc.)",
-  "confidence": 0.95,
-  "searchKeywords": ["keyword1", "keyword2", "keyword3", "keyword4", "keyword5"],
-  "description": "Brief description of the product"
-}
+ユーザーのリクエスト: "${userQuery}"
 
-User's specific request: "${userQuery}"
+以下の形式で検索キーワードを5〜10個提供してください：
+- 商品のタイプ（例：スニーカー、ランニングシューズ、ブーツなど）
+- スタイル（例：カジュアル、スポーティ、フォーマルなど）
+- 色
+- ブランド（識別可能な場合）
+- 特徴的なデザイン要素
 
-Focus on:
-1. Visual style and aesthetic
-2. Color palette (up to 3 main colors)
-3. Material/fabric if visible
-4. Appropriate use context
-5. Quality indicators for price estimation
-6. Product categorization
-7. Search-optimized keywords for product matching
-
-Respond only with valid JSON.
+キーワードのみをスペース区切りで返してください。
     `;
   }
 
   private parseAnalysisResult(analysisText: string): ImageAnalysis {
     try {
-      // Clean the response text to extract JSON
-      const jsonMatch = analysisText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON found in response');
+      // Parse keywords from simple text response
+      const keywords = analysisText.trim().split(/\s+/).filter(word => word.length > 0);
+      
+      if (keywords.length === 0) {
+        throw new Error('No keywords found in response');
       }
 
-      const jsonString = jsonMatch[0];
-      const parsed = JSON.parse(jsonString);
-
-      // Validate and provide defaults
+      // Return simplified analysis with focus on search keywords
       return {
-        style: parsed.style || 'casual',
-        colors: Array.isArray(parsed.colors) ? parsed.colors.slice(0, 3) : ['gray'],
-        materials: Array.isArray(parsed.materials) ? parsed.materials.slice(0, 2) : ['unknown'],
-        occasion: parsed.occasion || 'casual',
-        priceRange: parsed.priceRange || 'mid-range',
-        category: parsed.category || 'general',
-        confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.8,
-        searchKeywords: Array.isArray(parsed.searchKeywords) ? parsed.searchKeywords.slice(0, 5) : ['product'],
-        description: parsed.description || 'Product image analysis'
+        style: '',
+        colors: [],
+        materials: [],
+        occasion: '',
+        priceRange: '',
+        category: '',
+        confidence: 0.9,
+        searchKeywords: keywords,
+        description: `Image analysis: ${keywords.join(', ')}`
       };
     } catch (error) {
       console.error('Failed to parse Gemini analysis result:', error);
       
-      // Fallback analysis
+      // Return error state with no keywords
       return {
-        style: 'casual',
-        colors: ['gray', 'black'],
-        materials: ['unknown'],
-        occasion: 'casual',
-        priceRange: 'mid-range',
-        category: 'general',
-        confidence: 0.3,
-        searchKeywords: ['product', 'item'],
-        description: 'Analysis failed - using fallback data'
+        style: '',
+        colors: [],
+        materials: [],
+        occasion: '',
+        priceRange: '',
+        category: '',
+        confidence: 0,
+        searchKeywords: [],
+        description: 'Image analysis failed'
       };
     }
   }

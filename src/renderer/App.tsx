@@ -11,7 +11,7 @@ import { Message, AppView, Product, ProductWithContext, DiscoveryPercentage } fr
 import { useTheme } from './hooks/useTheme';
 import { useSettings } from './hooks/useSettings';
 import { useChatSessions } from './hooks/useChatSessions';
-import { DEFAULT_PRODUCT_IMAGE, MOCK_PRODUCT_IMAGES } from './utils/defaultImages';
+import { DEFAULT_PRODUCT_IMAGE } from './utils/defaultImages';
 import { GeminiService, ImageAnalysis } from './services/gemini';
 import { OutlierMixer } from './services/outlier-mixer';
 
@@ -132,15 +132,9 @@ function App() {
 
         products = await window.electronAPI.searchProducts(content, imageData);
       } else {
-        // Fallback for development environment - use mock data
-        console.warn('Electron API not available, using mock products');
-        if (imageDataUrl) {
-          // Mock image analysis products
-          products = getMockImageAnalysisProducts(content, imageDataUrl);
-        } else {
-          // Mock text search products
-          products = getMockProducts(content);
-        }
+        // No Electron API available
+        console.error('Electron API not available');
+        products = [];
       }
       
       // Apply discovery mixing for diverse recommendations
@@ -168,10 +162,18 @@ function App() {
       const inspirationCount = finalResults.filter(p => 'displayType' in p && p.displayType === 'inspiration').length;
       
       let responseText = '';
-      if (imageDataUrl) {
-        responseText = `I can see the image you've shared. Based on the visual analysis, I found ${finalResults.length} products for you!`;
+      if (finalResults.length === 0) {
+        if (imageDataUrl) {
+          responseText = `画像を分析しましたが、商品が見つかりませんでした。検索キーワードを調整してもう一度お試しください。`;
+        } else {
+          responseText = `"${content}" に一致する商品が見つかりませんでした。`;
+        }
       } else {
-        responseText = `Found ${finalResults.length} products matching "${content}"`;
+        if (imageDataUrl) {
+          responseText = `画像を分析し、${finalResults.length}件の商品を見つけました！`;
+        } else {
+          responseText = `"${content}" に一致する${finalResults.length}件の商品を見つけました。`;
+        }
       }
       
       if (inspirationCount > 0) {
@@ -202,7 +204,7 @@ function App() {
       
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: 'Sorry, there was an error searching for products. Please try again.',
+        content: '商品検索中にエラーが発生しました。APIキーが正しく設定されているか確認してください。',
         sender: 'assistant',
         timestamp: new Date(),
       };
@@ -213,153 +215,9 @@ function App() {
     }
   };
 
-  // Mock products for development environment
-  const getMockProducts = (query: string) => {
-    return [
-      {
-        id: '1',
-        name: `${query} - Premium Product`,
-        description: `High-quality ${query} with excellent reviews`,
-        price: 99.99,
-        image: MOCK_PRODUCT_IMAGES.generic,
-        categories: ['electronics', 'featured'],
-        url: '#'
-      },
-      {
-        id: '2',
-        name: `${query} - Best Seller`,
-        description: `Popular ${query} with great customer satisfaction`,
-        price: 79.99,
-        image: MOCK_PRODUCT_IMAGES.generic,
-        categories: ['electronics', 'bestseller'],
-        url: '#'
-      },
-      {
-        id: '3',
-        name: `${query} - Budget Option`,
-        description: `Affordable ${query} with good value`,
-        price: 49.99,
-        image: MOCK_PRODUCT_IMAGES.generic,
-        categories: ['electronics', 'budget'],
-        url: '#'
-      }
-    ];
-  };
 
-  // Mock image analysis products (simulating Gemini API response)
-  const getMockImageAnalysisProducts = (query: string, imageDataUrl: string) => {
-    // Mock image analysis - simulate different product types based on query
-    const mockAnalysisResults = [
-      {
-        category: 'fashion',
-        products: [
-          {
-            id: 'img-1',
-            name: 'Stylish Leather Jacket',
-            description: 'Premium leather jacket with modern design',
-            price: 199.99,
-            image: MOCK_PRODUCT_IMAGES.jacket,
-            categories: ['fashion', 'outerwear'],
-            url: '#'
-          },
-          {
-            id: 'img-2',
-            name: 'Designer Sunglasses',
-            description: 'Trendy sunglasses with UV protection',
-            price: 89.99,
-            image: MOCK_PRODUCT_IMAGES.sunglasses,
-            categories: ['fashion', 'accessories'],
-            url: '#'
-          }
-        ]
-      },
-      {
-        category: 'electronics',
-        products: [
-          {
-            id: 'img-3',
-            name: 'Wireless Headphones',
-            description: 'High-quality wireless headphones with noise cancellation',
-            price: 149.99,
-            image: MOCK_PRODUCT_IMAGES.headphones,
-            categories: ['electronics', 'audio'],
-            url: '#'
-          },
-          {
-            id: 'img-4',
-            name: 'Smart Watch',
-            description: 'Feature-rich smartwatch with fitness tracking',
-            price: 299.99,
-            image: MOCK_PRODUCT_IMAGES.watch,
-            categories: ['electronics', 'wearables'],
-            url: '#'
-          }
-        ]
-      },
-      {
-        category: 'home',
-        products: [
-          {
-            id: 'img-5',
-            name: 'Modern Table Lamp',
-            description: 'Elegant table lamp with adjustable brightness',
-            price: 79.99,
-            image: MOCK_PRODUCT_IMAGES.lamp,
-            categories: ['home', 'lighting'],
-            url: '#'
-          },
-          {
-            id: 'img-6',
-            name: 'Decorative Vase',
-            description: 'Beautiful ceramic vase for home decoration',
-            price: 45.99,
-            image: MOCK_PRODUCT_IMAGES.vase,
-            categories: ['home', 'decor'],
-            url: '#'
-          }
-        ]
-      }
-    ];
 
-    // Simple logic to determine category based on query or default to electronics
-    let selectedCategory = 'electronics';
-    if (query.toLowerCase().includes('fashion') || query.toLowerCase().includes('clothes') || query.toLowerCase().includes('jacket')) {
-      selectedCategory = 'fashion';
-    } else if (query.toLowerCase().includes('home') || query.toLowerCase().includes('decor') || query.toLowerCase().includes('lamp')) {
-      selectedCategory = 'home';
-    }
 
-    const categoryData = mockAnalysisResults.find(cat => cat.category === selectedCategory);
-    return categoryData ? categoryData.products : mockAnalysisResults[0].products;
-  };
-
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64 = (reader.result as string).split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const getRandomResponse = (userMessage: string) => {
-    const responses = [
-      "That's a great question! I'd be happy to help you with that.",
-      "I understand what you're asking. Let me think about this for a moment.",
-      "That's an interesting perspective. Here's what I think about that topic.",
-      "I appreciate you sharing that with me. Let me provide some insights.",
-      "Thank you for that question. I'll do my best to give you a helpful response.",
-    ];
-    
-    if (userMessage.toLowerCase().includes('hello') || userMessage.toLowerCase().includes('hi')) {
-      return "Hello! It's great to meet you. How can I assist you today?";
-    }
-    
-    return responses[Math.floor(Math.random() * responses.length)];
-  };
 
   const handleNewSession = () => {
     createNewSession();
