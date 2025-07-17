@@ -150,11 +150,8 @@ function App() {
             
             console.log('Real Gemini analysis:', analysis);
           } catch (error) {
-            console.warn('Gemini API failed, falling back to mock:', error);
-            // Fallback to mock analysis
-            const mockAnalysis = GeminiService.getMockAnalysis(content);
-            const searchQuery = mockAnalysis.searchKeywords.join(' ') + ' ' + content;
-            products = await algoliaService.searchProducts(searchQuery);
+            console.error('Gemini API failed:', error);
+            throw error; // Propagate error instead of using mock
           }
         } else {
           // Text-only search
