@@ -600,4 +600,83 @@ npm run dev
 npm run electron:dev
 ```
 
-This documentation reflects the current state as of Phase C development start on 2025-07-16.
+This documentation reflects the current state as of Phase C development on 2025-07-18.
+
+## Recent Critical Fixes (2025-07-18)
+
+### Gemini API Integration Fix
+**Problem**: Production builds failed with "Cannot find module '@google/generative-ai'" error.
+
+**Root Cause**: 
+- The `@google/generative-ai` package was incorrectly placed in `devDependencies`
+- Package was using wrong import: `@google/genai` instead of `@google/generative-ai`
+
+**Solution Applied**:
+1. **Package Management Fix**:
+   - Moved `@google/generative-ai` from `devDependencies` to `dependencies`
+   - Removed incorrect `@google/genai` package
+
+2. **Import Statement Corrections**:
+   - Fixed imports: `import { GoogleGenerativeAI } from '@google/generative-ai'`
+   - Updated constructor: `new GoogleGenerativeAI(apiKey)` (string parameter, not object)
+   - Fixed API calls to use `getGenerativeModel()` method
+   - Updated response handling: `response.response.text()` instead of `response.text`
+
+3. **Enhanced Logging**:
+   - Added comprehensive logging throughout Gemini service
+   - Added API key validation logging
+   - Enhanced error details for debugging
+
+**Files Modified**:
+- `package.json` - Fixed dependency placement
+- `src/main/gemini-service.ts` - Fixed imports and API usage
+- `src/renderer/services/gemini.ts` - Fixed imports and API usage
+- `src/main/main.ts` - Added detailed logging
+- `src/main/database.ts` - Added API key operation logging
+
+### GitHub Actions Storage Optimization
+**Problem**: Build failures due to artifact storage quota limit (500MB on free plan).
+
+**Immediate Solutions**:
+1. **Manual Cleanup**: Delete old artifacts from GitHub Actions tab
+2. **Repository Settings**: Reduce artifact retention in Settings → Actions → General
+
+**Recommended Optimizations** (requires workflow permissions):
+```yaml
+# Reduce retention period
+retention-days: 3  # from 7 days
+
+# Exclude large directories
+artifact-path: |
+  release/**/*.exe
+  # release/**/win-unpacked/**  # Comment out to save ~50-70% space
+
+# Prevent duplicate builds
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+```
+
+## Troubleshooting Guide
+
+### Common Issues and Solutions
+
+1. **Module Not Found Errors in Production**:
+   - Check if package is in `dependencies` not `devDependencies`
+   - Run clean install: `rm -rf node_modules package-lock.json && npm install`
+   - Rebuild with electron-builder
+
+2. **Gemini API Connection Failures**:
+   - Verify API key is correctly entered in Settings
+   - Check console logs for detailed error messages
+   - Ensure using model name: `gemini-2.5-flash`
+
+3. **GitHub Actions Build Failures**:
+   - Check artifact storage usage
+   - Delete old artifacts manually
+   - Consider using GitHub Releases for long-term storage
+
+4. **TypeScript Compilation Errors**:
+   - Verify correct package versions in package.json
+   - Check import statements match installed packages
+   - Run `npm run type-check` locally before pushing
