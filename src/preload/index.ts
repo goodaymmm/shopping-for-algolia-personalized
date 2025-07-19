@@ -89,5 +89,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('clear-logs'),
   
   getLogs: () =>
-    ipcRenderer.invoke('get-logs')
+    ipcRenderer.invoke('get-logs'),
+  
+  // 一時的なデバッグ用
+  debugAPIKeys: () =>
+    ipcRenderer.invoke('debug-api-keys'),
+  
+  deleteCorruptedAPIKeys: () =>
+    ipcRenderer.invoke('delete-corrupted-api-keys')
 })

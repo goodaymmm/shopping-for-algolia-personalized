@@ -25,6 +25,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const [isResetting, setIsResetting] = useState(false);
   const [apiSaveMessage, setApiSaveMessage] = useState<string>('');
   const [isCleaningUp, setIsCleaningUp] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string>('');
   const [logs, setLogs] = useState<string>('');
   const [logFilePath, setLogFilePath] = useState<string>('');
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
@@ -234,6 +235,62 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       setTimeout(() => setApiSaveMessage(''), 3000);
     } finally {
       setIsCleaningUp(false);
+    }
+  };
+
+  const handleDebugAPIKeys = async () => {
+    try {
+      if (window.electronAPI?.debugAPIKeys) {
+        const result = await window.electronAPI.debugAPIKeys();
+        if (result.success && result.debugInfo) {
+          const debugText = result.debugInfo.map((info: any) => 
+            `Entry ${info.index}: Provider=${info.provider}, Length=${info.keyLength}, Preview=${info.keyPreview}, Created=${info.createdAt}`
+          ).join('\n');
+          setDebugInfo(debugText);
+          console.log('Debug API Keys Result:', result.debugInfo);
+        } else {
+          setDebugInfo('Failed to get debug info: ' + (result.error || 'Unknown error'));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to debug API keys:', error);
+      setDebugInfo('Error: ' + (error as Error).message);
+    }
+  };
+
+  const handleDeleteCorruptedKeys = async () => {
+    if (!confirm('Are you sure you want to delete ALL corrupted API keys? This will remove any keys that are too short or have invalid format.')) {
+      return;
+    }
+    
+    try {
+      if (window.electronAPI?.deleteCorruptedAPIKeys) {
+        const result = await window.electronAPI.deleteCorruptedAPIKeys();
+        if (result.success) {
+          setApiSaveMessage(`Successfully deleted ${result.deletedCount || 0} corrupted API key entries!`);
+          // デバッグ情報を更新
+          handleDebugAPIKeys();
+          // 設定を再読み込み
+          const settingsResult = await window.electronAPI.getAPIKeys();
+          if (settingsResult.success && settingsResult.keys && settingsResult.keys.gemini) {
+            setHasExistingApiKey(true);
+            setMaskedApiKey(settingsResult.keys.gemini);
+            setGeminiApiKey('');
+          } else {
+            setHasExistingApiKey(false);
+            setMaskedApiKey('');
+            setGeminiApiKey('');
+          }
+          setTimeout(() => setApiSaveMessage(''), 3000);
+        } else {
+          setApiSaveMessage('Failed to delete corrupted keys: ' + (result.error || 'Unknown error'));
+          setTimeout(() => setApiSaveMessage(''), 3000);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to delete corrupted API keys:', error);
+      setApiSaveMessage('Failed to delete corrupted keys: ' + (error as Error).message);
+      setTimeout(() => setApiSaveMessage(''), 3000);
     }
   };
   return (
@@ -481,27 +538,47 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               </p>
             </div>
             
-            <div className="flex gap-3">
-              <button
-                onClick={handleSaveApiKeys}
-                className="flex items-center gap-2 px-4 py-3 rounded-xl bg-green-500 hover:bg-green-600 text-white transition-colors"
-              >
-                <Save className="w-4 h-4" />
-                Save API Key
-              </button>
+            <div className="space-y-3">
+              <div className="flex gap-3">
+                <button
+                  onClick={handleSaveApiKeys}
+                  className="flex items-center gap-2 px-4 py-3 rounded-xl bg-green-500 hover:bg-green-600 text-white transition-colors"
+                >
+                  <Save className="w-4 h-4" />
+                  Save API Key
+                </button>
+                
+                <button
+                  onClick={handleCleanupAPIKeys}
+                  disabled={isCleaningUp}
+                  className="flex items-center gap-2 px-4 py-3 rounded-xl bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white transition-colors"
+                >
+                  {isCleaningUp ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
+                  Cleanup Database
+                </button>
+              </div>
               
-              <button
-                onClick={handleCleanupAPIKeys}
-                disabled={isCleaningUp}
-                className="flex items-center gap-2 px-4 py-3 rounded-xl bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white transition-colors"
-              >
-                {isCleaningUp ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
+              <div className="flex gap-3">
+                <button
+                  onClick={handleDebugAPIKeys}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white transition-colors text-sm"
+                >
+                  <Type className="w-4 h-4" />
+                  Debug Database
+                </button>
+                
+                <button
+                  onClick={handleDeleteCorruptedKeys}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors text-sm"
+                >
                   <Trash2 className="w-4 h-4" />
-                )}
-                Cleanup Database
-              </button>
+                  Delete Corrupted
+                </button>
+              </div>
             </div>
             
             {apiSaveMessage && (
@@ -511,6 +588,17 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
               }`}>
                 {apiSaveMessage}
+              </div>
+            )}
+            
+            {debugInfo && (
+              <div className="p-4 rounded-xl bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
+                <div className="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-2">
+                  Database Debug Information:
+                </div>
+                <pre className="text-xs text-yellow-800 dark:text-yellow-200 whitespace-pre-wrap font-mono bg-yellow-100 dark:bg-yellow-900/30 p-2 rounded">
+                  {debugInfo}
+                </pre>
               </div>
             )}
           </div>

@@ -555,6 +555,67 @@ class MainApplication {
         return { success: false, error: (error as Error).message, logs: '' }
       }
     })
+
+    // 一時的なデバッグ用: APIキーの詳細情報を取得
+    ipcMain.handle('debug-api-keys', async () => {
+      try {
+        console.log('[Debug] Starting detailed API key analysis...');
+        const stmt = this.database.database.prepare(`
+          SELECT id, provider, encrypted_key, created_at FROM api_configs ORDER BY created_at ASC
+        `);
+        const allKeys = stmt.all();
+        
+        console.log('[Debug] Total API key entries found:', allKeys.length);
+        
+        const debugInfo = allKeys.map((key: any, index: number) => ({
+          index: index + 1,
+          id: key.id,
+          provider: key.provider,
+          keyLength: key.encrypted_key ? key.encrypted_key.length : 0,
+          keyPreview: key.encrypted_key ? `${key.encrypted_key.substring(0, 8)}...${key.encrypted_key.substring(key.encrypted_key.length - 4)}` : 'NULL',
+          fullKey: key.encrypted_key, // 一時的にフルキーも含める
+          createdAt: key.created_at
+        }));
+        
+        debugInfo.forEach(info => {
+          console.log(`[Debug] Entry ${info.index}: Provider=${info.provider}, Length=${info.keyLength}, Preview=${info.keyPreview}, Created=${info.createdAt}`);
+        });
+        
+        return { success: true, debugInfo };
+      } catch (error) {
+        console.error('[Debug] Debug API keys error:', error);
+        return { success: false, error: (error as Error).message };
+      }
+    })
+
+    // 破損したAPIキーを完全削除
+    ipcMain.handle('delete-corrupted-api-keys', async () => {
+      try {
+        console.log('[Main] Starting deletion of corrupted API keys...');
+        
+        // Geminiキーで長さが35文字未満、またはAIzaSyで始まらないものを削除
+        const deleteStmt = this.database.database.prepare(`
+          DELETE FROM api_configs 
+          WHERE provider = 'gemini' 
+          AND (
+            LENGTH(encrypted_key) < 35 
+            OR encrypted_key NOT LIKE 'AIzaSy%'
+          )
+        `);
+        
+        const result = deleteStmt.run();
+        console.log('[Main] Deleted corrupted entries:', result.changes);
+        
+        return { 
+          success: true, 
+          message: `Deleted ${result.changes} corrupted API key entries`,
+          deletedCount: result.changes 
+        };
+      } catch (error) {
+        console.error('[Main] Delete corrupted API keys error:', error);
+        return { success: false, error: (error as Error).message };
+      }
+    })
   }
 }
 
