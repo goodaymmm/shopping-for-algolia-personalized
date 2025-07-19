@@ -298,6 +298,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </div>
         )}
 
+        {/* Source Index Badge */}
+        {productData.sourceIndex && (
+          <div className="mb-2">
+            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
+              isDark 
+                ? 'bg-blue-900/50 text-blue-300 border border-blue-700/50' 
+                : 'bg-blue-50 text-blue-700 border border-blue-200'
+            }`}>
+              <Tag size={10} />
+              {productData.sourceIndex === 'bestbuy' ? 'Electronics' : 
+               productData.sourceIndex === 'instant_search' ? 'General' : 
+               productData.sourceIndex}
+            </span>
+          </div>
+        )}
+
         {/* Footer */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">

@@ -74,6 +74,7 @@ class MainApplication {
   private setupIPC() {
     // Search products using Algolia
     ipcMain.handle('search-products', async (event, query: string, imageData?: string) => {
+      const searchStartTime = Date.now();
       console.log('[Search] Starting product search...');
       console.log('[Search] Query:', query);
       console.log('[Search] Has image data:', !!imageData);
@@ -114,22 +115,96 @@ class MainApplication {
           }
         }
 
-        // Initialize Algolia MCP service with proper configuration
-        // Using a demo index that actually contains products
-        const algoliaMCPConfig = {
+        // カテゴリ別インデックスマッピングの設定（ショッピング系統合検索）
+        const categoryIndexMappings = {
+          electronics: 'bestbuy',           // 電子機器 (既存のBest Buyデータセット)
+          fashion: 'instant_search',        // ファッション (Algoliaデモインデックス)
+          general: 'instant_search',        // 一般商品
+          books: 'instant_search',          // 書籍
+          home: 'instant_search',           // ホーム用品
+          sports: 'instant_search',         // スポーツ用品
+          beauty: 'instant_search',         // 美容・コスメ
+          food: 'instant_search'            // 食品
+        };
+
+        // 統合検索用の設定
+        const multiSearchConfig = {
           applicationId: 'latency',
           apiKey: '6be0576ff61c053d5f9a3225e2a90f76',
-          indexName: 'bestbuy'  // Changed from 'instant_search' to 'bestbuy' which contains products
+          indexMappings: categoryIndexMappings
         };
         
-        console.log('[Search] Initializing Algolia MCP service...');
-        await this.algoliaMCPService.initialize(algoliaMCPConfig);
+        console.log('[Search] Initializing Algolia multi-search service...');
+        await this.algoliaMCPService.initializeMultiSearch(multiSearchConfig);
 
-        // Use Algolia MCP service for product search
-        console.log('[Search] Searching Algolia with query:', searchQuery);
-        let products = await this.algoliaMCPService.searchProducts(
+        // カテゴリの推論（Gemini解析結果またはキーワードから）
+        let inferredCategories: string[] = [];
+        if (imageAnalysis?.category) {
+          // Gemini APIがカテゴリを判定している場合
+          const category = imageAnalysis.category.toLowerCase();
+          if (category in categoryIndexMappings) {
+            inferredCategories.push(category);
+          }
+        }
+
+        // キーワードからもカテゴリを推論
+        const queryLower = searchQuery.toLowerCase();
+        if (queryLower.includes('nike') || queryLower.includes('shoe') || queryLower.includes('sneaker') || queryLower.includes('fashion')) {
+          inferredCategories.push('fashion');
+        }
+        if (queryLower.includes('phone') || queryLower.includes('laptop') || queryLower.includes('tv') || queryLower.includes('electronics')) {
+          inferredCategories.push('electronics');
+        }
+        if (queryLower.includes('book')) {
+          inferredCategories.push('books');
+        }
+
+        console.log('[Search] Inferred categories:', inferredCategories);
+
+        // パーソナライゼーション：カテゴリ別興味度に基づく優先順位付け
+        console.log('[Search] Applying personalization to category selection...');
+        const categoryInterests = await this.database.getCategoryInterests();
+        console.log('[Search] User category interests:', categoryInterests);
+
+        // 興味度に基づいてカテゴリを並び替え
+        if (inferredCategories.length > 1 && Object.keys(categoryInterests).length > 0) {
+          inferredCategories.sort((a, b) => (categoryInterests[b] || 0) - (categoryInterests[a] || 0));
+          console.log('[Search] Reordered categories by interest:', inferredCategories);
+        }
+
+        // パーソナライゼーション：過去の検索パターンからクエリ拡張
+        const searchPatterns = await this.database.getSearchPatterns(10);
+        const relatedPatterns = searchPatterns.filter(pattern => {
+          // クエリまたはカテゴリの類似性でフィルタ
+          return inferredCategories.includes(pattern.category) || 
+                 pattern.keywords.some(keyword => searchQuery.toLowerCase().includes(keyword.toLowerCase()));
+        });
+
+        if (relatedPatterns.length > 0) {
+          console.log('[Search] Found', relatedPatterns.length, 'related search patterns');
+          
+          // 最も頻度の高いパターンから追加キーワードを取得
+          const additionalKeywords: string[] = [];
+          relatedPatterns.slice(0, 2).forEach(pattern => {
+            pattern.keywords.forEach(keyword => {
+              if (!searchQuery.toLowerCase().includes(keyword.toLowerCase()) && additionalKeywords.length < 3) {
+                additionalKeywords.push(keyword);
+              }
+            });
+          });
+
+          if (additionalKeywords.length > 0) {
+            const originalQuery = searchQuery;
+            searchQuery = searchQuery + ' ' + additionalKeywords.join(' ');
+            console.log('[Search] Enhanced query with personalization:', originalQuery, '->', searchQuery);
+          }
+        }
+
+        // 統合検索の実行
+        console.log('[Search] Performing multi-index search with query:', searchQuery);
+        let products = await this.algoliaMCPService.searchProductsMultiIndex(
           searchQuery,
-          algoliaMCPConfig.indexName,
+          inferredCategories.length > 0 ? inferredCategories : undefined, // カテゴリ指定がない場合は全インデックス検索
           {
             hitsPerPage: 20,
             attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID']
@@ -179,6 +254,24 @@ class MainApplication {
             weight: 0.2,
             source: 'standalone-app'
           });
+        }
+
+        // 検索ログの記録（ML学習とパーソナライゼーション用）
+        const responseTime = Date.now() - searchStartTime;
+        console.log('[Search] Recording search log for ML learning...');
+        
+        try {
+          await this.database.logSearch({
+            searchQuery: query,
+            inferredCategories: inferredCategories,
+            searchResultsCount: products.length,
+            responseTimeMs: responseTime,
+            geminiKeywords: imageAnalysis?.searchKeywords,
+            geminiCategory: imageAnalysis?.category,
+            imageProvided: !!imageData
+          });
+        } catch (logError) {
+          console.warn('[Search] Failed to log search, continuing:', logError);
         }
 
         console.log('[Search] Returning', products.length, 'products');

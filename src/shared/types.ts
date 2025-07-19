@@ -64,6 +64,7 @@ export interface Product {
   image: string
   categories?: string[]
   url?: string
+  sourceIndex?: string // 検索元インデックス（統合検索用）
 }
 
 // Chat types (following project base structure)

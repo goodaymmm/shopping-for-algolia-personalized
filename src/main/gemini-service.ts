@@ -159,18 +159,22 @@ export class GeminiService {
 
   private buildAnalysisPrompt(userQuery: string): string {
     return `
-Analyze the product in this image and generate optimal search keywords for finding similar products in online shopping.
+Analyze this product image and generate search keywords and category.
 
-User's request: "${userQuery}"
+User query: "${userQuery}"
 
-Please provide 5-10 search keywords in the following format:
-- Product type (e.g., sneakers, running shoes, boots, etc.)
-- Style (e.g., casual, sporty, formal, etc.)
-- Colors
-- Brand (if identifiable)
-- Distinctive design features
+Provide response in this format:
+CATEGORY: [electronics|fashion|books|home|sports|beauty|food|general]
+KEYWORDS: [3-5 keywords under 50 characters total]
 
-Return only the keywords separated by spaces.
+Examples:
+CATEGORY: fashion
+KEYWORDS: Nike sneakers black
+
+CATEGORY: electronics  
+KEYWORDS: iPhone smartphone Apple
+
+Focus on brand, product type, key features. Keep keywords concise and searchable.
     `;
   }
 
@@ -181,13 +185,45 @@ Return only the keywords separated by spaces.
     });
     
     try {
-      // Parse keywords from simple text response
-      const keywords = analysisText.trim().split(/\s+/).filter(word => word.length > 0);
+      // Parse structured response with category and keywords
+      const lines = analysisText.trim().split('\n');
+      let category = 'general';
+      let keywords: string[] = [];
+
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (trimmedLine.startsWith('CATEGORY:')) {
+          const categoryMatch = trimmedLine.match(/CATEGORY:\s*(\w+)/i);
+          if (categoryMatch) {
+            category = categoryMatch[1].toLowerCase();
+          }
+        } else if (trimmedLine.startsWith('KEYWORDS:')) {
+          const keywordsMatch = trimmedLine.match(/KEYWORDS:\s*(.+)/i);
+          if (keywordsMatch) {
+            keywords = keywordsMatch[1].trim().split(/\s+/).filter(word => word.length > 0);
+          }
+        }
+      }
+
+      // Fallback: if structured parsing fails, try simple text parsing
+      if (keywords.length === 0) {
+        this.logger.warn('Gemini', 'Structured parsing failed, trying simple parsing');
+        keywords = analysisText.trim().split(/\s+/).filter(word => 
+          word.length > 0 && !word.toLowerCase().includes('category') && !word.toLowerCase().includes('keywords')
+        );
+      }
+
+      // Ensure keywords are under 50 characters total
+      const keywordString = keywords.join(' ');
+      if (keywordString.length > 50) {
+        keywords = keywords.slice(0, 3); // Reduce to top 3 keywords if too long
+      }
       
-      this.logger.info('Gemini', 'Extracted keywords from response', {
+      this.logger.info('Gemini', 'Extracted category and keywords from response', {
+        category: category,
         keywordCount: keywords.length,
-        keywords: keywords.slice(0, 10), // Log first 10 keywords
-        allKeywords: keywords
+        keywords: keywords,
+        totalKeywordLength: keywords.join(' ').length
       });
       
       if (keywords.length === 0) {
@@ -195,23 +231,24 @@ Return only the keywords separated by spaces.
         throw new Error('No keywords found in response');
       }
 
-      // Return simplified analysis with focus on search keywords
+      // Return simplified analysis with focus on search keywords and category
       const result = {
         style: '',
         colors: [],
         materials: [],
         occasion: '',
         priceRange: '',
-        category: '',
+        category: category,
         confidence: 0.9,
         searchKeywords: keywords,
         description: `Image analysis: ${keywords.join(', ')}`
       };
       
       this.logger.info('Gemini', 'Successfully parsed analysis result', {
-        resultConfidence: result.confidence,
+        category: result.category,
         keywordCount: result.searchKeywords.length,
-        description: result.description
+        totalKeywordLength: result.searchKeywords.join(' ').length,
+        confidence: result.confidence
       });
       
       return result;

@@ -100,6 +100,24 @@ export class DatabaseService {
       )
     `)
 
+    // Search logs (for ML learning and personalization)
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS search_logs (
+        id INTEGER PRIMARY KEY,
+        search_query TEXT NOT NULL,
+        inferred_categories TEXT, -- JSON array of categories
+        search_results_count INTEGER,
+        selected_product_id TEXT,
+        selected_product_index INTEGER, -- Position in search results (0-based)
+        source_index TEXT, -- Which Algolia index provided the selected product
+        response_time_ms INTEGER,
+        gemini_keywords TEXT, -- Gemini-generated keywords
+        gemini_category TEXT, -- Gemini-identified category
+        image_provided BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
     // User settings (including discovery settings)
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS user_settings (
@@ -451,6 +469,190 @@ export class DatabaseService {
     } catch (error) {
       console.error('[Database] Error during API key cleanup:', error);
       throw error;
+    }
+  }
+
+  // 検索ログの記録（ML学習とパーソナライゼーション用）
+  async logSearch(searchLog: {
+    searchQuery: string;
+    inferredCategories: string[];
+    searchResultsCount: number;
+    selectedProductId?: string;
+    selectedProductIndex?: number;
+    sourceIndex?: string;
+    responseTimeMs: number;
+    geminiKeywords?: string[];
+    geminiCategory?: string;
+    imageProvided: boolean;
+  }) {
+    console.log('[Database] Logging search:', {
+      query: searchLog.searchQuery,
+      categories: searchLog.inferredCategories,
+      resultsCount: searchLog.searchResultsCount,
+      hasSelection: !!searchLog.selectedProductId
+    });
+
+    try {
+      const stmt = this.db.prepare(`
+        INSERT INTO search_logs (
+          search_query, 
+          inferred_categories, 
+          search_results_count,
+          selected_product_id,
+          selected_product_index,
+          source_index,
+          response_time_ms,
+          gemini_keywords,
+          gemini_category,
+          image_provided
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+      const result = stmt.run(
+        searchLog.searchQuery,
+        JSON.stringify(searchLog.inferredCategories),
+        searchLog.searchResultsCount,
+        searchLog.selectedProductId || null,
+        searchLog.selectedProductIndex || null,
+        searchLog.sourceIndex || null,
+        searchLog.responseTimeMs,
+        searchLog.geminiKeywords ? JSON.stringify(searchLog.geminiKeywords) : null,
+        searchLog.geminiCategory || null,
+        searchLog.imageProvided
+      );
+
+      console.log('[Database] Search logged successfully with ID:', result.lastInsertRowid);
+      return result;
+    } catch (error) {
+      console.error('[Database] Error logging search:', error);
+      throw error;
+    }
+  }
+
+  // 商品選択の記録（検索ログを更新）
+  async logProductSelection(searchLogId: number, productId: string, productIndex: number, sourceIndex: string) {
+    console.log('[Database] Logging product selection:', {
+      searchLogId,
+      productId,
+      productIndex,
+      sourceIndex
+    });
+
+    try {
+      const stmt = this.db.prepare(`
+        UPDATE search_logs 
+        SET selected_product_id = ?, selected_product_index = ?, source_index = ?
+        WHERE id = ?
+      `);
+
+      const result = stmt.run(productId, productIndex, sourceIndex, searchLogId);
+      console.log('[Database] Product selection logged successfully');
+      return result;
+    } catch (error) {
+      console.error('[Database] Error logging product selection:', error);
+      throw error;
+    }
+  }
+
+  // カテゴリ別興味度の取得
+  async getCategoryInterests(): Promise<{ [category: string]: number }> {
+    console.log('[Database] Getting category interests from search logs');
+
+    try {
+      // 最近の検索ログからカテゴリ別の興味度を計算
+      const stmt = this.db.prepare(`
+        SELECT 
+          gemini_category,
+          inferred_categories,
+          COUNT(*) as search_count,
+          COUNT(selected_product_id) as selection_count
+        FROM search_logs 
+        WHERE created_at > datetime('now', '-30 days')
+        GROUP BY gemini_category, inferred_categories
+      `);
+
+      const rows = stmt.all() as Array<{
+        gemini_category: string | null;
+        inferred_categories: string;
+        search_count: number;
+        selection_count: number;
+      }>;
+
+      const categoryInterests: { [category: string]: number } = {};
+
+      for (const row of rows) {
+        // Geminiカテゴリの処理
+        if (row.gemini_category) {
+          const category = row.gemini_category;
+          const interest = row.selection_count / row.search_count; // 選択率
+          categoryInterests[category] = (categoryInterests[category] || 0) + interest;
+        }
+
+        // 推論カテゴリの処理
+        if (row.inferred_categories) {
+          try {
+            const categories = JSON.parse(row.inferred_categories) as string[];
+            const interest = (row.selection_count / row.search_count) / categories.length; // 複数カテゴリで分散
+            for (const category of categories) {
+              categoryInterests[category] = (categoryInterests[category] || 0) + interest;
+            }
+          } catch (e) {
+            console.warn('[Database] Failed to parse inferred categories:', row.inferred_categories);
+          }
+        }
+      }
+
+      console.log('[Database] Category interests calculated:', categoryInterests);
+      return categoryInterests;
+    } catch (error) {
+      console.error('[Database] Error getting category interests:', error);
+      return {};
+    }
+  }
+
+  // 検索パターンの取得（パーソナライズド検索用）
+  async getSearchPatterns(limit: number = 50): Promise<Array<{
+    query: string;
+    keywords: string[];
+    category: string;
+    frequency: number;
+  }>> {
+    console.log('[Database] Getting search patterns for personalization');
+
+    try {
+      const stmt = this.db.prepare(`
+        SELECT 
+          search_query,
+          gemini_keywords,
+          gemini_category,
+          COUNT(*) as frequency
+        FROM search_logs 
+        WHERE created_at > datetime('now', '-30 days')
+          AND selected_product_id IS NOT NULL
+        GROUP BY search_query, gemini_keywords, gemini_category
+        ORDER BY frequency DESC, created_at DESC
+        LIMIT ?
+      `);
+
+      const rows = stmt.all(limit) as Array<{
+        search_query: string;
+        gemini_keywords: string | null;
+        gemini_category: string | null;
+        frequency: number;
+      }>;
+
+      const patterns = rows.map(row => ({
+        query: row.search_query,
+        keywords: row.gemini_keywords ? JSON.parse(row.gemini_keywords) : [],
+        category: row.gemini_category || 'general',
+        frequency: row.frequency
+      }));
+
+      console.log('[Database] Retrieved', patterns.length, 'search patterns');
+      return patterns;
+    } catch (error) {
+      console.error('[Database] Error getting search patterns:', error);
+      return [];
     }
   }
 }

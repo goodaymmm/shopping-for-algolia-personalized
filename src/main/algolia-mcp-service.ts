@@ -15,6 +15,18 @@ interface AlgoliaConfig {
   indexName: string;
 }
 
+// 統合検索用のカテゴリ別インデックスマッピング
+interface CategoryIndexMapping {
+  [category: string]: string;
+}
+
+// 統合検索用の設定
+interface MultiSearchConfig {
+  applicationId: string;
+  apiKey: string;
+  indexMappings: CategoryIndexMapping;
+}
+
 interface AlgoliaMCPSearchResult {
   hits: Array<{
     objectID: string;
@@ -50,6 +62,7 @@ export class AlgoliaMCPService {
   private server: Server;
   private ajv: Ajv;
   private config: AlgoliaConfig | null = null;
+  private multiSearchConfig: MultiSearchConfig | null = null;
 
   constructor() {
     this.ajv = new Ajv();
@@ -80,6 +93,22 @@ export class AlgoliaMCPService {
       return true;
     } catch (error) {
       console.error('[AlgoliaMCP] Failed to initialize:', error);
+      return false;
+    }
+  }
+
+  async initializeMultiSearch(config: MultiSearchConfig): Promise<boolean> {
+    try {
+      console.log('[AlgoliaMCP] Initializing multi-search with config:', {
+        applicationId: config.applicationId,
+        indexMappings: Object.keys(config.indexMappings),
+        hasApiKey: !!config.apiKey
+      });
+      this.multiSearchConfig = config;
+      console.log('[AlgoliaMCP] Successfully initialized multi-search');
+      return true;
+    } catch (error) {
+      console.error('[AlgoliaMCP] Failed to initialize multi-search:', error);
       return false;
     }
   }
@@ -288,6 +317,115 @@ export class AlgoliaMCPService {
     } catch (error) {
       console.error('[AlgoliaMCP] Product search error:', error);
       console.error('[AlgoliaMCP] Error details:', {
+        message: (error as Error).message,
+        stack: (error as Error).stack,
+        name: (error as Error).name
+      });
+      return [];
+    }
+  }
+
+  // 統合検索：複数のインデックスから並列検索
+  async searchProductsMultiIndex(
+    query: string, 
+    categories?: string[],
+    additionalParams?: {
+      hitsPerPage?: number;
+      filters?: string;
+      attributesToRetrieve?: string[];
+    }
+  ): Promise<Product[]> {
+    console.log('[AlgoliaMCP] Starting multi-index search...');
+    console.log('[AlgoliaMCP] Query:', query);
+    console.log('[AlgoliaMCP] Categories:', categories);
+    console.log('[AlgoliaMCP] Params:', additionalParams);
+    
+    if (!this.multiSearchConfig) {
+      console.warn('[AlgoliaMCP] Multi-search not initialized, falling back to single index');
+      return this.config ? this.searchProducts(query, this.config.indexName, additionalParams) : [];
+    }
+
+    try {
+      // カテゴリが指定されていない場合は全てのインデックスを検索
+      const indicesToSearch = categories && categories.length > 0
+        ? categories.map(cat => this.multiSearchConfig!.indexMappings[cat]).filter(idx => idx)
+        : Object.values(this.multiSearchConfig.indexMappings);
+
+      console.log('[AlgoliaMCP] Searching indices:', indicesToSearch);
+
+      // 複数インデックスの検索リクエストを作成
+      const searchRequests = indicesToSearch.map(indexName => ({
+        indexName,
+        query,
+        hitsPerPage: additionalParams?.hitsPerPage || 20,
+        page: 0,
+        attributesToRetrieve: additionalParams?.attributesToRetrieve || [
+          'name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'
+        ],
+        filters: additionalParams?.filters
+      }));
+
+      const requestBody = {
+        requests: searchRequests
+      };
+
+      console.log('[AlgoliaMCP] Multi-search request body:', JSON.stringify(requestBody, null, 2));
+
+      const response = await fetch(
+        `https://${this.multiSearchConfig.applicationId}-dsn.algolia.net/1/indexes/*/queries`,
+        {
+          method: 'POST',
+          headers: {
+            'X-Algolia-API-Key': this.multiSearchConfig.apiKey,
+            'X-Algolia-Application-Id': this.multiSearchConfig.applicationId,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(requestBody)
+        }
+      );
+
+      console.log('[AlgoliaMCP] Multi-search response status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[AlgoliaMCP] Multi-search API error response:', errorText);
+        throw new Error(`Algolia multi-search API error: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
+      const data = await response.json() as AlgoliaMCPMultiSearchResult;
+      console.log('[AlgoliaMCP] Multi-search raw response:', JSON.stringify(data, null, 2));
+
+      // 全ての結果を統合
+      const allProducts: Product[] = [];
+      
+      data.results.forEach((result, index) => {
+        const indexName = indicesToSearch[index];
+        console.log(`[AlgoliaMCP] Processing results from ${indexName}:`, {
+          hits: result.hits?.length || 0,
+          nbHits: result.nbHits,
+          processingTimeMS: result.processingTimeMS
+        });
+
+        const products = result.hits.map((hit: any) => ({
+          id: hit.objectID,
+          name: hit.name || 'Unknown Product',
+          description: hit.description || '',
+          price: hit.price || hit.salePrice || 0,
+          image: hit.image || this.getDefaultProductImage(),
+          categories: hit.categories || [],
+          url: hit.url || '',
+          sourceIndex: indexName // 検索元インデックスを追加
+        }));
+
+        allProducts.push(...products);
+      });
+
+      console.log('[AlgoliaMCP] Multi-search returning', allProducts.length, 'products from', data.results.length, 'indices');
+      return allProducts;
+
+    } catch (error) {
+      console.error('[AlgoliaMCP] Multi-search error:', error);
+      console.error('[AlgoliaMCP] Multi-search error details:', {
         message: (error as Error).message,
         stack: (error as Error).stack,
         name: (error as Error).name
