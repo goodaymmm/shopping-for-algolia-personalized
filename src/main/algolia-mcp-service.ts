@@ -8,6 +8,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import Ajv from 'ajv';
 import { Product } from '../shared/types';
+import { SampleDataLoader } from './sample-data-loader';
 
 interface AlgoliaConfig {
   applicationId: string;
@@ -498,8 +499,54 @@ export class AlgoliaMCPService {
       }
 
       console.log('[AlgoliaMCP] Standard indices setup completed');
+      
+      // サンプルデータの投入
+      await this.loadSampleDataIfNeeded();
     } catch (error) {
       console.error('[AlgoliaMCP] Error during index creation:', error);
+    }
+  }
+
+  // 初回のみサンプルデータを投入
+  private async loadSampleDataIfNeeded(): Promise<void> {
+    try {
+      // productsインデックスでデータの存在を確認
+      const response = await fetch(
+        `https://${this.multiSearchConfig!.applicationId}-dsn.algolia.net/1/indexes/products/search`,
+        {
+          method: 'POST',
+          headers: {
+            'X-Algolia-API-Key': this.multiSearchConfig!.apiKey,
+            'X-Algolia-Application-Id': this.multiSearchConfig!.applicationId,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            query: '',
+            hitsPerPage: 1
+          })
+        }
+      );
+
+      if (response.ok) {
+        const searchResult = await response.json() as { nbHits: number };
+        if (searchResult.nbHits > 0) {
+          console.log('[AlgoliaMCP] Sample data already exists, skipping import');
+          return;
+        }
+      }
+
+      // データが存在しない場合、サンプルデータを投入
+      console.log('[AlgoliaMCP] No data found, starting sample data import...');
+      const dataLoader = new SampleDataLoader(
+        this.multiSearchConfig!.applicationId,
+        this.multiSearchConfig!.writeApiKey!
+      );
+      
+      await dataLoader.loadSampleData();
+      console.log('[AlgoliaMCP] Sample data import completed');
+    } catch (error) {
+      console.error('[AlgoliaMCP] Error during sample data loading:', error);
+      // エラーが発生してもアプリケーションは継続
     }
   }
 
