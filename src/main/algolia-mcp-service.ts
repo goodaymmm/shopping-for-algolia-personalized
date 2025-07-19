@@ -24,6 +24,7 @@ interface CategoryIndexMapping {
 interface MultiSearchConfig {
   applicationId: string;
   apiKey: string;
+  writeApiKey?: string;
   indexMappings: CategoryIndexMapping;
 }
 
@@ -446,7 +447,12 @@ export class AlgoliaMCPService {
       return;
     }
 
-    console.log('[AlgoliaMCP] Checking and creating standard indices...');
+    if (!this.multiSearchConfig.writeApiKey) {
+      console.warn('[AlgoliaMCP] Write API Key not available, skipping index creation');
+      return;
+    }
+
+    console.log('[AlgoliaMCP] Checking and creating standard indices with Write API Key...');
     
     try {
       // 標準インデックスリストを取得
@@ -457,36 +463,34 @@ export class AlgoliaMCPService {
         try {
           console.log(`[AlgoliaMCP] Ensuring index '${indexName}' exists...`);
           
-          // インデックスにダミーレコードを追加（存在しない場合は自動作成される）
-          const initRecord = {
-            objectID: 'init_record',
-            name: `${indexName} index`,
-            description: `Automatically created index for ${indexName} products`,
-            price: 0,
-            image: '',
-            categories: [indexName],
-            _tags: ['system', 'initialization'],
-            created_at: new Date().toISOString()
+          // インデックスの設定を作成（空の設定でインデックスを作成）
+          const indexSettings = {
+            searchableAttributes: ['name', 'description', 'categories'],
+            attributesForFaceting: ['categories', 'brand'],
+            customRanking: ['desc(price)'],
+            attributesToHighlight: ['name', 'description'],
+            attributesToSnippet: ['description:20']
           };
 
           const response = await fetch(
-            `https://${this.multiSearchConfig.applicationId}-dsn.algolia.net/1/indexes/${indexName}`,
+            `https://${this.multiSearchConfig.applicationId}-dsn.algolia.net/1/indexes/${indexName}/settings`,
             {
-              method: 'POST',
+              method: 'PUT',
               headers: {
-                'X-Algolia-API-Key': this.multiSearchConfig.apiKey,
+                'X-Algolia-API-Key': this.multiSearchConfig.writeApiKey!,
                 'X-Algolia-Application-Id': this.multiSearchConfig.applicationId,
                 'Content-Type': 'application/json'
               },
-              body: JSON.stringify(initRecord)
+              body: JSON.stringify(indexSettings)
             }
           );
 
           if (response.ok) {
-            console.log(`[AlgoliaMCP] Index '${indexName}' ensured (created or already exists)`);
+            const result = await response.json() as { taskID?: number };
+            console.log(`[AlgoliaMCP] Index '${indexName}' created successfully. TaskID:`, result.taskID);
           } else {
             const errorText = await response.text();
-            console.warn(`[AlgoliaMCP] Failed to ensure index '${indexName}':`, errorText);
+            console.warn(`[AlgoliaMCP] Failed to create index '${indexName}':`, response.status, errorText);
           }
         } catch (error) {
           console.warn(`[AlgoliaMCP] Error ensuring index '${indexName}':`, error);

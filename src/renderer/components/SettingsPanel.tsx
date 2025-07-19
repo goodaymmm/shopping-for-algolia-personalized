@@ -24,8 +24,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const [maskedApiKey, setMaskedApiKey] = useState<string>('');
   const [algoliaAppId, setAlgoliaAppId] = useState<string>('');
   const [algoliaSearchKey, setAlgoliaSearchKey] = useState<string>('');
+  const [algoliaWriteKey, setAlgoliaWriteKey] = useState<string>('');
   const [hasExistingAlgoliaKeys, setHasExistingAlgoliaKeys] = useState<boolean>(false);
-  const [maskedAlgoliaKeys, setMaskedAlgoliaKeys] = useState<{appId: string, searchKey: string}>({appId: '', searchKey: ''});
+  const [maskedAlgoliaKeys, setMaskedAlgoliaKeys] = useState<{appId: string, searchKey: string, writeKey: string}>({appId: '', searchKey: '', writeKey: ''});
   const [isResetting, setIsResetting] = useState(false);
   const [apiSaveMessage, setApiSaveMessage] = useState<string>('');
   const [isCleaningUp, setIsCleaningUp] = useState(false);
@@ -62,26 +63,29 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             }
             
             // Algolia API Keys
-            if (result.keys.algoliaAppId && result.keys.algoliaSearchKey) {
+            if (result.keys.algoliaAppId && result.keys.algoliaSearchKey && result.keys.algoliaWriteKey) {
               setHasExistingAlgoliaKeys(true);
               setMaskedAlgoliaKeys({
                 appId: result.keys.algoliaAppId,
-                searchKey: result.keys.algoliaSearchKey
+                searchKey: result.keys.algoliaSearchKey,
+                writeKey: result.keys.algoliaWriteKey
               });
               setAlgoliaAppId('');
               setAlgoliaSearchKey('');
+              setAlgoliaWriteKey('');
             } else {
               setHasExistingAlgoliaKeys(false);
-              setMaskedAlgoliaKeys({appId: '', searchKey: ''});
+              setMaskedAlgoliaKeys({appId: '', searchKey: '', writeKey: ''});
               setAlgoliaAppId('');
               setAlgoliaSearchKey('');
+              setAlgoliaWriteKey('');
             }
           } else {
             setHasExistingApiKey(false);
             setMaskedApiKey('');
             setGeminiApiKey('');
             setHasExistingAlgoliaKeys(false);
-            setMaskedAlgoliaKeys({appId: '', searchKey: ''});
+            setMaskedAlgoliaKeys({appId: '', searchKey: '', writeKey: ''});
             setAlgoliaAppId('');
             setAlgoliaSearchKey('');
           }
@@ -120,9 +124,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       }
 
       // Algolia API keys validation and preparation
-      if (algoliaAppId.trim() || algoliaSearchKey.trim()) {
-        if (!algoliaAppId.trim() || !algoliaSearchKey.trim()) {
-          setApiSaveMessage('Both Algolia Application ID and Search API Key are required.');
+      if (algoliaAppId.trim() || algoliaSearchKey.trim() || algoliaWriteKey.trim()) {
+        if (!algoliaAppId.trim() || !algoliaSearchKey.trim() || !algoliaWriteKey.trim()) {
+          setApiSaveMessage('All three Algolia keys are required: Application ID, Search API Key, and Write API Key.');
           setTimeout(() => setApiSaveMessage(''), 3000);
           return;
         }
@@ -140,8 +144,15 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           return;
         }
         
+        if (algoliaWriteKey.length < 20) {
+          setApiSaveMessage('Invalid Algolia Write API Key format. Should be at least 20 characters long.');
+          setTimeout(() => setApiSaveMessage(''), 3000);
+          return;
+        }
+        
         keysToSave.algoliaAppId = algoliaAppId.trim();
         keysToSave.algoliaSearchKey = algoliaSearchKey.trim();
+        keysToSave.algoliaWriteKey = algoliaWriteKey.trim();
         hasNewKeys = true;
       }
 
@@ -169,16 +180,19 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             setGeminiApiKey('');
           }
           
-          if (keysToSave.algoliaAppId && keysToSave.algoliaSearchKey) {
+          if (keysToSave.algoliaAppId && keysToSave.algoliaSearchKey && keysToSave.algoliaWriteKey) {
             const newMaskedAppId = `${algoliaAppId.substring(0, 4)}...${algoliaAppId.substring(algoliaAppId.length - 4)}`;
             const newMaskedSearchKey = `${algoliaSearchKey.substring(0, 4)}...${algoliaSearchKey.substring(algoliaSearchKey.length - 4)}`;
+            const newMaskedWriteKey = `${algoliaWriteKey.substring(0, 4)}...${algoliaWriteKey.substring(algoliaWriteKey.length - 4)}`;
             setHasExistingAlgoliaKeys(true);
             setMaskedAlgoliaKeys({
               appId: newMaskedAppId,
-              searchKey: newMaskedSearchKey
+              searchKey: newMaskedSearchKey,
+              writeKey: newMaskedWriteKey
             });
             setAlgoliaAppId('');
             setAlgoliaSearchKey('');
+            setAlgoliaWriteKey('');
           }
           
           setTimeout(() => setApiSaveMessage(''), 3000);
@@ -305,26 +319,29 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             }
             
             // Algolia API Keys
-            if (settingsResult.keys.algoliaAppId && settingsResult.keys.algoliaSearchKey) {
+            if (settingsResult.keys.algoliaAppId && settingsResult.keys.algoliaSearchKey && settingsResult.keys.algoliaWriteKey) {
               setHasExistingAlgoliaKeys(true);
               setMaskedAlgoliaKeys({
                 appId: settingsResult.keys.algoliaAppId,
-                searchKey: settingsResult.keys.algoliaSearchKey
+                searchKey: settingsResult.keys.algoliaSearchKey,
+                writeKey: settingsResult.keys.algoliaWriteKey
               });
               setAlgoliaAppId('');
               setAlgoliaSearchKey('');
+              setAlgoliaWriteKey('');
             } else {
               setHasExistingAlgoliaKeys(false);
-              setMaskedAlgoliaKeys({appId: '', searchKey: ''});
+              setMaskedAlgoliaKeys({appId: '', searchKey: '', writeKey: ''});
               setAlgoliaAppId('');
               setAlgoliaSearchKey('');
+              setAlgoliaWriteKey('');
             }
           } else {
             setHasExistingApiKey(false);
             setMaskedApiKey('');
             setGeminiApiKey('');
             setHasExistingAlgoliaKeys(false);
-            setMaskedAlgoliaKeys({appId: '', searchKey: ''});
+            setMaskedAlgoliaKeys({appId: '', searchKey: '', writeKey: ''});
             setAlgoliaAppId('');
             setAlgoliaSearchKey('');
           }
@@ -390,26 +407,29 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
             }
             
             // Algolia API Keys
-            if (settingsResult.keys.algoliaAppId && settingsResult.keys.algoliaSearchKey) {
+            if (settingsResult.keys.algoliaAppId && settingsResult.keys.algoliaSearchKey && settingsResult.keys.algoliaWriteKey) {
               setHasExistingAlgoliaKeys(true);
               setMaskedAlgoliaKeys({
                 appId: settingsResult.keys.algoliaAppId,
-                searchKey: settingsResult.keys.algoliaSearchKey
+                searchKey: settingsResult.keys.algoliaSearchKey,
+                writeKey: settingsResult.keys.algoliaWriteKey
               });
               setAlgoliaAppId('');
               setAlgoliaSearchKey('');
+              setAlgoliaWriteKey('');
             } else {
               setHasExistingAlgoliaKeys(false);
-              setMaskedAlgoliaKeys({appId: '', searchKey: ''});
+              setMaskedAlgoliaKeys({appId: '', searchKey: '', writeKey: ''});
               setAlgoliaAppId('');
               setAlgoliaSearchKey('');
+              setAlgoliaWriteKey('');
             }
           } else {
             setHasExistingApiKey(false);
             setMaskedApiKey('');
             setGeminiApiKey('');
             setHasExistingAlgoliaKeys(false);
-            setMaskedAlgoliaKeys({appId: '', searchKey: ''});
+            setMaskedAlgoliaKeys({appId: '', searchKey: '', writeKey: ''});
             setAlgoliaAppId('');
             setAlgoliaSearchKey('');
           }
@@ -674,15 +694,16 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-green-800 dark:text-green-200">
-                        ✓ Algolia keys configured: App ID: {maskedAlgoliaKeys.appId}, Search Key: {maskedAlgoliaKeys.searchKey}
+                        ✓ Algolia keys configured: App ID: {maskedAlgoliaKeys.appId}, Search Key: {maskedAlgoliaKeys.searchKey}, Write Key: {maskedAlgoliaKeys.writeKey}
                       </span>
                     </div>
                     <button
                       onClick={() => {
                         setHasExistingAlgoliaKeys(false);
-                        setMaskedAlgoliaKeys({appId: '', searchKey: ''});
+                        setMaskedAlgoliaKeys({appId: '', searchKey: '', writeKey: ''});
                         setAlgoliaAppId('');
                         setAlgoliaSearchKey('');
+                        setAlgoliaWriteKey('');
                       }}
                       className="text-xs text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 underline"
                     >
@@ -692,10 +713,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 </div>
               )}
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">
-                    Application ID
+                    Application ID *
                   </label>
                   <input
                     type="text"
@@ -708,7 +729,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 
                 <div>
                   <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">
-                    Search API Key
+                    Search API Key *
                   </label>
                   <input
                     type="password"
@@ -718,12 +739,25 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     className="w-full p-3 rounded-xl border transition-all shadow-sm focus:shadow-md bg-white dark:bg-slate-800/50 border-gray-200 dark:border-slate-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
+                
+                <div>
+                  <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">
+                    Write API Key *
+                  </label>
+                  <input
+                    type="password"
+                    value={algoliaWriteKey}
+                    onChange={(e) => setAlgoliaWriteKey(e.target.value)}
+                    placeholder={hasExistingAlgoliaKeys ? "Enter new Write Key to update" : "Enter Write API Key"}
+                    className="w-full p-3 rounded-xl border transition-all shadow-sm focus:shadow-md bg-white dark:bg-slate-800/50 border-gray-200 dark:border-slate-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
               </div>
               
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 {hasExistingAlgoliaKeys 
-                  ? "Leave empty to keep current keys, or enter new keys to update. Get your API keys from your Algolia Dashboard."
-                  : "Required for product search functionality. Get your API keys from your Algolia Dashboard (algolia.com)."
+                  ? "Leave empty to keep current keys, or enter all three keys to update. All three keys are required for full functionality."
+                  : "All three keys are required for product search and index creation. Get your API keys from your Algolia Dashboard (algolia.com)."
                 }
               </p>
             </div>

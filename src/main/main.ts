@@ -132,13 +132,14 @@ class MainApplication {
         const apiKeysArray = await this.database.getAPIKeys();
         const algoliaAppId = apiKeysArray.find(key => key.provider === 'algoliaAppId')?.encrypted_key;
         const algoliaApiKey = apiKeysArray.find(key => key.provider === 'algoliaSearchKey')?.encrypted_key;
+        const algoliaWriteKey = apiKeysArray.find(key => key.provider === 'algoliaWriteKey')?.encrypted_key;
         
         let actualAppId, actualApiKey;
         
         let usingDemoKeys = false;
         
-        if (!algoliaAppId || !algoliaApiKey) {
-          console.warn('[Search] User Algolia API keys not found. Using demo keys.');
+        if (!algoliaAppId || !algoliaApiKey || !algoliaWriteKey) {
+          console.warn('[Search] User Algolia API keys not found or incomplete. Using demo keys.');
           // フォールバック: デモAPIキーを使用 (Best Buy データセット)
           actualAppId = 'latency';
           actualApiKey = '6be0576ff61c053d5f9a3225e2a90f76';
@@ -164,6 +165,7 @@ class MainApplication {
         const multiSearchConfig = {
           applicationId: actualAppId,
           apiKey: actualApiKey,
+          writeApiKey: usingDemoKeys ? undefined : algoliaWriteKey,
           indexMappings: indexMappings
         };
         
@@ -570,6 +572,14 @@ class MainApplication {
           await this.database.saveAPIKey('algoliaSearchKey', apiKeys.algoliaSearchKey)
           console.log('[Main] Algolia Search API Key saved successfully');
           savedKeys.push('Algolia Search Key');
+        }
+        
+        // Save Algolia Write API Key
+        if (apiKeys.algoliaWriteKey && apiKeys.algoliaWriteKey.trim()) {
+          console.log('[Main] Saving Algolia Write API Key...');
+          await this.database.saveAPIKey('algoliaWriteKey', apiKeys.algoliaWriteKey)
+          console.log('[Main] Algolia Write API Key saved successfully');
+          savedKeys.push('Algolia Write Key');
         }
         
         if (savedKeys.length === 0) {
