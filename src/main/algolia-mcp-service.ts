@@ -42,6 +42,10 @@ interface AlgoliaMCPSearchResult {
   processingTimeMS: number;
 }
 
+interface AlgoliaMCPMultiSearchResult {
+  results: AlgoliaMCPSearchResult[];
+}
+
 export class AlgoliaMCPService {
   private server: Server;
   private ajv: Ajv;
@@ -154,7 +158,9 @@ export class AlgoliaMCPService {
     };
 
     try {
-      const searchParams = {
+      // MCPに合わせたリクエスト形式に修正
+      const searchRequest = {
+        indexName: params.indexName,
         query: params.query,
         hitsPerPage: params.hitsPerPage || 20,
         page: params.page || 0,
@@ -164,8 +170,15 @@ export class AlgoliaMCPService {
         filters: params.filters
       };
 
+      // 複数クエリ対応のエンドポイントを使用
+      const requestBody = {
+        requests: [searchRequest]
+      };
+
+      console.log('[AlgoliaMCP] Request body:', JSON.stringify(requestBody, null, 2));
+
       const response = await fetch(
-        `https://${this.config.applicationId}-dsn.algolia.net/1/indexes/${params.indexName}/query`,
+        `https://${this.config.applicationId}-dsn.algolia.net/1/indexes/*/queries`,
         {
           method: 'POST',
           headers: {
@@ -173,26 +186,46 @@ export class AlgoliaMCPService {
             'X-Algolia-Application-Id': this.config.applicationId,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(searchParams)
+          body: JSON.stringify(requestBody)
         }
       );
 
+      console.log('[AlgoliaMCP] Response status:', response.status, response.statusText);
+
       if (!response.ok) {
-        throw new Error(`Algolia API error: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('[AlgoliaMCP] API error response:', errorText);
+        throw new Error(`Algolia API error: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
-      const data = await response.json() as AlgoliaMCPSearchResult;
+      const data = await response.json() as AlgoliaMCPMultiSearchResult;
+      console.log('[AlgoliaMCP] Raw response:', JSON.stringify(data, null, 2));
+      
+      // 複数クエリレスポンスの最初の結果を取得
+      const searchResult = data.results?.[0];
+      
+      if (!searchResult) {
+        console.warn('[AlgoliaMCP] No search result in response');
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ hits: [], nbHits: 0 }, null, 2)
+            }
+          ]
+        };
+      }
       
       return {
         content: [
           {
             type: 'text',
-            text: JSON.stringify(data, null, 2)
+            text: JSON.stringify(searchResult, null, 2)
           }
         ]
       };
     } catch (error) {
-      console.error('Algolia MCP search error:', error);
+      console.error('[AlgoliaMCP] Search error:', error);
       throw error;
     }
   }
@@ -229,14 +262,18 @@ export class AlgoliaMCPService {
       const resultText = searchResult.content[0].text as string;
       console.log('[AlgoliaMCP] Result text length:', resultText.length);
       
-      const data = JSON.parse(resultText) as AlgoliaMCPSearchResult;
-      console.log('[AlgoliaMCP] Parsed data:', {
-        hits: data.hits?.length || 0,
-        nbHits: data.nbHits,
-        processingTimeMS: data.processingTimeMS
+      const data = JSON.parse(resultText);
+      console.log('[AlgoliaMCP] Parsed data:', data);
+      
+      // 複数クエリレスポンスの場合、最初の結果を取得
+      const searchData = data.results ? data.results[0] : data;
+      console.log('[AlgoliaMCP] Search data:', {
+        hits: searchData.hits?.length || 0,
+        nbHits: searchData.nbHits,
+        processingTimeMS: searchData.processingTimeMS
       });
 
-      const products = data.hits.map(hit => ({
+      const products = searchData.hits.map((hit: any) => ({
         id: hit.objectID,
         name: hit.name || 'Unknown Product',
         description: hit.description || '',
