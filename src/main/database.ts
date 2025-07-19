@@ -389,6 +389,16 @@ export class DatabaseService {
 
   async saveAPIKey(provider: string, key: string) {
     console.log('[Database] Saving API key for provider:', provider, 'keyLength:', key.length);
+    
+    // APIキーの基本的な検証
+    if (provider === 'gemini' && (!key.startsWith('AIzaSy') || key.length < 35)) {
+      console.log('[Database] Invalid Gemini API key format detected, rejecting save');
+      throw new Error('Invalid API key format');
+    }
+    
+    // 既存の重複エントリをクリーンアップ
+    await this.cleanupDuplicateAPIKeys(provider);
+    
     const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO api_configs (provider, encrypted_key, created_at)
       VALUES (?, ?, CURRENT_TIMESTAMP)
@@ -396,5 +406,51 @@ export class DatabaseService {
     const result = stmt.run(provider, key);
     console.log('[Database] API key saved successfully');
     return result;
+  }
+
+  // 重複APIキーエントリのクリーンアップ
+  async cleanupDuplicateAPIKeys(provider?: string) {
+    console.log('[Database] Starting API key cleanup for provider:', provider || 'all');
+    
+    try {
+      // 指定されたプロバイダーまたは全てのプロバイダーの重複をクリーンアップ
+      if (provider) {
+        // 特定のプロバイダーの最新エントリ以外を削除
+        const deleteStmt = this.db.prepare(`
+          DELETE FROM api_configs 
+          WHERE provider = ? AND id NOT IN (
+            SELECT id FROM api_configs 
+            WHERE provider = ? 
+            ORDER BY created_at DESC 
+            LIMIT 1
+          )
+        `);
+        const result = deleteStmt.run(provider, provider);
+        console.log('[Database] Cleaned up', result.changes, 'duplicate entries for provider:', provider);
+      } else {
+        // 全プロバイダーの重複をクリーンアップ
+        const providers = this.db.prepare('SELECT DISTINCT provider FROM api_configs').all() as Array<{ provider: string }>;
+        let totalCleaned = 0;
+        
+        for (const { provider } of providers) {
+          const deleteStmt = this.db.prepare(`
+            DELETE FROM api_configs 
+            WHERE provider = ? AND id NOT IN (
+              SELECT id FROM api_configs 
+              WHERE provider = ? 
+              ORDER BY created_at DESC 
+              LIMIT 1
+            )
+          `);
+          const result = deleteStmt.run(provider, provider);
+          totalCleaned += result.changes;
+        }
+        
+        console.log('[Database] Total cleanup: removed', totalCleaned, 'duplicate API key entries');
+      }
+    } catch (error) {
+      console.error('[Database] Error during API key cleanup:', error);
+      throw error;
+    }
   }
 }

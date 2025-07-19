@@ -20,8 +20,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 }) => {
   const [databasePath, setDatabasePath] = useState<string>('');
   const [geminiApiKey, setGeminiApiKey] = useState<string>('');
+  const [hasExistingApiKey, setHasExistingApiKey] = useState<boolean>(false);
+  const [maskedApiKey, setMaskedApiKey] = useState<string>('');
   const [isResetting, setIsResetting] = useState(false);
   const [apiSaveMessage, setApiSaveMessage] = useState<string>('');
+  const [isCleaningUp, setIsCleaningUp] = useState(false);
   const [logs, setLogs] = useState<string>('');
   const [logFilePath, setLogFilePath] = useState<string>('');
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
@@ -41,8 +44,15 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         // Get API keys (if available)
         if (window.electronAPI?.getAPIKeys) {
           const result = await window.electronAPI.getAPIKeys();
-          if (result.success && result.keys) {
-            setGeminiApiKey(result.keys.gemini || '');
+          if (result.success && result.keys && result.keys.gemini) {
+            // APIキーが存在する場合はマスクされた値を表示用に保存し、入力フィールドは空のままにする
+            setHasExistingApiKey(true);
+            setMaskedApiKey(result.keys.gemini);
+            setGeminiApiKey(''); // 入力フィールドは空のままにする
+          } else {
+            setHasExistingApiKey(false);
+            setMaskedApiKey('');
+            setGeminiApiKey('');
           }
         }
 
@@ -63,18 +73,44 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
   const handleSaveApiKeys = async () => {
     try {
+      // 新しいAPIキーが入力されている場合のみ保存
+      if (!geminiApiKey.trim()) {
+        if (hasExistingApiKey) {
+          setApiSaveMessage('API key is already configured. Enter a new key to update.');
+        } else {
+          setApiSaveMessage('Please enter a valid API key.');
+        }
+        setTimeout(() => setApiSaveMessage(''), 3000);
+        return;
+      }
+
+      // APIキーの基本的な検証（Geminiキーは通常AIzaSyで始まり、39文字）
+      if (geminiApiKey.length < 35 || !geminiApiKey.startsWith('AIzaSy')) {
+        setApiSaveMessage('Invalid Gemini API key format. Keys should start with "AIzaSy" and be approximately 39 characters long.');
+        setTimeout(() => setApiSaveMessage(''), 5000);
+        return;
+      }
+
       if (window.electronAPI?.saveAPIKeys) {
         const result = await window.electronAPI.saveAPIKeys({
-          gemini: geminiApiKey
+          gemini: geminiApiKey.trim() // 前後の空白を削除
         });
         if (result.success) {
           setApiSaveMessage('API key saved successfully!');
+          // 実際のAPIキーを取得して新しいマスクを生成
+          const newMaskedKey = `${geminiApiKey.substring(0, 4)}...${geminiApiKey.substring(geminiApiKey.length - 4)}`;
+          setHasExistingApiKey(true);
+          setMaskedApiKey(newMaskedKey);
+          setGeminiApiKey(''); // 入力フィールドをクリア
+          setTimeout(() => setApiSaveMessage(''), 3000);
+        } else {
+          setApiSaveMessage(result.error || 'Failed to save API key');
           setTimeout(() => setApiSaveMessage(''), 3000);
         }
       }
     } catch (error) {
       console.error('Failed to save API keys:', error);
-      setApiSaveMessage('Failed to save API key');
+      setApiSaveMessage('Failed to save API key: ' + (error as Error).message);
       setTimeout(() => setApiSaveMessage(''), 3000);
     }
   };
@@ -161,6 +197,43 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       }
     } catch (error) {
       console.error('Failed to clear logs:', error);
+    }
+  };
+
+  const handleCleanupAPIKeys = async () => {
+    if (!confirm('Are you sure you want to cleanup duplicate API keys? This will remove old duplicate entries and keep only the latest ones.')) {
+      return;
+    }
+    
+    setIsCleaningUp(true);
+    try {
+      if (window.electronAPI?.cleanupAPIKeys) {
+        const result = await window.electronAPI.cleanupAPIKeys();
+        if (result.success) {
+          setApiSaveMessage('API key cleanup completed successfully!');
+          // 設定を再読み込み
+          const settingsResult = await window.electronAPI.getAPIKeys();
+          if (settingsResult.success && settingsResult.keys && settingsResult.keys.gemini) {
+            setHasExistingApiKey(true);
+            setMaskedApiKey(settingsResult.keys.gemini);
+            setGeminiApiKey('');
+          } else {
+            setHasExistingApiKey(false);
+            setMaskedApiKey('');
+            setGeminiApiKey('');
+          }
+          setTimeout(() => setApiSaveMessage(''), 3000);
+        } else {
+          setApiSaveMessage('Failed to cleanup API keys: ' + (result.message || 'Unknown error'));
+          setTimeout(() => setApiSaveMessage(''), 3000);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to cleanup API keys:', error);
+      setApiSaveMessage('Failed to cleanup API keys: ' + (error as Error).message);
+      setTimeout(() => setApiSaveMessage(''), 3000);
+    } finally {
+      setIsCleaningUp(false);
     }
   };
   return (
@@ -364,15 +437,41 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
                 Gemini API Key
               </label>
+              
+              {hasExistingApiKey && (
+                <div className="mb-3 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-green-800 dark:text-green-200">
+                        ✓ API key configured: {maskedApiKey}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setHasExistingApiKey(false);
+                        setMaskedApiKey('');
+                        setGeminiApiKey('');
+                      }}
+                      className="text-xs text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 underline"
+                    >
+                      Clear & Replace
+                    </button>
+                  </div>
+                </div>
+              )}
+              
               <input
                 type="password"
                 value={geminiApiKey}
                 onChange={(e) => setGeminiApiKey(e.target.value)}
-                placeholder="Enter your Gemini API key"
+                placeholder={hasExistingApiKey ? "Enter new API key to update" : "Enter your Gemini API key"}
                 className="w-full p-3 rounded-xl border transition-all shadow-sm focus:shadow-md bg-white dark:bg-slate-800/50 border-gray-200 dark:border-slate-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Required for image analysis and AI features
+                {hasExistingApiKey 
+                  ? "Leave empty to keep current key, or enter a new key to update. Get your API key from Google AI Studio."
+                  : "Required for image analysis and AI features. Get your free API key from Google AI Studio (makersuite.google.com)."
+                }
               </p>
             </div>
             
@@ -382,13 +481,28 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               </p>
             </div>
             
-            <button
-              onClick={handleSaveApiKeys}
-              className="flex items-center gap-2 px-4 py-3 rounded-xl bg-green-500 hover:bg-green-600 text-white transition-colors"
-            >
-              <Save className="w-4 h-4" />
-              Save API Key
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={handleSaveApiKeys}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl bg-green-500 hover:bg-green-600 text-white transition-colors"
+              >
+                <Save className="w-4 h-4" />
+                Save API Key
+              </button>
+              
+              <button
+                onClick={handleCleanupAPIKeys}
+                disabled={isCleaningUp}
+                className="flex items-center gap-2 px-4 py-3 rounded-xl bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white transition-colors"
+              >
+                {isCleaningUp ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                Cleanup Database
+              </button>
+            </div>
             
             {apiSaveMessage && (
               <div className={`p-3 rounded-xl text-sm font-medium transition-all ${

@@ -420,6 +420,18 @@ class MainApplication {
       }
     })
 
+    // Cleanup duplicate API keys
+    ipcMain.handle('cleanup-api-keys', async (event, provider?: string) => {
+      try {
+        console.log('[Main] Starting API key cleanup for provider:', provider || 'all');
+        await this.database.cleanupDuplicateAPIKeys(provider);
+        return { success: true, message: 'API key cleanup completed successfully' }
+      } catch (error) {
+        console.error('[Main] Cleanup API keys error:', error)
+        return { success: false, error: (error as Error).message }
+      }
+    })
+
     // Track product view interaction
     ipcMain.handle('track-product-view', async (event, productId: string, timeSpent: number) => {
       try {

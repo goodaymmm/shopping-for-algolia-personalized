@@ -30,6 +30,7 @@ export interface ElectronAPI {
   // API key management
   getAPIKeys: () => Promise<{ success: boolean; keys?: Record<string, string> }>
   saveAPIKeys: (apiKeys: Record<string, string>) => Promise<{ success: boolean }>
+  cleanupAPIKeys: (provider?: string) => Promise<{ success: boolean; message?: string }>
   
   // ML interaction tracking
   trackProductView: (productId: string, timeSpent: number) => Promise<{ success: boolean }>

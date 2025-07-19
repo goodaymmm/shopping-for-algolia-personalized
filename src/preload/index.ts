@@ -61,6 +61,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   saveAPIKeys: (apiKeys: Record<string, string>) =>
     ipcRenderer.invoke('save-api-keys', apiKeys),
+  
+  cleanupAPIKeys: (provider?: string) =>
+    ipcRenderer.invoke('cleanup-api-keys', provider),
 
   // ML interaction tracking
   trackProductView: (productId: string, timeSpent: number) =>
