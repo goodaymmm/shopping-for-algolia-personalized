@@ -4,6 +4,7 @@ import { DatabaseService } from './database'
 import { PersonalizationEngine, MLTrainingEvent } from './personalization'
 import { GeminiService, ImageAnalysis } from './gemini-service'
 import { AlgoliaMCPService } from './algolia-mcp-service'
+import { Logger } from './logger'
 import { copyFileSync, existsSync } from 'fs'
 
 class MainApplication {
@@ -12,8 +13,10 @@ class MainApplication {
   private personalization: PersonalizationEngine
   private geminiService: GeminiService
   private algoliaMCPService: AlgoliaMCPService
+  private logger: Logger
 
   constructor() {
+    this.logger = Logger.getInstance()
     this.database = new DatabaseService()
     this.personalization = new PersonalizationEngine(this.database.database)
     this.geminiService = new GeminiService()
@@ -24,6 +27,8 @@ class MainApplication {
 
   private setupApp() {
     app.whenReady().then(() => {
+      this.logger.initialize()
+      this.logger.info('Main', 'Application starting up')
       this.createWindow()
       this.database.initialize()
     })
@@ -55,6 +60,8 @@ class MainApplication {
       this.mainWindow.webContents.openDevTools()
     } else {
       this.mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+      // 強制的にDevToolsを開いてログを確認できるようにする（デバッグ用）
+      this.mainWindow.webContents.openDevTools()
     }
   }
 
@@ -503,6 +510,37 @@ class MainApplication {
       } catch (error) {
         console.error('Get personalization profile error:', error)
         return { success: false, error: (error as Error).message }
+      }
+    })
+
+    // ログ関連のIPCハンドラー
+    ipcMain.handle('get-log-file-path', async () => {
+      try {
+        return { success: true, path: this.logger.getLogFilePath() }
+      } catch (error) {
+        console.error('Get log file path error:', error)
+        return { success: false, error: (error as Error).message }
+      }
+    })
+
+    ipcMain.handle('clear-logs', async () => {
+      try {
+        this.logger.clearLogs()
+        return { success: true, message: 'Logs cleared successfully' }
+      } catch (error) {
+        console.error('Clear logs error:', error)
+        return { success: false, error: (error as Error).message }
+      }
+    })
+
+    ipcMain.handle('get-logs', async () => {
+      try {
+        const fs = require('fs')
+        const logContent = fs.readFileSync(this.logger.getLogFilePath(), 'utf8')
+        return { success: true, logs: logContent }
+      } catch (error) {
+        console.error('Get logs error:', error)
+        return { success: false, error: (error as Error).message, logs: '' }
       }
     })
   }

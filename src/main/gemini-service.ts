@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { Logger } from './logger';
 
 // Image analysis result interface (same as renderer)
 export interface ImageAnalysis {
@@ -16,57 +17,101 @@ export interface ImageAnalysis {
 export class GeminiService {
   private client: GoogleGenerativeAI | null = null;
   private apiKey: string | null = null;
+  private logger: Logger;
+
+  constructor() {
+    this.logger = Logger.getInstance();
+  }
 
   async initialize(apiKey: string): Promise<boolean> {
     try {
-      console.log('[Gemini] Initializing with API key:', apiKey ? `Present (${apiKey.length} chars)` : 'Missing');
+      this.logger.info('Gemini', 'Initializing service', {
+        hasApiKey: !!apiKey,
+        keyLength: apiKey ? apiKey.length : 0,
+        keyPrefix: apiKey ? apiKey.substring(0, 8) + '...' : 'None'
+      });
+      
+      if (!apiKey || apiKey.trim() === '') {
+        this.logger.error('Gemini', 'API key is empty or missing');
+        return false;
+      }
+
       this.apiKey = apiKey;
       this.client = new GoogleGenerativeAI(apiKey);
-      console.log('[Gemini] Successfully initialized');
+      
+      this.logger.info('Gemini', 'Service initialized successfully', {
+        clientCreated: !!this.client
+      });
+      
       return true;
     } catch (error) {
-      console.error('[Gemini] Failed to initialize:', error);
+      this.logger.error('Gemini', 'Failed to initialize service', {
+        error: (error as Error).message,
+        stack: (error as Error).stack
+      });
       return false;
     }
   }
 
   async testConnection(): Promise<boolean> {
-    console.log('[Gemini] Testing connection...');
+    this.logger.info('Gemini', 'Starting connection test');
+    
     if (!this.client) {
-      console.log('[Gemini] Connection test failed: client not initialized');
+      this.logger.error('Gemini', 'Connection test failed: client not initialized');
       return false;
     }
 
     try {
-      console.log('[Gemini] Sending test request...');
+      this.logger.info('Gemini', 'Sending test request to API');
       const model = this.client.getGenerativeModel({ model: 'gemini-2.5-flash' });
       const response = await model.generateContent('Hello');
-      const success = response.response.text() ? response.response.text().length > 0 : false;
-      console.log('[Gemini] Connection test result:', success ? 'Success' : 'Failed');
+      const responseText = response.response.text();
+      const success = responseText ? responseText.length > 0 : false;
+      
+      this.logger.info('Gemini', 'Connection test completed', {
+        success,
+        responseLength: responseText ? responseText.length : 0,
+        responsePreview: responseText ? responseText.substring(0, 100) : 'No response'
+      });
+      
       return success;
     } catch (error) {
-      console.error('[Gemini] Connection test failed:', error);
+      this.logger.error('Gemini', 'Connection test failed', {
+        error: (error as Error).message,
+        stack: (error as Error).stack,
+        name: (error as Error).name
+      });
       return false;
     }
   }
 
   async analyzeImage(imageData: string, userQuery?: string): Promise<ImageAnalysis> {
-    console.log('[Gemini] Starting image analysis...');
-    console.log('[Gemini] User query:', userQuery || 'None');
-    console.log('[Gemini] Image data length:', imageData ? imageData.length : 0);
+    this.logger.info('Gemini', 'Starting image analysis', {
+      hasImageData: !!imageData,
+      imageDataLength: imageData ? imageData.length : 0,
+      userQuery: userQuery || 'None',
+      imageDataPrefix: imageData ? imageData.substring(0, 50) + '...' : 'None'
+    });
     
     if (!this.client) {
       const error = 'Gemini client not initialized. Please set API key first.';
-      console.error('[Gemini]', error);
+      this.logger.error('Gemini', error);
       throw new Error(error);
     }
 
     try {
       const prompt = this.buildAnalysisPrompt(userQuery || '');
-      console.log('[Gemini] Using prompt:', prompt);
       
-      console.log('[Gemini] Sending request to Gemini API...');
+      this.logger.info('Gemini', 'Prepared analysis request', {
+        promptLength: prompt.length,
+        promptPreview: prompt.substring(0, 100) + '...',
+        model: 'gemini-2.5-flash'
+      });
+      
+      this.logger.info('Gemini', 'Sending image analysis request to API');
       const model = this.client.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      
+      const requestStartTime = Date.now();
       const response = await model.generateContent([
         {
           inlineData: {
@@ -76,18 +121,37 @@ export class GeminiService {
         },
         prompt
       ]);
+      const requestDuration = Date.now() - requestStartTime;
 
-      console.log('[Gemini] Received response from API');
+      this.logger.info('Gemini', 'Received response from API', {
+        requestDurationMs: requestDuration,
+        hasResponse: !!response,
+        hasResponseText: !!response.response?.text
+      });
+      
       const analysisText = response.response.text();
-      console.log('[Gemini] Response text length:', analysisText ? analysisText.length : 0);
+      
+      this.logger.info('Gemini', 'Processing API response', {
+        responseTextLength: analysisText ? analysisText.length : 0,
+        responsePreview: analysisText ? analysisText.substring(0, 200) + '...' : 'No response text'
+      });
 
-      return this.parseAnalysisResult(analysisText || '');
+      const result = this.parseAnalysisResult(analysisText || '');
+      
+      this.logger.info('Gemini', 'Image analysis completed successfully', {
+        resultKeywordsCount: result.searchKeywords.length,
+        keywords: result.searchKeywords,
+        confidence: result.confidence
+      });
+      
+      return result;
     } catch (error) {
-      console.error('[Gemini] Image analysis failed:', error);
-      console.error('[Gemini] Error details:', {
-        message: (error as Error).message,
+      this.logger.error('Gemini', 'Image analysis failed', {
+        error: (error as Error).message,
         stack: (error as Error).stack,
-        name: (error as Error).name
+        name: (error as Error).name,
+        userQuery,
+        hasImageData: !!imageData
       });
       throw error;
     }
@@ -111,15 +175,23 @@ Return only the keywords separated by spaces.
   }
 
   private parseAnalysisResult(analysisText: string): ImageAnalysis {
-    console.log('[Gemini] Raw analysis text:', analysisText);
+    this.logger.info('Gemini', 'Parsing analysis result', {
+      rawTextLength: analysisText.length,
+      rawTextPreview: analysisText.substring(0, 300) + '...'
+    });
     
     try {
       // Parse keywords from simple text response
       const keywords = analysisText.trim().split(/\s+/).filter(word => word.length > 0);
       
-      console.log('[Gemini] Extracted keywords:', keywords);
+      this.logger.info('Gemini', 'Extracted keywords from response', {
+        keywordCount: keywords.length,
+        keywords: keywords.slice(0, 10), // Log first 10 keywords
+        allKeywords: keywords
+      });
       
       if (keywords.length === 0) {
+        this.logger.warn('Gemini', 'No keywords found in API response');
         throw new Error('No keywords found in response');
       }
 
@@ -136,10 +208,19 @@ Return only the keywords separated by spaces.
         description: `Image analysis: ${keywords.join(', ')}`
       };
       
-      console.log('[Gemini] Parsed result:', result);
+      this.logger.info('Gemini', 'Successfully parsed analysis result', {
+        resultConfidence: result.confidence,
+        keywordCount: result.searchKeywords.length,
+        description: result.description
+      });
+      
       return result;
     } catch (error) {
-      console.error('[Gemini] Failed to parse analysis result:', error);
+      this.logger.error('Gemini', 'Failed to parse analysis result', {
+        error: (error as Error).message,
+        rawText: analysisText,
+        rawTextLength: analysisText.length
+      });
       
       // Return error state with no keywords
       const fallbackResult = {
@@ -154,7 +235,10 @@ Return only the keywords separated by spaces.
         description: 'Image analysis failed'
       };
       
-      console.log('[Gemini] Using fallback result:', fallbackResult);
+      this.logger.warn('Gemini', 'Using fallback result due to parsing failure', {
+        fallbackResult
+      });
+      
       return fallbackResult;
     }
   }

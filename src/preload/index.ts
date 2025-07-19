@@ -76,5 +76,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('track-product-remove', productId),
   
   getPersonalizationProfile: () =>
-    ipcRenderer.invoke('get-personalization-profile')
+    ipcRenderer.invoke('get-personalization-profile'),
+
+  // ログ管理
+  getLogFilePath: () =>
+    ipcRenderer.invoke('get-log-file-path'),
+  
+  clearLogs: () =>
+    ipcRenderer.invoke('clear-logs'),
+  
+  getLogs: () =>
+    ipcRenderer.invoke('get-logs')
 })

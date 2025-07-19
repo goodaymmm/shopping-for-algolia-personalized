@@ -37,6 +37,11 @@ export interface ElectronAPI {
   saveProductWithTracking: (product: Product) => Promise<{ success: boolean; id?: number }>
   trackProductRemove: (productId: string) => Promise<{ success: boolean }>
   getPersonalizationProfile: () => Promise<{ success: boolean; profile?: any }>
+  
+  // ログ管理
+  getLogFilePath: () => Promise<{ success: boolean; path?: string }>
+  clearLogs: () => Promise<{ success: boolean; message?: string }>
+  getLogs: () => Promise<{ success: boolean; logs?: string }>
 }
 
 declare global {

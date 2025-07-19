@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Monitor, Moon, Sun, Type, Keyboard, Clock, Save, Database, Key, Trash2, RefreshCw, FolderOpen } from 'lucide-react';
+import { ArrowLeft, Monitor, Moon, Sun, Type, Keyboard, Clock, Save, Database, Key, Trash2, RefreshCw, FolderOpen, FileText, Download, RotateCcw } from 'lucide-react';
 import { AppSettings } from '../types';
 import { Theme } from '../hooks/useTheme';
 
@@ -22,6 +22,9 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const [geminiApiKey, setGeminiApiKey] = useState<string>('');
   const [isResetting, setIsResetting] = useState(false);
   const [apiSaveMessage, setApiSaveMessage] = useState<string>('');
+  const [logs, setLogs] = useState<string>('');
+  const [logFilePath, setLogFilePath] = useState<string>('');
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
 
   // Load current settings on mount
   useEffect(() => {
@@ -40,6 +43,14 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           const result = await window.electronAPI.getAPIKeys();
           if (result.success && result.keys) {
             setGeminiApiKey(result.keys.gemini || '');
+          }
+        }
+
+        // Get log file path
+        if (window.electronAPI?.getLogFilePath) {
+          const result = await window.electronAPI.getLogFilePath();
+          if (result.success && result.path) {
+            setLogFilePath(result.path);
           }
         }
       } catch (error) {
@@ -113,6 +124,43 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
       }
     } catch (error) {
       console.error('Failed to change database path:', error);
+    }
+  };
+
+  const handleLoadLogs = async () => {
+    setIsLoadingLogs(true);
+    try {
+      if (window.electronAPI?.getLogs) {
+        const result = await window.electronAPI.getLogs();
+        if (result.success) {
+          setLogs(result.logs || '');
+        } else {
+          setLogs('Failed to load logs: ' + (result.error || 'Unknown error'));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load logs:', error);
+      setLogs('Error loading logs: ' + (error as Error).message);
+    } finally {
+      setIsLoadingLogs(false);
+    }
+  };
+
+  const handleClearLogs = async () => {
+    if (!confirm('Are you sure you want to clear all logs? This action cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      if (window.electronAPI?.clearLogs) {
+        const result = await window.electronAPI.clearLogs();
+        if (result.success) {
+          setLogs('');
+          alert('Logs cleared successfully');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to clear logs:', error);
     }
   };
   return (
@@ -351,6 +399,77 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 {apiSaveMessage}
               </div>
             )}
+          </div>
+        </section>
+
+        {/* Logs */}
+        <section>
+          <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
+            <FileText className="w-5 h-5" />
+            Application Logs
+          </h2>
+          
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl border shadow-sm bg-white dark:bg-slate-800/50 border-gray-200 dark:border-slate-600 backdrop-blur-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-white">
+                    Log File
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    {logFilePath || 'Log file path not available'}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleLoadLogs}
+                    disabled={isLoadingLogs}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white transition-colors"
+                  >
+                    {isLoadingLogs ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4" />
+                    )}
+                    Load Logs
+                  </button>
+                  <button
+                    onClick={handleClearLogs}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Clear Logs
+                  </button>
+                </div>
+              </div>
+              
+              {logs && (
+                <div className="mt-4">
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Log Contents:
+                  </div>
+                  <div className="bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-600 rounded-lg p-4 max-h-96 overflow-y-auto">
+                    <pre className="text-xs text-gray-800 dark:text-gray-200 whitespace-pre-wrap font-mono">
+                      {logs}
+                    </pre>
+                  </div>
+                </div>
+              )}
+              
+              {!logs && (
+                <div className="mt-4 p-3 rounded-lg bg-gray-100 dark:bg-slate-800 text-center">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Click "Load Logs" to view application logs
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            <div className="p-4 rounded-xl bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                <strong>Debug Mode:</strong> Logs include detailed information about Gemini API calls, database operations, and error details for troubleshooting.
+              </p>
+            </div>
           </div>
         </section>
 
