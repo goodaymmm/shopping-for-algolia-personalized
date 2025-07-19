@@ -130,19 +130,41 @@ class MainApplication {
         // ユーザーのAlgolia APIキーを取得
         console.log('[Search] Getting user Algolia API keys...');
         const apiKeysArray = await this.database.getAPIKeys();
-        const algoliaAppId = apiKeysArray.find(key => key.provider === 'algolia_app_id')?.encrypted_key;
-        const algoliaApiKey = apiKeysArray.find(key => key.provider === 'algolia_api_key')?.encrypted_key;
+        const algoliaAppId = apiKeysArray.find(key => key.provider === 'algoliaAppId')?.encrypted_key;
+        const algoliaApiKey = apiKeysArray.find(key => key.provider === 'algoliaSearchKey')?.encrypted_key;
+        
+        let actualAppId, actualApiKey;
+        
+        let usingDemoKeys = false;
         
         if (!algoliaAppId || !algoliaApiKey) {
-          console.error('[Search] Algolia API keys not found. Please configure in Settings.');
-          throw new Error('Algolia API keys not configured. Please set Application ID and API Key in Settings.');
+          console.warn('[Search] User Algolia API keys not found. Using demo keys.');
+          // フォールバック: デモAPIキーを使用 (Best Buy データセット)
+          actualAppId = 'latency';
+          actualApiKey = '6be0576ff61c053d5f9a3225e2a90f76';
+          usingDemoKeys = true;
+        } else {
+          console.log('[Search] Using user-configured Algolia API keys.');
+          actualAppId = algoliaAppId;
+          actualApiKey = algoliaApiKey;
         }
 
-        // 統合検索用の設定
+        // 統合検索用の設定（デモキー使用時は Best Buy インデックスを使用）
+        const indexMappings = usingDemoKeys ? {
+          all: 'bestbuy',
+          electronics: 'bestbuy',
+          fashion: 'bestbuy',
+          books: 'bestbuy',
+          home: 'bestbuy',
+          sports: 'bestbuy',
+          beauty: 'bestbuy',
+          food: 'bestbuy'
+        } : STANDARD_INDICES;
+        
         const multiSearchConfig = {
-          applicationId: algoliaAppId,
-          apiKey: algoliaApiKey,
-          indexMappings: STANDARD_INDICES
+          applicationId: actualAppId,
+          apiKey: actualApiKey,
+          indexMappings: indexMappings
         };
         
         console.log('[Search] Initializing Algolia multi-search service with user API keys...');
@@ -520,20 +542,44 @@ class MainApplication {
       }
     })
 
-    // Save API keys (Gemini only, Algolia handled via MCP)
+    // Save API keys (Gemini and Algolia)
     ipcMain.handle('save-api-keys', async (event, apiKeys: Record<string, string>) => {
       try {
         console.log('[Main] Saving API keys:', Object.keys(apiKeys));
-        // Save only Gemini API key (Algolia is handled via MCP)
+        let savedKeys = [];
+        
+        // Save Gemini API key
         if (apiKeys.gemini && apiKeys.gemini.trim()) {
           console.log('[Main] Saving Gemini API key...');
           await this.database.saveAPIKey('gemini', apiKeys.gemini)
           console.log('[Main] Gemini API key saved successfully');
-        } else {
-          console.log('[Main] No Gemini API key provided or key is empty');
+          savedKeys.push('Gemini');
         }
         
-        return { success: true, message: 'API key saved successfully' }
+        // Save Algolia Application ID
+        if (apiKeys.algoliaAppId && apiKeys.algoliaAppId.trim()) {
+          console.log('[Main] Saving Algolia Application ID...');
+          await this.database.saveAPIKey('algoliaAppId', apiKeys.algoliaAppId)
+          console.log('[Main] Algolia Application ID saved successfully');
+          savedKeys.push('Algolia App ID');
+        }
+        
+        // Save Algolia Search API Key
+        if (apiKeys.algoliaSearchKey && apiKeys.algoliaSearchKey.trim()) {
+          console.log('[Main] Saving Algolia Search API Key...');
+          await this.database.saveAPIKey('algoliaSearchKey', apiKeys.algoliaSearchKey)
+          console.log('[Main] Algolia Search API Key saved successfully');
+          savedKeys.push('Algolia Search Key');
+        }
+        
+        if (savedKeys.length === 0) {
+          console.log('[Main] No API keys provided or all keys are empty');
+          return { success: false, error: 'No valid API keys provided' }
+        }
+        
+        const message = `API keys saved successfully: ${savedKeys.join(', ')}`;
+        console.log('[Main]', message);
+        return { success: true, message }
       } catch (error) {
         console.error('[Main] Save API keys error:', error)
         return { success: false, error: (error as Error).message }

@@ -22,6 +22,10 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const [geminiApiKey, setGeminiApiKey] = useState<string>('');
   const [hasExistingApiKey, setHasExistingApiKey] = useState<boolean>(false);
   const [maskedApiKey, setMaskedApiKey] = useState<string>('');
+  const [algoliaAppId, setAlgoliaAppId] = useState<string>('');
+  const [algoliaSearchKey, setAlgoliaSearchKey] = useState<string>('');
+  const [hasExistingAlgoliaKeys, setHasExistingAlgoliaKeys] = useState<boolean>(false);
+  const [maskedAlgoliaKeys, setMaskedAlgoliaKeys] = useState<{appId: string, searchKey: string}>({appId: '', searchKey: ''});
   const [isResetting, setIsResetting] = useState(false);
   const [apiSaveMessage, setApiSaveMessage] = useState<string>('');
   const [isCleaningUp, setIsCleaningUp] = useState(false);
@@ -45,15 +49,41 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         // Get API keys (if available)
         if (window.electronAPI?.getAPIKeys) {
           const result = await window.electronAPI.getAPIKeys();
-          if (result.success && result.keys && result.keys.gemini) {
-            // APIキーが存在する場合はマスクされた値を表示用に保存し、入力フィールドは空のままにする
-            setHasExistingApiKey(true);
-            setMaskedApiKey(result.keys.gemini);
-            setGeminiApiKey(''); // 入力フィールドは空のままにする
+          if (result.success && result.keys) {
+            // Gemini API Key
+            if (result.keys.gemini) {
+              setHasExistingApiKey(true);
+              setMaskedApiKey(result.keys.gemini);
+              setGeminiApiKey('');
+            } else {
+              setHasExistingApiKey(false);
+              setMaskedApiKey('');
+              setGeminiApiKey('');
+            }
+            
+            // Algolia API Keys
+            if (result.keys.algoliaAppId && result.keys.algoliaSearchKey) {
+              setHasExistingAlgoliaKeys(true);
+              setMaskedAlgoliaKeys({
+                appId: result.keys.algoliaAppId,
+                searchKey: result.keys.algoliaSearchKey
+              });
+              setAlgoliaAppId('');
+              setAlgoliaSearchKey('');
+            } else {
+              setHasExistingAlgoliaKeys(false);
+              setMaskedAlgoliaKeys({appId: '', searchKey: ''});
+              setAlgoliaAppId('');
+              setAlgoliaSearchKey('');
+            }
           } else {
             setHasExistingApiKey(false);
             setMaskedApiKey('');
             setGeminiApiKey('');
+            setHasExistingAlgoliaKeys(false);
+            setMaskedAlgoliaKeys({appId: '', searchKey: ''});
+            setAlgoliaAppId('');
+            setAlgoliaSearchKey('');
           }
         }
 
@@ -74,44 +104,92 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
 
   const handleSaveApiKeys = async () => {
     try {
-      // 新しいAPIキーが入力されている場合のみ保存
-      if (!geminiApiKey.trim()) {
-        if (hasExistingApiKey) {
-          setApiSaveMessage('API key is already configured. Enter a new key to update.');
+      const keysToSave: any = {};
+      let hasNewKeys = false;
+
+      // Gemini API key validation and preparation
+      if (geminiApiKey.trim()) {
+        // APIキーの基本的な検証（Geminiキーは通常AIzaSyで始まり、39文字）
+        if (geminiApiKey.length < 35 || !geminiApiKey.startsWith('AIzaSy')) {
+          setApiSaveMessage('Invalid Gemini API key format. Keys should start with "AIzaSy" and be approximately 39 characters long.');
+          setTimeout(() => setApiSaveMessage(''), 5000);
+          return;
+        }
+        keysToSave.gemini = geminiApiKey.trim();
+        hasNewKeys = true;
+      }
+
+      // Algolia API keys validation and preparation
+      if (algoliaAppId.trim() || algoliaSearchKey.trim()) {
+        if (!algoliaAppId.trim() || !algoliaSearchKey.trim()) {
+          setApiSaveMessage('Both Algolia Application ID and Search API Key are required.');
+          setTimeout(() => setApiSaveMessage(''), 3000);
+          return;
+        }
+        
+        // Basic validation for Algolia keys
+        if (algoliaAppId.length < 8) {
+          setApiSaveMessage('Invalid Algolia Application ID format. Should be at least 8 characters long.');
+          setTimeout(() => setApiSaveMessage(''), 3000);
+          return;
+        }
+        
+        if (algoliaSearchKey.length < 20) {
+          setApiSaveMessage('Invalid Algolia Search API Key format. Should be at least 20 characters long.');
+          setTimeout(() => setApiSaveMessage(''), 3000);
+          return;
+        }
+        
+        keysToSave.algoliaAppId = algoliaAppId.trim();
+        keysToSave.algoliaSearchKey = algoliaSearchKey.trim();
+        hasNewKeys = true;
+      }
+
+      // Check if any new keys were provided
+      if (!hasNewKeys) {
+        if (hasExistingApiKey || hasExistingAlgoliaKeys) {
+          setApiSaveMessage('API keys are already configured. Enter new keys to update.');
         } else {
-          setApiSaveMessage('Please enter a valid API key.');
+          setApiSaveMessage('Please enter at least one API key to save.');
         }
         setTimeout(() => setApiSaveMessage(''), 3000);
         return;
       }
 
-      // APIキーの基本的な検証（Geminiキーは通常AIzaSyで始まり、39文字）
-      if (geminiApiKey.length < 35 || !geminiApiKey.startsWith('AIzaSy')) {
-        setApiSaveMessage('Invalid Gemini API key format. Keys should start with "AIzaSy" and be approximately 39 characters long.');
-        setTimeout(() => setApiSaveMessage(''), 5000);
-        return;
-      }
-
       if (window.electronAPI?.saveAPIKeys) {
-        const result = await window.electronAPI.saveAPIKeys({
-          gemini: geminiApiKey.trim() // 前後の空白を削除
-        });
+        const result = await window.electronAPI.saveAPIKeys(keysToSave);
         if (result.success) {
-          setApiSaveMessage('API key saved successfully!');
-          // 実際のAPIキーを取得して新しいマスクを生成
-          const newMaskedKey = `${geminiApiKey.substring(0, 4)}...${geminiApiKey.substring(geminiApiKey.length - 4)}`;
-          setHasExistingApiKey(true);
-          setMaskedApiKey(newMaskedKey);
-          setGeminiApiKey(''); // 入力フィールドをクリア
+          setApiSaveMessage('API keys saved successfully!');
+          
+          // Update UI state for saved keys
+          if (keysToSave.gemini) {
+            const newMaskedKey = `${geminiApiKey.substring(0, 4)}...${geminiApiKey.substring(geminiApiKey.length - 4)}`;
+            setHasExistingApiKey(true);
+            setMaskedApiKey(newMaskedKey);
+            setGeminiApiKey('');
+          }
+          
+          if (keysToSave.algoliaAppId && keysToSave.algoliaSearchKey) {
+            const newMaskedAppId = `${algoliaAppId.substring(0, 4)}...${algoliaAppId.substring(algoliaAppId.length - 4)}`;
+            const newMaskedSearchKey = `${algoliaSearchKey.substring(0, 4)}...${algoliaSearchKey.substring(algoliaSearchKey.length - 4)}`;
+            setHasExistingAlgoliaKeys(true);
+            setMaskedAlgoliaKeys({
+              appId: newMaskedAppId,
+              searchKey: newMaskedSearchKey
+            });
+            setAlgoliaAppId('');
+            setAlgoliaSearchKey('');
+          }
+          
           setTimeout(() => setApiSaveMessage(''), 3000);
         } else {
-          setApiSaveMessage(result.error || 'Failed to save API key');
+          setApiSaveMessage(result.error || 'Failed to save API keys');
           setTimeout(() => setApiSaveMessage(''), 3000);
         }
       }
     } catch (error) {
       console.error('Failed to save API keys:', error);
-      setApiSaveMessage('Failed to save API key: ' + (error as Error).message);
+      setApiSaveMessage('Failed to save API keys: ' + (error as Error).message);
       setTimeout(() => setApiSaveMessage(''), 3000);
     }
   };
@@ -214,14 +292,41 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           setApiSaveMessage('API key cleanup completed successfully!');
           // 設定を再読み込み
           const settingsResult = await window.electronAPI.getAPIKeys();
-          if (settingsResult.success && settingsResult.keys && settingsResult.keys.gemini) {
-            setHasExistingApiKey(true);
-            setMaskedApiKey(settingsResult.keys.gemini);
-            setGeminiApiKey('');
+          if (settingsResult.success && settingsResult.keys) {
+            // Gemini API Key
+            if (settingsResult.keys.gemini) {
+              setHasExistingApiKey(true);
+              setMaskedApiKey(settingsResult.keys.gemini);
+              setGeminiApiKey('');
+            } else {
+              setHasExistingApiKey(false);
+              setMaskedApiKey('');
+              setGeminiApiKey('');
+            }
+            
+            // Algolia API Keys
+            if (settingsResult.keys.algoliaAppId && settingsResult.keys.algoliaSearchKey) {
+              setHasExistingAlgoliaKeys(true);
+              setMaskedAlgoliaKeys({
+                appId: settingsResult.keys.algoliaAppId,
+                searchKey: settingsResult.keys.algoliaSearchKey
+              });
+              setAlgoliaAppId('');
+              setAlgoliaSearchKey('');
+            } else {
+              setHasExistingAlgoliaKeys(false);
+              setMaskedAlgoliaKeys({appId: '', searchKey: ''});
+              setAlgoliaAppId('');
+              setAlgoliaSearchKey('');
+            }
           } else {
             setHasExistingApiKey(false);
             setMaskedApiKey('');
             setGeminiApiKey('');
+            setHasExistingAlgoliaKeys(false);
+            setMaskedAlgoliaKeys({appId: '', searchKey: ''});
+            setAlgoliaAppId('');
+            setAlgoliaSearchKey('');
           }
           setTimeout(() => setApiSaveMessage(''), 3000);
         } else {
@@ -272,14 +377,41 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           handleDebugAPIKeys();
           // 設定を再読み込み
           const settingsResult = await window.electronAPI.getAPIKeys();
-          if (settingsResult.success && settingsResult.keys && settingsResult.keys.gemini) {
-            setHasExistingApiKey(true);
-            setMaskedApiKey(settingsResult.keys.gemini);
-            setGeminiApiKey('');
+          if (settingsResult.success && settingsResult.keys) {
+            // Gemini API Key
+            if (settingsResult.keys.gemini) {
+              setHasExistingApiKey(true);
+              setMaskedApiKey(settingsResult.keys.gemini);
+              setGeminiApiKey('');
+            } else {
+              setHasExistingApiKey(false);
+              setMaskedApiKey('');
+              setGeminiApiKey('');
+            }
+            
+            // Algolia API Keys
+            if (settingsResult.keys.algoliaAppId && settingsResult.keys.algoliaSearchKey) {
+              setHasExistingAlgoliaKeys(true);
+              setMaskedAlgoliaKeys({
+                appId: settingsResult.keys.algoliaAppId,
+                searchKey: settingsResult.keys.algoliaSearchKey
+              });
+              setAlgoliaAppId('');
+              setAlgoliaSearchKey('');
+            } else {
+              setHasExistingAlgoliaKeys(false);
+              setMaskedAlgoliaKeys({appId: '', searchKey: ''});
+              setAlgoliaAppId('');
+              setAlgoliaSearchKey('');
+            }
           } else {
             setHasExistingApiKey(false);
             setMaskedApiKey('');
             setGeminiApiKey('');
+            setHasExistingAlgoliaKeys(false);
+            setMaskedAlgoliaKeys({appId: '', searchKey: ''});
+            setAlgoliaAppId('');
+            setAlgoliaSearchKey('');
           }
           setTimeout(() => setApiSaveMessage(''), 3000);
         } else {
@@ -532,9 +664,67 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               </p>
             </div>
             
-            <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                <strong>Note:</strong> Product search now uses Algolia MCP integration. No additional API keys needed for search functionality.
+            <div className="space-y-4">
+              <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                Algolia Search Configuration
+              </label>
+              
+              {hasExistingAlgoliaKeys && (
+                <div className="mb-3 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-green-800 dark:text-green-200">
+                        ✓ Algolia keys configured: App ID: {maskedAlgoliaKeys.appId}, Search Key: {maskedAlgoliaKeys.searchKey}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setHasExistingAlgoliaKeys(false);
+                        setMaskedAlgoliaKeys({appId: '', searchKey: ''});
+                        setAlgoliaAppId('');
+                        setAlgoliaSearchKey('');
+                      }}
+                      className="text-xs text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 underline"
+                    >
+                      Clear & Replace
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">
+                    Application ID
+                  </label>
+                  <input
+                    type="text"
+                    value={algoliaAppId}
+                    onChange={(e) => setAlgoliaAppId(e.target.value)}
+                    placeholder={hasExistingAlgoliaKeys ? "Enter new App ID to update" : "Enter Algolia Application ID"}
+                    className="w-full p-3 rounded-xl border transition-all shadow-sm focus:shadow-md bg-white dark:bg-slate-800/50 border-gray-200 dark:border-slate-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-medium mb-1 text-gray-600 dark:text-gray-400">
+                    Search API Key
+                  </label>
+                  <input
+                    type="password"
+                    value={algoliaSearchKey}
+                    onChange={(e) => setAlgoliaSearchKey(e.target.value)}
+                    placeholder={hasExistingAlgoliaKeys ? "Enter new Search Key to update" : "Enter Search API Key"}
+                    className="w-full p-3 rounded-xl border transition-all shadow-sm focus:shadow-md bg-white dark:bg-slate-800/50 border-gray-200 dark:border-slate-600 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+              
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {hasExistingAlgoliaKeys 
+                  ? "Leave empty to keep current keys, or enter new keys to update. Get your API keys from your Algolia Dashboard."
+                  : "Required for product search functionality. Get your API keys from your Algolia Dashboard (algolia.com)."
+                }
               </p>
             </div>
             
@@ -545,7 +735,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   className="flex items-center gap-2 px-4 py-3 rounded-xl bg-green-500 hover:bg-green-600 text-white transition-colors"
                 >
                   <Save className="w-4 h-4" />
-                  Save API Key
+                  Save API Keys
                 </button>
                 
                 <button
