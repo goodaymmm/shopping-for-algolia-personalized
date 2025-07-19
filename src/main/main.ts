@@ -115,48 +115,75 @@ class MainApplication {
           }
         }
 
-        // カテゴリ別インデックスマッピングの設定（ショッピング系統合検索）
-        const categoryIndexMappings = {
-          electronics: 'bestbuy',           // 電子機器 (既存のBest Buyデータセット)
-          fashion: 'instant_search',        // ファッション (Algoliaデモインデックス)
-          general: 'instant_search',        // 一般商品
-          books: 'instant_search',          // 書籍
-          home: 'instant_search',           // ホーム用品
-          sports: 'instant_search',         // スポーツ用品
-          beauty: 'instant_search',         // 美容・コスメ
-          food: 'instant_search'            // 食品
+        // 標準インデックス構成の定義
+        const STANDARD_INDICES = {
+          all: 'products',        // 全商品（デフォルト・フォールバック）
+          electronics: 'electronics',  // 電子機器
+          fashion: 'fashion',           // ファッション
+          books: 'books',               // 書籍
+          home: 'home',                 // ホーム用品
+          sports: 'sports',             // スポーツ用品
+          beauty: 'beauty',             // 美容・コスメ
+          food: 'food'                  // 食品
         };
+
+        // ユーザーのAlgolia APIキーを取得
+        console.log('[Search] Getting user Algolia API keys...');
+        const apiKeysArray = await this.database.getAPIKeys();
+        const algoliaAppId = apiKeysArray.find(key => key.provider === 'algolia_app_id')?.encrypted_key;
+        const algoliaApiKey = apiKeysArray.find(key => key.provider === 'algolia_api_key')?.encrypted_key;
+        
+        if (!algoliaAppId || !algoliaApiKey) {
+          console.error('[Search] Algolia API keys not found. Please configure in Settings.');
+          throw new Error('Algolia API keys not configured. Please set Application ID and API Key in Settings.');
+        }
 
         // 統合検索用の設定
         const multiSearchConfig = {
-          applicationId: 'latency',
-          apiKey: '6be0576ff61c053d5f9a3225e2a90f76',
-          indexMappings: categoryIndexMappings
+          applicationId: algoliaAppId,
+          apiKey: algoliaApiKey,
+          indexMappings: STANDARD_INDICES
         };
         
-        console.log('[Search] Initializing Algolia multi-search service...');
+        console.log('[Search] Initializing Algolia multi-search service with user API keys...');
         await this.algoliaMCPService.initializeMultiSearch(multiSearchConfig);
+
+        // インデックス自動作成
+        console.log('[Search] Ensuring standard indices exist...');
+        await this.algoliaMCPService.ensureIndicesExist();
 
         // カテゴリの推論（Gemini解析結果またはキーワードから）
         let inferredCategories: string[] = [];
         if (imageAnalysis?.category) {
           // Gemini APIがカテゴリを判定している場合
           const category = imageAnalysis.category.toLowerCase();
-          if (category in categoryIndexMappings) {
+          if (category in STANDARD_INDICES) {
             inferredCategories.push(category);
           }
         }
 
         // キーワードからもカテゴリを推論
         const queryLower = searchQuery.toLowerCase();
-        if (queryLower.includes('nike') || queryLower.includes('shoe') || queryLower.includes('sneaker') || queryLower.includes('fashion')) {
+        if (queryLower.includes('nike') || queryLower.includes('shoe') || queryLower.includes('sneaker') || queryLower.includes('fashion') || queryLower.includes('clothing')) {
           inferredCategories.push('fashion');
         }
-        if (queryLower.includes('phone') || queryLower.includes('laptop') || queryLower.includes('tv') || queryLower.includes('electronics')) {
+        if (queryLower.includes('phone') || queryLower.includes('laptop') || queryLower.includes('tv') || queryLower.includes('electronics') || queryLower.includes('computer')) {
           inferredCategories.push('electronics');
         }
-        if (queryLower.includes('book')) {
+        if (queryLower.includes('book') || queryLower.includes('novel') || queryLower.includes('magazine')) {
           inferredCategories.push('books');
+        }
+        if (queryLower.includes('furniture') || queryLower.includes('home') || queryLower.includes('kitchen') || queryLower.includes('decor')) {
+          inferredCategories.push('home');
+        }
+        if (queryLower.includes('sport') || queryLower.includes('fitness') || queryLower.includes('gym') || queryLower.includes('exercise')) {
+          inferredCategories.push('sports');
+        }
+        if (queryLower.includes('beauty') || queryLower.includes('cosmetic') || queryLower.includes('makeup') || queryLower.includes('skincare')) {
+          inferredCategories.push('beauty');
+        }
+        if (queryLower.includes('food') || queryLower.includes('snack') || queryLower.includes('drink') || queryLower.includes('grocery')) {
+          inferredCategories.push('food');
         }
 
         console.log('[Search] Inferred categories:', inferredCategories);

@@ -439,6 +439,66 @@ export class AlgoliaMCPService {
     return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2UwZTBlMCIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmaWxsPSIjOTk5Ij5ObyBJbWFnZTwvdGV4dD4KPC9zdmc+';
   }
 
+  // 標準インデックスの自動作成
+  async ensureIndicesExist(): Promise<void> {
+    if (!this.multiSearchConfig) {
+      console.warn('[AlgoliaMCP] Multi-search config not initialized, skipping index creation');
+      return;
+    }
+
+    console.log('[AlgoliaMCP] Checking and creating standard indices...');
+    
+    try {
+      // 標準インデックスリストを取得
+      const standardIndices = Object.values(this.multiSearchConfig.indexMappings);
+      const uniqueIndices = [...new Set(standardIndices)]; // 重複を除去
+
+      for (const indexName of uniqueIndices) {
+        try {
+          console.log(`[AlgoliaMCP] Ensuring index '${indexName}' exists...`);
+          
+          // インデックスにダミーレコードを追加（存在しない場合は自動作成される）
+          const initRecord = {
+            objectID: 'init_record',
+            name: `${indexName} index`,
+            description: `Automatically created index for ${indexName} products`,
+            price: 0,
+            image: '',
+            categories: [indexName],
+            _tags: ['system', 'initialization'],
+            created_at: new Date().toISOString()
+          };
+
+          const response = await fetch(
+            `https://${this.multiSearchConfig.applicationId}-dsn.algolia.net/1/indexes/${indexName}`,
+            {
+              method: 'POST',
+              headers: {
+                'X-Algolia-API-Key': this.multiSearchConfig.apiKey,
+                'X-Algolia-Application-Id': this.multiSearchConfig.applicationId,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(initRecord)
+            }
+          );
+
+          if (response.ok) {
+            console.log(`[AlgoliaMCP] Index '${indexName}' ensured (created or already exists)`);
+          } else {
+            const errorText = await response.text();
+            console.warn(`[AlgoliaMCP] Failed to ensure index '${indexName}':`, errorText);
+          }
+        } catch (error) {
+          console.warn(`[AlgoliaMCP] Error ensuring index '${indexName}':`, error);
+        }
+      }
+
+      console.log('[AlgoliaMCP] Standard indices setup completed');
+    } catch (error) {
+      console.error('[AlgoliaMCP] Error during index creation:', error);
+    }
+  }
+
   async connect(): Promise<void> {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);

@@ -518,7 +518,7 @@ export class DatabaseService {
         searchLog.responseTimeMs,
         searchLog.geminiKeywords ? JSON.stringify(searchLog.geminiKeywords) : null,
         searchLog.geminiCategory || null,
-        searchLog.imageProvided
+        searchLog.imageProvided ? 1 : 0 // boolean を数値に変換
       );
 
       console.log('[Database] Search logged successfully with ID:', result.lastInsertRowid);
