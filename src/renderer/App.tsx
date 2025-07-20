@@ -27,6 +27,7 @@ function App() {
     deleteSession,
     addMessageToSession,
     updateSessionSearchResults,
+    appendSessionSearchResults,
     clearSessionSearchResults,
   } = useChatSessions();
 
@@ -150,8 +151,8 @@ function App() {
         // Search for products using Electron API
         let imageData: string | undefined;
         if (imageDataUrl) {
-          // Extract base64 from data URL
-          imageData = imageDataUrl.split(',')[1];
+          // Send complete data URL (not just base64)
+          imageData = imageDataUrl;
           
           // Set initial progress for image analysis
           setImageAnalysisProgress({
@@ -189,8 +190,8 @@ function App() {
         finalResults = products;
       }
       
-      // Save search results to current session
-      updateSessionSearchResults(sessionId, finalResults);
+      // Save search results to current session (append to existing results)
+      appendSessionSearchResults(sessionId, finalResults);
 
       // Create assistant response
       const personalizedCount = finalResults.filter(p => !('displayType' in p) || p.displayType === 'personalized').length;

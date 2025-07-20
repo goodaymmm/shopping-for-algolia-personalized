@@ -103,6 +103,32 @@ export const useChatSessions = () => {
     ));
   };
 
+  const appendSessionSearchResults = (sessionId: string, newResults: (Product | ProductWithContext)[]) => {
+    setSessions(prev => prev.map(session => {
+      if (session.id === sessionId) {
+        // 既存の商品IDを収集（重複防止）
+        const existingIds = new Set(
+          (session.searchResults || []).map(r => 
+            'product' in r ? r.product.id : r.id
+          )
+        );
+        
+        // 新しい結果から重複を除外
+        const uniqueNewResults = newResults.filter(r => {
+          const id = 'product' in r ? r.product.id : r.id;
+          return !existingIds.has(id);
+        });
+        
+        return {
+          ...session,
+          searchResults: [...(session.searchResults || []), ...uniqueNewResults],
+          updatedAt: new Date()
+        };
+      }
+      return session;
+    }));
+  };
+
   const clearSessionSearchResults = (sessionId: string) => {
     updateSessionSearchResults(sessionId, []);
   };
@@ -119,6 +145,7 @@ export const useChatSessions = () => {
     deleteSession,
     addMessageToSession,
     updateSessionSearchResults,
+    appendSessionSearchResults,
     clearSessionSearchResults,
   };
 };
