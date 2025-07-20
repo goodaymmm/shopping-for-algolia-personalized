@@ -1,8 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { ChatMessage } from './ChatMessage';
 import { ProductCard } from './ProductCard';
-import { Message, Product, ProductWithContext } from '../types';
-import { MessageSquare, Sparkles, ShoppingBag } from 'lucide-react';
+import { Message, Product, ProductWithContext, ImageAnalysisProgress } from '../types';
+import { MessageSquare, Sparkles, ShoppingBag, Clock, Loader } from 'lucide-react';
 
 interface ChatContainerProps {
   messages: Message[];
@@ -14,6 +14,7 @@ interface ChatContainerProps {
   onProductSave?: (product: Product) => Promise<{ success: boolean }>;
   onProductRemove?: (productId: string) => Promise<{ success: boolean }>;
   saveMessage?: { type: 'success' | 'error'; text: string } | null;
+  imageAnalysisProgress?: ImageAnalysisProgress | null;
 }
 
 export const ChatContainer: React.FC<ChatContainerProps> = ({ 
@@ -25,7 +26,8 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
   savedProductIds = new Set(),
   onProductSave,
   onProductRemove,
-  saveMessage
+  saveMessage,
+  imageAnalysisProgress
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -223,8 +225,44 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
               );
             })()}
             
+            {/* Image Analysis Progress */}
+            {imageAnalysisProgress && (
+              <div className="px-6 my-4">
+                <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="relative">
+                      <Loader className="w-5 h-5 text-blue-500 animate-spin" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-1">
+                        Image Analysis in Progress
+                      </div>
+                      <div className="text-xs text-blue-700 dark:text-blue-300">
+                        {imageAnalysisProgress.message}
+                      </div>
+                    </div>
+                    <div className="text-xs font-medium text-blue-600 dark:text-blue-400">
+                      {imageAnalysisProgress.progress}%
+                    </div>
+                  </div>
+                  <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
+                    <div 
+                      className="bg-blue-500 h-2 rounded-full transition-all duration-300 ease-out"
+                      style={{ width: `${imageAnalysisProgress.progress}%` }}
+                    />
+                  </div>
+                  {imageAnalysisProgress.progress > 50 && (
+                    <div className="mt-2 flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400">
+                      <Clock className="w-3 h-3" />
+                      <span>This may take up to 60 seconds...</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Loading Indicator */}
-            {isLoading && (
+            {isLoading && !imageAnalysisProgress && (
               <div className="flex justify-center items-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
                 <span className="ml-2 text-gray-600 dark:text-gray-400">Searching for products...</span>

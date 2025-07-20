@@ -82,6 +82,7 @@ export interface ChatSession {
   category?: string
   subcategory?: string
   messages: Message[]
+  searchResults?: (Product | ProductWithContext)[]
   createdAt: Date
   updatedAt: Date
 }
@@ -111,4 +112,20 @@ export interface ProductWithContext {
   product: Product
   displayType: ProductDisplayType
   inspirationReason?: 'trending' | 'different_style' | 'visual_appeal'
+}
+
+// Progress status for image analysis
+export type ImageAnalysisProgressStatus = 
+  | 'preparing'
+  | 'uploading'
+  | 'analyzing'
+  | 'detailed-analysis'
+  | 'completed'
+  | 'failed'
+  | 'timeout'
+
+export interface ImageAnalysisProgress {
+  status: ImageAnalysisProgressStatus
+  message: string
+  progress: number // 0-100
 }

@@ -7,7 +7,7 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { ChatHistory } from './components/ChatHistory';
 import { MyDatabase } from './components/MyDatabase';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { Message, AppView, Product, ProductWithContext, DiscoveryPercentage } from './types';
+import { Message, AppView, Product, ProductWithContext, DiscoveryPercentage, ImageAnalysisProgress } from './types';
 import { useTheme } from './hooks/useTheme';
 import { useSettings } from './hooks/useSettings';
 import { useChatSessions } from './hooks/useChatSessions';
@@ -26,14 +26,19 @@ function App() {
     createNewSession,
     deleteSession,
     addMessageToSession,
+    updateSessionSearchResults,
+    clearSessionSearchResults,
   } = useChatSessions();
 
   const [currentView, setCurrentView] = useState<AppView>('chat');
-  const [searchResults, setSearchResults] = useState<(Product | ProductWithContext)[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [discoveryPercentage, setDiscoveryPercentage] = useState<DiscoveryPercentage>(0);
   const [savedProductIds, setSavedProductIds] = useState<Set<string>>(new Set());
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [imageAnalysisProgress, setImageAnalysisProgress] = useState<ImageAnalysisProgress | null>(null);
+
+  // Get search results from current session
+  const searchResults = currentSession?.searchResults || [];
 
   // Service instances for fallback when Electron API is not available
   const geminiService = new GeminiService();
@@ -55,7 +60,7 @@ function App() {
     loadDiscoveryPercentage();
   }, []);
 
-  // Initialize Gemini service with API key
+  // Initialize Gemini service with API key and setup progress listener
   useEffect(() => {
     const initializeGeminiService = async () => {
       if (window.electronAPI?.getAPIKeys) {
@@ -70,7 +75,23 @@ function App() {
       }
     };
 
+    // Setup image analysis progress listener
+    let cleanup: (() => void) | undefined;
+    if (window.electronAPI?.onImageAnalysisProgress) {
+      cleanup = window.electronAPI.onImageAnalysisProgress((data) => {
+        setImageAnalysisProgress({
+          status: data.status as any,
+          message: data.status,
+          progress: data.progress
+        });
+      });
+    }
+
     initializeGeminiService();
+
+    return () => {
+      if (cleanup) cleanup();
+    };
   }, []);
 
   // Load saved products
@@ -117,6 +138,9 @@ function App() {
 
     addMessageToSession(sessionId, userMessage);
     setIsLoading(true);
+    
+    // Reset image analysis progress
+    setImageAnalysisProgress(null);
 
     try {
       let products = [];
@@ -128,9 +152,19 @@ function App() {
         if (imageDataUrl) {
           // Extract base64 from data URL
           imageData = imageDataUrl.split(',')[1];
+          
+          // Set initial progress for image analysis
+          setImageAnalysisProgress({
+            status: 'preparing',
+            message: 'Preparing image for analysis...',
+            progress: 0
+          });
         }
 
         products = await window.electronAPI.searchProducts(content, imageData);
+        
+        // Clear progress when done
+        setImageAnalysisProgress(null);
       } else {
         // No Electron API available
         console.error('Electron API not available');
@@ -155,7 +189,8 @@ function App() {
         finalResults = products;
       }
       
-      setSearchResults(finalResults);
+      // Save search results to current session
+      updateSessionSearchResults(sessionId, finalResults);
 
       // Create assistant response
       const personalizedCount = finalResults.filter(p => !('displayType' in p) || p.displayType === 'personalized').length;
@@ -234,13 +269,16 @@ function App() {
 
 
   const handleNewSession = () => {
-    createNewSession();
+    const newSession = createNewSession();
     setCurrentView('chat');
+    // Clear any existing search results for fresh start
+    clearSessionSearchResults(newSession.id);
   };
 
   const handleSessionSelect = (sessionId: string) => {
     setCurrentSessionId(sessionId);
     setCurrentView('chat');
+    // Search results will be automatically loaded from the selected session
   };
 
   const handleSettingsClick = () => {
@@ -362,6 +400,7 @@ function App() {
                 onProductSave={handleProductSave}
                 onProductRemove={handleProductRemove}
                 saveMessage={saveMessage}
+                imageAnalysisProgress={imageAnalysisProgress}
               />
               <ChatInput 
                 onSendMessage={handleSendMessage}

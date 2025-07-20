@@ -85,7 +85,72 @@ export class GeminiService {
     }
   }
 
-  async analyzeImage(imageData: string, userQuery?: string): Promise<ImageAnalysis> {
+  private validateImageData(imageData: string): { isValid: boolean; mimeType?: string; error?: string } {
+    if (!imageData || imageData.trim() === '') {
+      return { isValid: false, error: 'Image data is empty' };
+    }
+
+    // Check if it's base64 data URL
+    if (!imageData.startsWith('data:image/')) {
+      return { isValid: false, error: 'Invalid image data format. Expected data URL.' };
+    }
+
+    // Extract MIME type
+    const mimeTypeMatch = imageData.match(/^data:image\/([^;]+);base64,/);
+    if (!mimeTypeMatch) {
+      return { isValid: false, error: 'Could not extract MIME type from image data' };
+    }
+
+    const mimeType = `image/${mimeTypeMatch[1]}`;
+    const supportedFormats = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif'];
+    
+    if (!supportedFormats.includes(mimeType)) {
+      return { 
+        isValid: false, 
+        error: `Unsupported image format: ${mimeType}. Supported formats: PNG, JPEG, WEBP, HEIC, HEIF` 
+      };
+    }
+
+    // Extract base64 data and check size (20MB limit)
+    const base64Data = imageData.split(',')[1];
+    if (!base64Data) {
+      return { isValid: false, error: 'No base64 data found in image' };
+    }
+
+    // Calculate approximate file size from base64 (base64 is ~33% larger than original)
+    const sizeInBytes = (base64Data.length * 3) / 4;
+    const maxSizeInBytes = 20 * 1024 * 1024; // 20MB
+
+    if (sizeInBytes > maxSizeInBytes) {
+      return { 
+        isValid: false, 
+        error: `Image too large: ${(sizeInBytes / (1024 * 1024)).toFixed(1)}MB. Maximum size: 20MB` 
+      };
+    }
+
+    this.logger.info('Gemini', 'Image validation passed', {
+      mimeType,
+      sizeKB: Math.round(sizeInBytes / 1024),
+      base64Length: base64Data.length
+    });
+
+    return { isValid: true, mimeType };
+  }
+
+  private async withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutError: string): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(() => {
+        reject(new Error(timeoutError));
+      }, timeoutMs);
+
+      promise
+        .then(resolve)
+        .catch(reject)
+        .finally(() => clearTimeout(timeoutId));
+    });
+  }
+
+  async analyzeImage(imageData: string, userQuery?: string, onProgress?: (status: string, progress: number) => void): Promise<ImageAnalysis> {
     this.logger.info('Gemini', 'Starting image analysis', {
       hasImageData: !!imageData,
       imageDataLength: imageData ? imageData.length : 0,
@@ -93,67 +158,117 @@ export class GeminiService {
       imageDataPrefix: imageData ? imageData.substring(0, 50) + '...' : 'None'
     });
     
+    // Report initial progress
+    onProgress?.('Preparing image...', 0);
+    
     if (!this.client) {
       const error = 'Gemini client not initialized. Please set API key first.';
       this.logger.error('Gemini', error);
       throw new Error(error);
     }
 
+    // Validate image data
+    const validation = this.validateImageData(imageData);
+    if (!validation.isValid) {
+      this.logger.error('Gemini', 'Image validation failed', { error: validation.error });
+      throw new Error(`Image validation failed: ${validation.error}`);
+    }
+
     try {
+      onProgress?.('Building analysis request...', 10);
+      
       const prompt = this.buildAnalysisPrompt(userQuery || '');
       
       this.logger.info('Gemini', 'Prepared analysis request', {
         promptLength: prompt.length,
         promptPreview: prompt.substring(0, 100) + '...',
-        model: 'gemini-2.5-flash'
+        model: 'gemini-2.5-flash',
+        mimeType: validation.mimeType
       });
       
-      this.logger.info('Gemini', 'Sending image analysis request to API');
+      onProgress?.('Sending image to Gemini API...', 20);
+      
       const model = this.client.getGenerativeModel({ model: 'gemini-2.5-flash' });
       
+      // Extract base64 data from data URL
+      const base64Data = imageData.split(',')[1];
+      
+      this.logger.info('Gemini', 'Sending image analysis request to API');
       const requestStartTime = Date.now();
-      const response = await model.generateContent([
-        {
-          inlineData: {
-            data: imageData,
-            mimeType: 'image/jpeg'
-          }
-        },
-        prompt
-      ]);
+      
+      onProgress?.('Analyzing image...', 40);
+      
+      // Use timeout wrapper (60 seconds)
+      const response = await this.withTimeout(
+        model.generateContent([
+          {
+            inlineData: {
+              data: base64Data,
+              mimeType: validation.mimeType || 'image/jpeg'
+            }
+          },
+          prompt
+        ]),
+        60000, // 60 seconds timeout
+        'Image analysis timed out after 60 seconds. Please try again with a smaller image or check your internet connection.'
+      );
+      
       const requestDuration = Date.now() - requestStartTime;
+
+      onProgress?.('Processing response...', 80);
 
       this.logger.info('Gemini', 'Received response from API', {
         requestDurationMs: requestDuration,
         hasResponse: !!response,
-        hasResponseText: !!response.response?.text
+        hasResponseText: !!response.response?.text,
+        responseObject: response ? JSON.stringify(response, null, 2) : 'No response'
       });
       
       const analysisText = response.response.text();
       
       this.logger.info('Gemini', 'Processing API response', {
         responseTextLength: analysisText ? analysisText.length : 0,
-        responsePreview: analysisText ? analysisText.substring(0, 200) + '...' : 'No response text'
+        responsePreview: analysisText ? analysisText.substring(0, 200) + '...' : 'No response text',
+        fullResponseText: analysisText || 'No response text'
       });
 
+      onProgress?.('Parsing results...', 90);
+
       const result = this.parseAnalysisResult(analysisText || '');
+      
+      onProgress?.('Analysis complete!', 100);
       
       this.logger.info('Gemini', 'Image analysis completed successfully', {
         resultKeywordsCount: result.searchKeywords.length,
         keywords: result.searchKeywords,
-        confidence: result.confidence
+        confidence: result.confidence,
+        totalDurationMs: Date.now() - requestStartTime
       });
       
       return result;
     } catch (error) {
+      onProgress?.('Analysis failed', 0);
+      
       this.logger.error('Gemini', 'Image analysis failed', {
         error: (error as Error).message,
         stack: (error as Error).stack,
         name: (error as Error).name,
         userQuery,
-        hasImageData: !!imageData
+        hasImageData: !!imageData,
+        errorType: error instanceof Error ? error.constructor.name : 'Unknown'
       });
-      throw error;
+      
+      // Re-throw with more specific error messages
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes('timed out')) {
+        throw new Error('Image analysis timed out. Please try again with a smaller image or check your internet connection.');
+      } else if (errorMessage.includes('API key')) {
+        throw new Error('Invalid Gemini API key. Please check your API key configuration in Settings.');
+      } else if (errorMessage.includes('quota') || errorMessage.includes('limit')) {
+        throw new Error('API quota exceeded. Please try again later or check your Gemini API usage limits.');
+      } else {
+        throw error instanceof Error ? error : new Error(String(error));
+      }
     }
   }
 

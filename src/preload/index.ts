@@ -96,5 +96,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('debug-api-keys'),
   
   deleteCorruptedAPIKeys: () =>
-    ipcRenderer.invoke('delete-corrupted-api-keys')
+    ipcRenderer.invoke('delete-corrupted-api-keys'),
+
+  // Event listeners for progress tracking
+  onImageAnalysisProgress: (callback: (data: { status: string; progress: number }) => void) => {
+    ipcRenderer.on('image-analysis-progress', (_, data) => callback(data));
+    return () => ipcRenderer.removeAllListeners('image-analysis-progress');
+  }
 })

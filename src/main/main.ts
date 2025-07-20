@@ -98,9 +98,15 @@ class MainApplication {
               console.log('[Search] Initializing Gemini service...');
               await this.geminiService.initialize(geminiKey);
               
-              // Analyze the image
+              // Analyze the image with progress tracking
               console.log('[Search] Analyzing image with Gemini...');
-              imageAnalysis = await this.geminiService.analyzeImage(imageData, query);
+              imageAnalysis = await this.geminiService.analyzeImage(imageData, query, (status, progress) => {
+                // Send progress updates to renderer
+                if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+                  this.mainWindow.webContents.send('image-analysis-progress', { status, progress });
+                }
+                console.log(`[Search] Analysis progress: ${status} (${progress}%)`);
+              });
               
               // Enhance search query with image analysis keywords
               const originalQuery = searchQuery;

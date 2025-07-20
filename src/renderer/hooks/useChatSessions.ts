@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChatSession, Message } from '../types';
+import { ChatSession, Message, Product, ProductWithContext } from '../types';
 import { safeGetItem, safeSetItem, safeRemoveItem } from '../utils/safeStorage';
 
 export const useChatSessions = () => {
@@ -13,7 +13,8 @@ export const useChatSessions = () => {
         messages: (session.messages || []).map((msg: any) => ({
           ...msg,
           timestamp: new Date(msg.timestamp)
-        }))
+        })),
+        searchResults: session.searchResults || []
       }));
     } catch (error) {
       console.error('Failed to parse chat sessions:', error);
@@ -42,6 +43,7 @@ export const useChatSessions = () => {
       id: Date.now().toString(),
       title: 'New Chat',
       messages: [],
+      searchResults: [],
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -89,6 +91,22 @@ export const useChatSessions = () => {
     }));
   };
 
+  const updateSessionSearchResults = (sessionId: string, searchResults: (Product | ProductWithContext)[]) => {
+    setSessions(prev => prev.map(session => 
+      session.id === sessionId 
+        ? { 
+            ...session, 
+            searchResults,
+            updatedAt: new Date() 
+          }
+        : session
+    ));
+  };
+
+  const clearSessionSearchResults = (sessionId: string) => {
+    updateSessionSearchResults(sessionId, []);
+  };
+
   const currentSession = sessions.find(s => s.id === currentSessionId) || null;
 
   return {
@@ -100,5 +118,7 @@ export const useChatSessions = () => {
     updateSession,
     deleteSession,
     addMessageToSession,
+    updateSessionSearchResults,
+    clearSessionSearchResults,
   };
 };
