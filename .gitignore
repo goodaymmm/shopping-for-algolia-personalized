@@ -46,3 +46,6 @@ yarn-error.log*
 
 # API Keys (for development)
 keys.json
+
+# Documentation (development in progress)
+README.md
