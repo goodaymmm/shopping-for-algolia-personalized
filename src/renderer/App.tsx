@@ -3,6 +3,7 @@ import { ChatHeader } from './components/ChatHeader';
 import { ChatContainer } from './components/ChatContainer';
 import { ChatInput } from './components/ChatInput';
 import { Sidebar } from './components/Sidebar';
+import { ProductSidebar } from './components/ProductSidebar';
 import { SettingsPanel } from './components/SettingsPanel';
 import { ChatHistory } from './components/ChatHistory';
 import { MyDatabase } from './components/MyDatabase';
@@ -37,9 +38,20 @@ function App() {
   const [savedProductIds, setSavedProductIds] = useState<Set<string>>(new Set());
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [imageAnalysisProgress, setImageAnalysisProgress] = useState<ImageAnalysisProgress | null>(null);
+  const [sidebarProducts, setSidebarProducts] = useState<(Product | ProductWithContext)[]>([]);
+  const [isProductSidebarOpen, setIsProductSidebarOpen] = useState(false);
+  const [searchFeedback, setSearchFeedback] = useState<string | null>(null);
 
-  // Get search results from current session
+  // Get search results from current session and update sidebar products
   const searchResults = currentSession?.searchResults || [];
+  
+  // Update sidebar products when search results change
+  useEffect(() => {
+    setSidebarProducts(searchResults);
+    if (searchResults.length > 0) {
+      setIsProductSidebarOpen(true);
+    }
+  }, [searchResults]);
 
   // Service instances for fallback when Electron API is not available
   const geminiService = new GeminiService();
@@ -78,6 +90,8 @@ function App() {
 
     // Setup image analysis progress listener
     let cleanup: (() => void) | undefined;
+    let feedbackCleanup: (() => void) | undefined;
+    
     if (window.electronAPI?.onImageAnalysisProgress) {
       cleanup = window.electronAPI.onImageAnalysisProgress((data) => {
         setImageAnalysisProgress({
@@ -88,10 +102,18 @@ function App() {
       });
     }
 
+    // Setup search feedback listener
+    if (window.electronAPI?.onSearchFeedback) {
+      feedbackCleanup = window.electronAPI.onSearchFeedback((feedback: string) => {
+        setSearchFeedback(feedback);
+      });
+    }
+
     initializeGeminiService();
 
     return () => {
       if (cleanup) cleanup();
+      if (feedbackCleanup) feedbackCleanup();
     };
   }, []);
 
@@ -140,8 +162,9 @@ function App() {
     addMessageToSession(sessionId, userMessage);
     setIsLoading(true);
     
-    // Reset image analysis progress
+    // Reset image analysis progress and search feedback
     setImageAnalysisProgress(null);
+    setSearchFeedback(null);
 
     try {
       let products = [];
@@ -164,8 +187,9 @@ function App() {
 
         products = await window.electronAPI.searchProducts(content, imageData);
         
-        // Clear progress when done
+        // Clear progress and feedback when done
         setImageAnalysisProgress(null);
+        setSearchFeedback(null);
       } else {
         // No Electron API available
         console.error('Electron API not available');
@@ -192,6 +216,12 @@ function App() {
       
       // Save search results to current session (append to existing results)
       appendSessionSearchResults(sessionId, finalResults);
+      
+      // Update sidebar products and open sidebar if products found
+      setSidebarProducts(prev => [...prev, ...finalResults]);
+      if (finalResults.length > 0) {
+        setIsProductSidebarOpen(true);
+      }
 
       // Create assistant response
       const personalizedCount = finalResults.filter(p => !('displayType' in p) || p.displayType === 'personalized').length;
@@ -274,12 +304,16 @@ function App() {
     setCurrentView('chat');
     // Clear any existing search results for fresh start
     clearSessionSearchResults(newSession.id);
+    // Clear sidebar products for new session
+    setSidebarProducts([]);
+    setIsProductSidebarOpen(false);
   };
 
   const handleSessionSelect = (sessionId: string) => {
     setCurrentSessionId(sessionId);
     setCurrentView('chat');
     // Search results will be automatically loaded from the selected session
+    // The useEffect will handle updating sidebar products
   };
 
   const handleSettingsClick = () => {
@@ -372,6 +406,15 @@ function App() {
     }
   };
 
+  const handleToggleProductSidebar = () => {
+    setIsProductSidebarOpen(prev => !prev);
+  };
+
+  const handleClearSidebarProducts = () => {
+    setSidebarProducts([]);
+    setIsProductSidebarOpen(false);
+  };
+
   return (
     <ErrorBoundary isDark={isDark}>
       <div className="flex h-screen overflow-hidden bg-white dark:bg-gray-900">
@@ -393,15 +436,12 @@ function App() {
               <ChatHeader isDark={isDark} />
               <ChatContainer 
                 messages={currentSession?.messages || []}
-                searchResults={searchResults}
                 showTimestamps={settings.showTimestamps}
                 isLoading={isLoading}
                 isDark={isDark}
-                savedProductIds={savedProductIds}
-                onProductSave={handleProductSave}
-                onProductRemove={handleProductRemove}
                 saveMessage={saveMessage}
                 imageAnalysisProgress={imageAnalysisProgress}
+                searchFeedback={searchFeedback}
               />
               <ChatInput 
                 onSendMessage={handleSendMessage}
@@ -436,6 +476,18 @@ function App() {
             />
           )}
         </div>
+        
+        {/* Product Sidebar */}
+        <ProductSidebar
+          products={sidebarProducts}
+          isOpen={isProductSidebarOpen}
+          onToggle={handleToggleProductSidebar}
+          onProductSave={handleProductSave}
+          onProductRemove={handleProductRemove}
+          onClearProducts={handleClearSidebarProducts}
+          savedProductIds={savedProductIds}
+          isDark={isDark}
+        />
       </div>
     </ErrorBoundary>
   );

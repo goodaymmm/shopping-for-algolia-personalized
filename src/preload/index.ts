@@ -102,5 +102,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onImageAnalysisProgress: (callback: (data: { status: string; progress: number }) => void) => {
     ipcRenderer.on('image-analysis-progress', (_, data) => callback(data));
     return () => ipcRenderer.removeAllListeners('image-analysis-progress');
+  },
+
+  // Search feedback listener
+  onSearchFeedback: (callback: (feedback: string) => void) => {
+    ipcRenderer.on('search-feedback', (_, feedback) => callback(feedback));
+    return () => ipcRenderer.removeAllListeners('search-feedback');
   }
 })

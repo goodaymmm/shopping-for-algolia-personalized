@@ -257,6 +257,14 @@ class MainApplication {
           }
         }
 
+        // Function to send feedback to renderer
+        const sendFeedback = (message: string) => {
+          if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+            this.mainWindow.webContents.send('search-feedback', message);
+          }
+          console.log('[Search Feedback]', message);
+        };
+
         // 統合検索の実行
         console.log('[Search] Performing multi-index search with query:', searchQuery);
         let products = await this.algoliaMCPService.searchProductsMultiIndex(
@@ -270,9 +278,76 @@ class MainApplication {
 
         console.log('[Search] Algolia search results:', products ? products.length : 0, 'products');
         
+        // Implement fallback search strategy if no results found
         if (!products || products.length === 0) {
-          console.log('[Search] No products found, returning empty array');
-          return [];
+          console.log('[Search] No products found with original query, attempting fallback searches...');
+          
+          // If we have image analysis keywords, try fallback searches
+          if (imageAnalysis && imageAnalysis.searchKeywords.length > 0) {
+            const originalKeywords = imageAnalysis.searchKeywords.join(' ');
+            sendFeedback(`分析結果の検索ワード「${originalKeywords}」では見つかりませんでした。より広範囲な検索をします。`);
+            
+            // Strategy 1: Try generic keywords without brand names
+            const genericKeywords = imageAnalysis.searchKeywords.filter(keyword => 
+              !['Nike', 'Adidas', 'Apple', 'Samsung', 'Sony'].includes(keyword)
+            );
+            
+            if (genericKeywords.length > 0) {
+              const genericQuery = genericKeywords.join(' ') + ' ' + query;
+              sendFeedback(`ブランド名を除いたキーワード「${genericKeywords.join(' ')}」で検索中...`);
+              
+              products = await this.algoliaMCPService.searchProductsMultiIndex(
+                genericQuery,
+                inferredCategories.length > 0 ? inferredCategories : undefined,
+                {
+                  hitsPerPage: 20,
+                  attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID']
+                }
+              );
+              
+              console.log('[Search] Generic keywords search results:', products ? products.length : 0, 'products');
+            }
+            
+            // Strategy 2: If still no results, try category-only search
+            if ((!products || products.length === 0) && imageAnalysis.category && imageAnalysis.category !== 'general') {
+              sendFeedback(`カテゴリ「${imageAnalysis.category}」での検索に切り替えます...`);
+              
+              products = await this.algoliaMCPService.searchProductsMultiIndex(
+                query, // Use original user query
+                [imageAnalysis.category],
+                {
+                  hitsPerPage: 20,
+                  attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID']
+                }
+              );
+              
+              console.log('[Search] Category-only search results:', products ? products.length : 0, 'products');
+            }
+            
+            // Strategy 3: If still no results, try all indices with user query only
+            if (!products || products.length === 0) {
+              sendFeedback(`すべてのカテゴリから「${query}」で検索中...`);
+              
+              products = await this.algoliaMCPService.searchProductsMultiIndex(
+                query,
+                undefined, // Search all indices
+                {
+                  hitsPerPage: 20,
+                  attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID']
+                }
+              );
+              
+              console.log('[Search] All-categories search results:', products ? products.length : 0, 'products');
+            }
+          }
+          
+          if (!products || products.length === 0) {
+            console.log('[Search] No products found after all fallback attempts, returning empty array');
+            sendFeedback('申し訳ございません。お探しの商品が見つかりませんでした。');
+            return [];
+          } else {
+            sendFeedback(`${products.length}個の商品が見つかりました。`);
+          }
         }
 
         // Apply personalization scoring if we have ML data
