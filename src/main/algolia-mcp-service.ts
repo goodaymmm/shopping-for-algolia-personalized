@@ -65,6 +65,7 @@ export class AlgoliaMCPService {
   private ajv: Ajv;
   private config: AlgoliaConfig | null = null;
   private multiSearchConfig: MultiSearchConfig | null = null;
+  private initializedIndices = new Set<string>();
 
   constructor() {
     this.ajv = new Ajv();
@@ -453,6 +454,13 @@ export class AlgoliaMCPService {
       return;
     }
 
+    // Check if indices are already initialized
+    const configKey = `${this.multiSearchConfig.applicationId}-${this.multiSearchConfig.writeApiKey.substring(0, 8)}`;
+    if (this.initializedIndices.has(configKey)) {
+      console.log('[AlgoliaMCP] Indices already initialized, skipping creation');
+      return;
+    }
+
     console.log('[AlgoliaMCP] Checking and creating standard indices with Write API Key...');
     
     try {
@@ -499,6 +507,9 @@ export class AlgoliaMCPService {
       }
 
       console.log('[AlgoliaMCP] Standard indices setup completed');
+      
+      // Mark indices as initialized
+      this.initializedIndices.add(configKey);
       
       // サンプルデータの投入
       await this.loadSampleDataIfNeeded();

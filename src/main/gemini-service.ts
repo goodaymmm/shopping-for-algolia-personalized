@@ -200,15 +200,22 @@ export class GeminiService {
       
       // Use timeout wrapper (60 seconds)
       const response = await this.withTimeout(
-        model.generateContent([
-          {
-            inlineData: {
-              data: base64Data,
-              mimeType: validation.mimeType || 'image/jpeg'
+        model.generateContent({
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { text: prompt },
+                {
+                  inlineData: {
+                    data: base64Data,
+                    mimeType: validation.mimeType || 'image/jpeg'
+                  }
+                }
+              ]
             }
-          },
-          prompt
-        ]),
+          ]
+        }),
         60000, // 60 seconds timeout
         'Image analysis timed out after 60 seconds. Please try again with a smaller image or check your internet connection.'
       );
@@ -224,7 +231,7 @@ export class GeminiService {
         responseObject: response ? JSON.stringify(response, null, 2) : 'No response'
       });
       
-      const analysisText = response.response.text();
+      const analysisText = response.response?.candidates?.[0]?.content?.parts?.[0]?.text || response.response.text();
       
       this.logger.info('Gemini', 'Processing API response', {
         responseTextLength: analysisText ? analysisText.length : 0,

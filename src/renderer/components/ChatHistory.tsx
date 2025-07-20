@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, MessageSquare, Search, Trash2, Calendar, Filter } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Search, Trash2, Calendar, Filter, ShoppingBag } from 'lucide-react';
 import { ChatSession } from '../types';
 
 interface ChatHistoryProps {
@@ -50,6 +50,10 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
     return lastMessage.content.length > 50 
       ? lastMessage.content.substring(0, 50) + '...'
       : lastMessage.content;
+  };
+
+  const getProductCount = (session: ChatSession) => {
+    return session.searchResults?.length || 0;
   };
 
   return (
@@ -165,6 +169,12 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
                         <span>{formatDate(session.updatedAt)}</span>
                       </div>
                       <span>{session.messages.length} messages</span>
+                      {getProductCount(session) > 0 && (
+                        <div className="flex items-center gap-1">
+                          <ShoppingBag size={12} />
+                          <span>{getProductCount(session)} products</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <button
