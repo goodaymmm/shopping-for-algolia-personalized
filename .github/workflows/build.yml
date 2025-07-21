@@ -49,11 +49,30 @@ jobs:
           echo "PostCSS config after fix:"
           cat postcss.config.js
 
+      - name: Pre-install electron-builder dependencies
+        run: |
+          # Pre-install electron-builder dependencies to avoid download issues during build
+          npx electron-builder install-app-deps --arch=x64 || true
+        
       - name: Build TypeScript
         run: npm run build:all
 
-      - name: Build Electron app
-        run: npx electron-builder --${{ matrix.platform }}
+      - name: Build Electron app (with retry on NSIS failure)
+        shell: bash
+        run: |
+          # First attempt
+          if ! npx electron-builder --${{ matrix.platform }}; then
+            echo "First build attempt failed, retrying after clearing cache..."
+            
+            # Clear electron-builder cache
+            npx electron-builder install-app-deps --arch=x64 --force || true
+            rm -rf node_modules/.cache/electron-builder || true
+            
+            # Wait and retry
+            sleep 10
+            echo "Retrying build..."
+            npx electron-builder --${{ matrix.platform }}
+          fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
