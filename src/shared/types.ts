@@ -55,6 +55,16 @@ declare global {
   }
 }
 
+// Search session metadata
+export interface SearchSession {
+  sessionId: string
+  searchQuery: string
+  searchType: 'text' | 'image' | 'mixed'
+  timestamp: Date
+  imageAnalysisKeywords?: string[]
+  resultCount: number
+}
+
 // Product types
 export interface Product {
   id: string
@@ -65,6 +75,7 @@ export interface Product {
   categories?: string[]
   url?: string
   sourceIndex?: string // 検索元インデックス（統合検索用）
+  searchSession?: SearchSession // メタデータ（セッション情報）
 }
 
 // Chat types (following project base structure)
@@ -112,6 +123,7 @@ export interface ProductWithContext {
   product: Product
   displayType: ProductDisplayType
   inspirationReason?: 'trending' | 'different_style' | 'visual_appeal'
+  searchSession?: SearchSession // メタデータ（セッション情報）
 }
 
 // Progress status for image analysis

@@ -6,6 +6,7 @@ import { GeminiService, ImageAnalysis } from './gemini-service'
 import { AlgoliaMCPService } from './algolia-mcp-service'
 import { Logger } from './logger'
 import { copyFileSync, existsSync } from 'fs'
+import { SearchSession } from '../shared/types'
 
 class MainApplication {
   private mainWindow: BrowserWindow | null = null
@@ -288,8 +289,15 @@ class MainApplication {
             sendFeedback(`No products found with analyzed keywords "${originalKeywords}". Trying broader search...`);
             
             // Strategy 1: Try generic keywords without brand names
+            const commonBrands = [
+              'Nike', 'Adidas', 'Apple', 'Samsung', 'Sony', 'Microsoft', 'Dell', 'HP', 
+              'Canon', 'Nikon', 'LG', 'Panasonic', 'Toshiba', 'Asus', 'Acer', 'Lenovo',
+              'Intel', 'AMD', 'Nvidia', 'Google', 'Amazon', 'Facebook', 'Tesla', 'BMW',
+              'Mercedes', 'Audi', 'Toyota', 'Honda', 'Ford', 'Chevrolet', 'Puma', 'Reebok',
+              'New Balance', 'Converse', 'Vans', 'Under Armour', 'Jordan', 'Yeezy'
+            ];
             const genericKeywords = imageAnalysis.searchKeywords.filter(keyword => 
-              !['Nike', 'Adidas', 'Apple', 'Samsung', 'Sony'].includes(keyword)
+              !commonBrands.some(brand => keyword.toLowerCase().includes(brand.toLowerCase()))
             );
             
             if (genericKeywords.length > 0) {
@@ -324,7 +332,42 @@ class MainApplication {
               console.log('[Search] Category-only search results:', products ? products.length : 0, 'products');
             }
             
-            // Strategy 3: If still no results, try all indices with user query only
+            // Strategy 3: Try with synonym variations
+            if ((!products || products.length === 0) && genericKeywords.length > 0) {
+              const synonymMap: Record<string, string[]> = {
+                'shoes': ['footwear', 'sneakers', 'boots', 'sandals'],
+                'sneakers': ['shoes', 'trainers', 'athletic shoes'],
+                'black': ['dark', 'noir'],
+                'white': ['light', 'cream', 'ivory'],
+                'low': ['short', 'minimal'],
+                'high': ['tall', 'elevated'],
+                'dunk': ['basketball', 'sport', 'athletic']
+              };
+              
+              const expandedKeywords = [...genericKeywords];
+              genericKeywords.forEach(keyword => {
+                const synonyms = synonymMap[keyword.toLowerCase()];
+                if (synonyms) {
+                  expandedKeywords.push(...synonyms.slice(0, 2)); // Add max 2 synonyms per word
+                }
+              });
+              
+              const synonymQuery = expandedKeywords.join(' ') + ' ' + query;
+              sendFeedback(`Trying with related terms: "${expandedKeywords.slice(0, 5).join(' ')}"...`);
+              
+              products = await this.algoliaMCPService.searchProductsMultiIndex(
+                synonymQuery,
+                inferredCategories.length > 0 ? inferredCategories : undefined,
+                {
+                  hitsPerPage: 20,
+                  attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID']
+                }
+              );
+              
+              console.log('[Search] Synonym search results:', products ? products.length : 0, 'products');
+            }
+            
+            // Strategy 4: If still no results, try all indices with user query only
             if (!products || products.length === 0) {
               sendFeedback(`Searching all categories for "${query}"...`);
               
@@ -406,8 +449,24 @@ class MainApplication {
           console.warn('[Search] Failed to log search, continuing:', logError);
         }
 
-        console.log('[Search] Returning', products.length, 'products');
-        return products;
+        // Create search session metadata
+        const searchSession: SearchSession = {
+          sessionId: `search_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          searchQuery: query,
+          searchType: imageData ? (imageAnalysis ? 'mixed' : 'image') : 'text',
+          timestamp: new Date(),
+          imageAnalysisKeywords: imageAnalysis?.searchKeywords,
+          resultCount: products.length
+        };
+
+        // Attach search session metadata to all products
+        const productsWithSession = products.map((product: any) => ({
+          ...product,
+          searchSession
+        }));
+
+        console.log('[Search] Returning', productsWithSession.length, 'products with session metadata');
+        return productsWithSession;
 
       } catch (error) {
         console.error('[Search] Product search error:', error);

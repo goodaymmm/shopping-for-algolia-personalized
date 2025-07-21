@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronRight, ChevronLeft, ShoppingBag, Sparkles, Trash2, Package, GripVertical } from 'lucide-react';
+import { ChevronRight, ChevronLeft, ChevronDown, ChevronUp, ShoppingBag, Sparkles, Trash2, Package, GripVertical, Image, Type, Search } from 'lucide-react';
 import { ProductCard } from './ProductCard';
 import { ClearProductsDialog } from './ClearProductsDialog';
-import { Product, ProductWithContext } from '../types';
+import { Product, ProductWithContext, SearchSession } from '../types';
 
 interface ProductSidebarProps {
   products: (Product | ProductWithContext)[];
@@ -34,6 +34,7 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
     return saved ? parseInt(saved, 10) : 600;
   });
   const [isResizing, setIsResizing] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const resizeRef = useRef<HTMLDivElement>(null);
 
   // Save width to localStorage and notify parent when it changes
@@ -76,12 +77,36 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
     };
   }, [isResizing]);
 
-  // Separate personalized and inspiration products
-  const personalizedProducts = products.filter(p => 
-    !('displayType' in p) || p.displayType === 'personalized'
-  );
-  const inspirationProducts = products.filter(p => 
-    'displayType' in p && p.displayType === 'inspiration'
+  // Group products by search session
+  const productsBySession = products.reduce((acc, product) => {
+    // Extract search session from either Product or ProductWithContext
+    const searchSession = 'searchSession' in product ? product.searchSession : 
+                         ('product' in product && product.product.searchSession ? product.product.searchSession : null);
+    
+    if (!searchSession) {
+      // If no search session, create a default one
+      const defaultSession: SearchSession = {
+        sessionId: 'default',
+        searchQuery: 'Search Results',
+        searchType: 'text',
+        timestamp: new Date(),
+        resultCount: 1
+      };
+      if (!acc['default']) acc['default'] = { session: defaultSession, products: [] };
+      acc['default'].products.push(product);
+      return acc;
+    }
+
+    if (!acc[searchSession.sessionId]) {
+      acc[searchSession.sessionId] = { session: searchSession, products: [] };
+    }
+    acc[searchSession.sessionId].products.push(product);
+    return acc;
+  }, {} as Record<string, { session: SearchSession; products: (Product | ProductWithContext)[] }>);
+
+  // Convert to array and sort by timestamp (newest first)
+  const sessionGroups = Object.values(productsBySession).sort(
+    (a, b) => new Date(b.session.timestamp).getTime() - new Date(a.session.timestamp).getTime()
   );
 
   const totalCount = products.length;
@@ -93,6 +118,48 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
   const handleClearConfirm = () => {
     onClearProducts();
     setShowClearDialog(false);
+  };
+
+  const toggleSection = (sessionId: string) => {
+    setCollapsedSections(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(sessionId)) {
+        newSet.delete(sessionId);
+      } else {
+        newSet.add(sessionId);
+      }
+      return newSet;
+    });
+  };
+
+  const expandAll = () => {
+    setCollapsedSections(new Set());
+  };
+
+  const collapseAll = () => {
+    const allSessionIds = sessionGroups.map(group => group.session.sessionId);
+    setCollapsedSections(new Set(allSessionIds));
+  };
+
+  const formatSearchType = (searchType: SearchSession['searchType']) => {
+    switch (searchType) {
+      case 'image': return <Image className="w-4 h-4" />;
+      case 'text': return <Type className="w-4 h-4" />;
+      case 'mixed': return <Search className="w-4 h-4" />;
+      default: return <Search className="w-4 h-4" />;
+    }
+  };
+
+  const formatTimestamp = (timestamp: Date) => {
+    const now = new Date();
+    const diff = now.getTime() - new Date(timestamp).getTime();
+    const minutes = Math.floor(diff / (1000 * 60));
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    
+    if (minutes < 1) return 'Just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    return new Date(timestamp).toLocaleDateString();
   };
 
   return (
@@ -180,6 +247,34 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
               </button>
             )}
           </div>
+
+          {/* Expand/Collapse All Controls */}
+          {sessionGroups.length > 1 && (
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={expandAll}
+                className={`flex-1 px-3 py-2 text-sm rounded-lg transition-colors ${
+                  isDark
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                }`}
+              >
+                <ChevronDown className="w-4 h-4 inline mr-1" />
+                Expand All
+              </button>
+              <button
+                onClick={collapseAll}
+                className={`flex-1 px-3 py-2 text-sm rounded-lg transition-colors ${
+                  isDark
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                }`}
+              >
+                <ChevronUp className="w-4 h-4 inline mr-1" />
+                Collapse All
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Content */}
@@ -205,115 +300,189 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
               </p>
             </div>
           ) : (
-            <div className="p-6 space-y-8">
-              {/* Personalized Products */}
-              {personalizedProducts.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <ShoppingBag className="w-5 h-5 text-orange-500" />
-                    <h3 className={`text-lg font-semibold ${
-                      isDark ? 'text-white' : 'text-gray-900'
-                    }`}>
-                      Personalized
-                    </h3>
-                    <span className="px-2 py-1 text-xs rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200">
-                      For You
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    {personalizedProducts.map((product) => {
-                      const productData = 'product' in product ? product.product : product;
-                      return (
-                        <ProductCard
-                          key={productData.id}
-                          product={product}
-                          isSaved={savedProductIds.has(productData.id)}
-                          onSave={async (product) => {
-                            try {
-                              if (onProductSave) {
-                                await onProductSave(product);
-                              }
-                            } catch (error) {
-                              console.error('Failed to save product:', error);
-                            }
-                          }}
-                          onRemove={async (productId) => {
-                            try {
-                              if (onProductRemove) {
-                                await onProductRemove(productId);
-                              }
-                            } catch (error) {
-                              console.error('Failed to remove product:', error);
-                            }
-                          }}
-                          showSaveButton={true}
-                          showRemoveButton={false}
-                          isDark={isDark}
-                          enableMLTracking={true}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
+            <div className="p-6 space-y-6">
+              {/* Search Session Groups */}
+              {sessionGroups.map((group, groupIndex) => {
+                const isCollapsed = collapsedSections.has(group.session.sessionId);
+                const personalizedProducts = group.products.filter(p => 
+                  !('displayType' in p) || p.displayType === 'personalized'
+                );
+                const inspirationProducts = group.products.filter(p => 
+                  'displayType' in p && p.displayType === 'inspiration'
+                );
 
-              {/* Inspiration Products */}
-              {inspirationProducts.length > 0 && (
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
-                    <Sparkles className="w-5 h-5 text-purple-500" />
-                    <h3 className={`text-lg font-semibold ${
-                      isDark ? 'text-white' : 'text-gray-900'
-                    }`}>
-                      Discovery
-                    </h3>
-                    <span className="px-2 py-1 text-xs rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200">
-                      Diverse
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4">
-                    {inspirationProducts.map((product) => {
-                      const productData = product.product;
-                      return (
-                        <ProductCard
-                          key={productData.id}
-                          product={product}
-                          isSaved={savedProductIds.has(productData.id)}
-                          onSave={async (product) => {
-                            try {
-                              if (onProductSave) {
-                                await onProductSave(product);
+                return (
+                  <div key={group.session.sessionId} className={`rounded-lg border ${
+                    isDark ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'
+                  }`}>
+                    {/* Session Header */}
+                    <div 
+                      className={`p-4 cursor-pointer transition-colors ${
+                        isDark ? 'hover:bg-gray-750' : 'hover:bg-gray-100'
+                      }`}
+                      onClick={() => toggleSection(group.session.sessionId)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3 flex-1">
+                          {formatSearchType(group.session.searchType)}
+                          <div className="flex-1 min-w-0">
+                            <h3 className={`text-sm font-medium truncate ${
+                              isDark ? 'text-white' : 'text-gray-900'
+                            }`}>
+                              {group.session.searchQuery.length > 50 
+                                ? group.session.searchQuery.substring(0, 50) + '...'
+                                : group.session.searchQuery
                               }
-                            } catch (error) {
-                              console.error('Failed to save product:', error);
-                            }
-                          }}
-                          onRemove={async (productId) => {
-                            try {
-                              if (onProductRemove) {
-                                await onProductRemove(productId);
-                              }
-                            } catch (error) {
-                              console.error('Failed to remove product:', error);
-                            }
-                          }}
-                          showSaveButton={true}
-                          showRemoveButton={false}
-                          isDark={isDark}
-                          enableMLTracking={false}
-                        />
-                      );
-                    })}
+                            </h3>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className={`text-xs ${
+                                isDark ? 'text-gray-400' : 'text-gray-500'
+                              }`}>
+                                {formatTimestamp(group.session.timestamp)}
+                              </span>
+                              {group.session.imageAnalysisKeywords && (
+                                <span className={`text-xs px-2 py-0.5 rounded ${
+                                  isDark ? 'bg-blue-900/30 text-blue-200' : 'bg-blue-100 text-blue-700'
+                                }`}>
+                                  AI analyzed
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                              isDark
+                                ? 'bg-gray-700 text-gray-300'
+                                : 'bg-gray-200 text-gray-600'
+                            }`}>
+                              {group.products.length} items
+                            </span>
+                            {isCollapsed ? (
+                              <ChevronRight className="w-4 h-4 text-gray-400" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-gray-400" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Session Products */}
+                    {!isCollapsed && (
+                      <div className="px-4 pb-4 space-y-6">
+                        {/* Personalized Products */}
+                        {personalizedProducts.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <ShoppingBag className="w-4 h-4 text-orange-500" />
+                              <h4 className={`text-sm font-medium ${
+                                isDark ? 'text-white' : 'text-gray-900'
+                              }`}>
+                                Personalized
+                              </h4>
+                              <span className="px-2 py-0.5 text-xs rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200">
+                                {personalizedProducts.length}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                              {personalizedProducts.map((product) => {
+                                const productData = 'product' in product ? product.product : product;
+                                return (
+                                  <ProductCard
+                                    key={productData.id}
+                                    product={product}
+                                    isSaved={savedProductIds.has(productData.id)}
+                                    onSave={async (product) => {
+                                      try {
+                                        if (onProductSave) {
+                                          await onProductSave(product);
+                                        }
+                                      } catch (error) {
+                                        console.error('Failed to save product:', error);
+                                      }
+                                    }}
+                                    onRemove={async (productId) => {
+                                      try {
+                                        if (onProductRemove) {
+                                          await onProductRemove(productId);
+                                        }
+                                      } catch (error) {
+                                        console.error('Failed to remove product:', error);
+                                      }
+                                    }}
+                                    showSaveButton={true}
+                                    showRemoveButton={false}
+                                    isDark={isDark}
+                                    enableMLTracking={true}
+                                  />
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Inspiration Products */}
+                        {inspirationProducts.length > 0 && (
+                          <div>
+                            <div className="flex items-center gap-2 mb-3">
+                              <Sparkles className="w-4 h-4 text-purple-500" />
+                              <h4 className={`text-sm font-medium ${
+                                isDark ? 'text-white' : 'text-gray-900'
+                              }`}>
+                                Discovery
+                              </h4>
+                              <span className="px-2 py-0.5 text-xs rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200">
+                                {inspirationProducts.length}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                              {inspirationProducts.map((product) => {
+                                const productData = product.product;
+                                return (
+                                  <ProductCard
+                                    key={productData.id}
+                                    product={product}
+                                    isSaved={savedProductIds.has(productData.id)}
+                                    onSave={async (product) => {
+                                      try {
+                                        if (onProductSave) {
+                                          await onProductSave(product);
+                                        }
+                                      } catch (error) {
+                                        console.error('Failed to save product:', error);
+                                      }
+                                    }}
+                                    onRemove={async (productId) => {
+                                      try {
+                                        if (onProductRemove) {
+                                          await onProductRemove(productId);
+                                        }
+                                      } catch (error) {
+                                        console.error('Failed to remove product:', error);
+                                      }
+                                    }}
+                                    showSaveButton={true}
+                                    showRemoveButton={false}
+                                    isDark={isDark}
+                                    enableMLTracking={false}
+                                  />
+                                );
+                              })}
+                            </div>
+                            <div className="mt-3 text-center">
+                              <p className={`text-xs ${
+                                isDark ? 'text-gray-500' : 'text-gray-500'
+                              }`}>
+                                💡 Discovery items don't affect personalization
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <div className="mt-3 text-center">
-                    <p className={`text-xs ${
-                      isDark ? 'text-gray-500' : 'text-gray-500'
-                    }`}>
-                      💡 These products don't affect personalization
-                    </p>
-                  </div>
-                </div>
-              )}
+                );
+              })}
             </div>
           )}
         </div>
