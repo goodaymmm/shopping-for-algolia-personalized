@@ -385,16 +385,21 @@ class MainApplication {
           }
           
           if (!products || products.length === 0) {
-            console.log('[Search] No products found after all fallback attempts, returning empty array');
-            sendFeedback('Sorry, no products found matching your search.');
+            if (imageAnalysis) {
+              console.log('[Search] No products found after all fallback attempts with image analysis');
+              sendFeedback(`Image analysis successful (found: ${imageAnalysis.searchKeywords.join(', ')}), but no matching products in our catalog. The fashion index may need more products.`);
+            } else {
+              console.log('[Search] No products found after all fallback attempts, returning empty array');
+              sendFeedback('Sorry, no products found matching your search.');
+            }
             return [];
           } else {
             sendFeedback(`Found ${products.length} products.`);
           }
         }
 
-        // Filter out products with broken or invalid image URLs
-        console.log('[Search] Filtering products with invalid images...');
+        // Filter out products with broken or invalid image URLs and invalid product URLs
+        console.log('[Search] Filtering products with invalid images and URLs...');
         const validProducts = products.filter((product: any) => {
           // Check if image URL is valid
           if (!product.image || 
@@ -406,6 +411,15 @@ class MainApplication {
             return false;
           }
           
+          // Check if product URL is valid
+          if (!product.url || 
+              product.url === '' || 
+              product.url === '#' ||
+              product.url === 'undefined' ||
+              product.url === 'null') {
+            return false;
+          }
+          
           // Check for common invalid URL patterns
           const invalidPatterns = [
             /^https?:\/\/(localhost|127\.0\.0\.1)/,  // localhost URLs
@@ -414,10 +428,14 @@ class MainApplication {
             /example\.com/i                          // example domains
           ];
           
-          return !invalidPatterns.some(pattern => pattern.test(product.image));
+          // Check both image and URL for invalid patterns
+          const hasInvalidImage = invalidPatterns.some(pattern => pattern.test(product.image));
+          const hasInvalidUrl = invalidPatterns.some(pattern => pattern.test(product.url));
+          
+          return !hasInvalidImage && !hasInvalidUrl;
         });
         
-        console.log(`[Search] Filtered ${products.length - validProducts.length} products with invalid images, ${validProducts.length} remain`);
+        console.log(`[Search] Filtered ${products.length - validProducts.length} products with invalid images/URLs, ${validProducts.length} remain`);
         products = validProducts;
 
         // Apply personalization scoring if we have ML data

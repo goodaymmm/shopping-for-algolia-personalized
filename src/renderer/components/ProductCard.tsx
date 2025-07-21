@@ -33,6 +33,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const displayType: ProductDisplayType = 'displayType' in product ? product.displayType : 'personalized';
   const inspirationReason = 'inspirationReason' in product ? product.inspirationReason : undefined;
 
+  // Utility function to extract domain from URL
+  const getDomainFromUrl = (url: string): string => {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.hostname.replace('www.', '');
+    } catch {
+      return '';
+    }
+  };
+
   const handleSave = async (e: React.MouseEvent) => {
     e.stopPropagation();
     console.log('ProductCard handleSave clicked for product:', productData);
@@ -322,9 +332,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               4.5
             </span>
           </div>
-          <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
-            Featured
-          </div>
+          {productData.url && productData.url !== '#' && (
+            <div className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+              {getDomainFromUrl(productData.url)}
+            </div>
+          )}
         </div>
       </div>
     </div>
