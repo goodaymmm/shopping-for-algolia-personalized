@@ -81,13 +81,13 @@ export const ClearProductsDialog: React.FC<ClearProductsDialogProps> = ({
                 : 'border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
             }`}
           >
-            いいえ
+            No
           </button>
           <button
             onClick={handleConfirm}
             className="flex-1 px-4 py-2.5 rounded-xl font-medium text-sm text-white bg-red-500 hover:bg-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
           >
-            はい、クリアする
+            Yes, clear
           </button>
         </div>
       </div>

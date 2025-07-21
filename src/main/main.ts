@@ -285,7 +285,7 @@ class MainApplication {
           // If we have image analysis keywords, try fallback searches
           if (imageAnalysis && imageAnalysis.searchKeywords.length > 0) {
             const originalKeywords = imageAnalysis.searchKeywords.join(' ');
-            sendFeedback(`分析結果の検索ワード「${originalKeywords}」では見つかりませんでした。より広範囲な検索をします。`);
+            sendFeedback(`No products found with analyzed keywords "${originalKeywords}". Trying broader search...`);
             
             // Strategy 1: Try generic keywords without brand names
             const genericKeywords = imageAnalysis.searchKeywords.filter(keyword => 
@@ -294,7 +294,7 @@ class MainApplication {
             
             if (genericKeywords.length > 0) {
               const genericQuery = genericKeywords.join(' ') + ' ' + query;
-              sendFeedback(`ブランド名を除いたキーワード「${genericKeywords.join(' ')}」で検索中...`);
+              sendFeedback(`Searching with generic keywords "${genericKeywords.join(' ')}" (brand names removed)...`);
               
               products = await this.algoliaMCPService.searchProductsMultiIndex(
                 genericQuery,
@@ -310,7 +310,7 @@ class MainApplication {
             
             // Strategy 2: If still no results, try category-only search
             if ((!products || products.length === 0) && imageAnalysis.category && imageAnalysis.category !== 'general') {
-              sendFeedback(`カテゴリ「${imageAnalysis.category}」での検索に切り替えます...`);
+              sendFeedback(`Switching to category search: "${imageAnalysis.category}"...`);
               
               products = await this.algoliaMCPService.searchProductsMultiIndex(
                 query, // Use original user query
@@ -326,7 +326,7 @@ class MainApplication {
             
             // Strategy 3: If still no results, try all indices with user query only
             if (!products || products.length === 0) {
-              sendFeedback(`すべてのカテゴリから「${query}」で検索中...`);
+              sendFeedback(`Searching all categories for "${query}"...`);
               
               products = await this.algoliaMCPService.searchProductsMultiIndex(
                 query,
@@ -343,10 +343,10 @@ class MainApplication {
           
           if (!products || products.length === 0) {
             console.log('[Search] No products found after all fallback attempts, returning empty array');
-            sendFeedback('申し訳ございません。お探しの商品が見つかりませんでした。');
+            sendFeedback('Sorry, no products found matching your search.');
             return [];
           } else {
-            sendFeedback(`${products.length}個の商品が見つかりました。`);
+            sendFeedback(`Found ${products.length} products.`);
           }
         }
 

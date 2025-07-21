@@ -89,7 +89,7 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
               <h2 className={`text-xl font-semibold ${
                 isDark ? 'text-white' : 'text-gray-900'
               }`}>
-                検索結果
+                Search Results
               </h2>
               {totalCount > 0 && (
                 <span className={`px-2 py-1 text-sm font-medium rounded-full ${
@@ -97,7 +97,7 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
                     ? 'bg-gray-700 text-gray-300'
                     : 'bg-gray-100 text-gray-600'
                 }`}>
-                  {totalCount}個
+                  {totalCount} items
                 </span>
               )}
             </div>
@@ -109,7 +109,7 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
                     ? 'hover:bg-gray-800 text-gray-400 hover:text-red-400'
                     : 'hover:bg-gray-100 text-gray-500 hover:text-red-500'
                 }`}
-                title="すべての商品をクリア"
+                title="Clear all products"
               >
                 <Trash2 className="w-5 h-5" />
               </button>
@@ -118,7 +118,7 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto h-[calc(100vh-8rem)]">
           {totalCount === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center px-6">
               <div className={`w-20 h-20 rounded-2xl flex items-center justify-center mb-6 ${
@@ -131,12 +131,12 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
               <h3 className={`text-lg font-medium mb-2 ${
                 isDark ? 'text-gray-300' : 'text-gray-600'
               }`}>
-                検索結果がありません
+                No Search Results
               </h3>
               <p className={`text-sm ${
                 isDark ? 'text-gray-500' : 'text-gray-500'
               }`}>
-                商品を検索すると、ここに結果が表示されます
+                Search for products to see results here
               </p>
             </div>
           ) : (
@@ -149,10 +149,10 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
                     <h3 className={`text-lg font-semibold ${
                       isDark ? 'text-white' : 'text-gray-900'
                     }`}>
-                      おすすめ商品
+                      Personalized
                     </h3>
                     <span className="px-2 py-1 text-xs rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200">
-                      パーソナライズ
+                      For You
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-4">
@@ -200,10 +200,10 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
                     <h3 className={`text-lg font-semibold ${
                       isDark ? 'text-white' : 'text-gray-900'
                     }`}>
-                      発見商品
+                      Discovery
                     </h3>
                     <span className="px-2 py-1 text-xs rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200">
-                      多様性
+                      Diverse
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-4">
@@ -244,7 +244,7 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
                     <p className={`text-xs ${
                       isDark ? 'text-gray-500' : 'text-gray-500'
                     }`}>
-                      💡 これらの商品はパーソナライゼーションに影響しません
+                      💡 These products don't affect personalization
                     </p>
                   </div>
                 </div>

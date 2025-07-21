@@ -430,7 +430,9 @@ function App() {
           isDark={isDark}
         />
         
-        <div className="flex flex-col flex-1">
+        <div className={`flex flex-col flex-1 transition-all duration-300 ${
+          currentView === 'chat' && isProductSidebarOpen ? 'mr-[900px]' : ''
+        }`}>
           {currentView === 'chat' ? (
             <>
               <ChatHeader isDark={isDark} />
@@ -450,6 +452,18 @@ function App() {
                 onDiscoveryModeToggle={handleDiscoveryModeToggle}
                 discoveryPercentage={discoveryPercentage}
                 onDiscoveryPercentageChange={handleDiscoveryPercentageChange}
+                isDark={isDark}
+              />
+              
+              {/* Product Sidebar - Only in chat view */}
+              <ProductSidebar
+                products={sidebarProducts}
+                isOpen={isProductSidebarOpen}
+                onToggle={handleToggleProductSidebar}
+                onProductSave={handleProductSave}
+                onProductRemove={handleProductRemove}
+                onClearProducts={handleClearSidebarProducts}
+                savedProductIds={savedProductIds}
                 isDark={isDark}
               />
             </>
@@ -476,18 +490,6 @@ function App() {
             />
           )}
         </div>
-        
-        {/* Product Sidebar */}
-        <ProductSidebar
-          products={sidebarProducts}
-          isOpen={isProductSidebarOpen}
-          onToggle={handleToggleProductSidebar}
-          onProductSave={handleProductSave}
-          onProductRemove={handleProductRemove}
-          onClearProducts={handleClearSidebarProducts}
-          savedProductIds={savedProductIds}
-          isDark={isDark}
-        />
       </div>
     </ErrorBoundary>
   );
