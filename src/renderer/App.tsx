@@ -8,7 +8,7 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { ChatHistory } from './components/ChatHistory';
 import { MyDatabase } from './components/MyDatabase';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { Message, AppView, Product, ProductWithContext, DiscoveryPercentage, ImageAnalysisProgress } from './types';
+import { Message, AppView, Product, ProductWithContext, DiscoveryPercentage, ImageAnalysisProgress, IPCSearchResult } from './types';
 import { useTheme } from './hooks/useTheme';
 import { useSettings } from './hooks/useSettings';
 import { useChatSessions } from './hooks/useChatSessions';
@@ -169,6 +169,7 @@ function App() {
 
     try {
       let products = [];
+      let searchResult: IPCSearchResult = { products: [], imageAnalysis: undefined };
       
       // Check if Electron API is available
       if (window.electronAPI && window.electronAPI.searchProducts) {
@@ -186,7 +187,8 @@ function App() {
           });
         }
 
-        products = await window.electronAPI.searchProducts(content, imageData);
+        searchResult = await window.electronAPI.searchProducts(content, imageData);
+        products = searchResult.products;
         
         // Clear progress and feedback when done
         setImageAnalysisProgress(null);
@@ -230,13 +232,17 @@ function App() {
       
       let responseText = '';
       if (finalResults.length === 0) {
-        if (imageDataUrl) {
+        if (imageDataUrl && searchResult.imageAnalysis) {
+          responseText = `I analyzed the image and identified: ${searchResult.imageAnalysis.keywords.join(', ')}. However, I couldn't find any matching products. Please try adjusting your search keywords.`;
+        } else if (imageDataUrl) {
           responseText = `I analyzed the image but couldn't find any products. Please try adjusting your search keywords.`;
         } else {
           responseText = `No products found matching "${content}".`;
         }
       } else {
-        if (imageDataUrl) {
+        if (imageDataUrl && searchResult.imageAnalysis) {
+          responseText = `I analyzed the image and identified: ${searchResult.imageAnalysis.keywords.join(', ')}. Found ${finalResults.length} products!`;
+        } else if (imageDataUrl) {
           responseText = `I analyzed the image and found ${finalResults.length} products!`;
         } else {
           responseText = `Found ${finalResults.length} products matching "${content}".`;

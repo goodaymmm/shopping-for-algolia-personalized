@@ -6,7 +6,7 @@ import { GeminiService, ImageAnalysis } from './gemini-service'
 import { AlgoliaMCPService } from './algolia-mcp-service'
 import { Logger } from './logger'
 import { copyFileSync, existsSync } from 'fs'
-import { SearchSession } from '../shared/types'
+import { SearchSession, IPCSearchResult } from '../shared/types'
 
 class MainApplication {
   private mainWindow: BrowserWindow | null = null
@@ -393,6 +393,33 @@ class MainApplication {
           }
         }
 
+        // Filter out products with broken or invalid image URLs
+        console.log('[Search] Filtering products with invalid images...');
+        const validProducts = products.filter((product: any) => {
+          // Check if image URL is valid
+          if (!product.image || 
+              product.image === '' || 
+              product.image === '#' ||
+              product.image.includes('placeholder') ||
+              product.image.includes('default') ||
+              product.image === 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2UwZTBlMCIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmaWxsPSIjOTk5Ij5ObyBJbWFnZTwvdGV4dD4KPC9zdmc+') {
+            return false;
+          }
+          
+          // Check for common invalid URL patterns
+          const invalidPatterns = [
+            /^https?:\/\/(localhost|127\.0\.0\.1)/,  // localhost URLs
+            /\.(tmp|temp)$/i,                        // temporary file extensions
+            /\/temp\//i,                             // temp directories
+            /example\.com/i                          // example domains
+          ];
+          
+          return !invalidPatterns.some(pattern => pattern.test(product.image));
+        });
+        
+        console.log(`[Search] Filtered ${products.length - validProducts.length} products with invalid images, ${validProducts.length} remain`);
+        products = validProducts;
+
         // Apply personalization scoring if we have ML data
         console.log('[Search] Checking user profile for personalization...');
         const userProfile = await this.personalization.getUserProfile();
@@ -465,8 +492,18 @@ class MainApplication {
           searchSession
         }));
 
-        console.log('[Search] Returning', productsWithSession.length, 'products with session metadata');
-        return productsWithSession;
+        // Create search result with analysis metadata
+        const searchResult: IPCSearchResult = {
+          products: productsWithSession,
+          imageAnalysis: imageAnalysis ? {
+            keywords: imageAnalysis.searchKeywords,
+            category: imageAnalysis.category,
+            searchQuery: imageAnalysis.searchKeywords.join(' ')
+          } : undefined
+        };
+
+        console.log('[Search] Returning', productsWithSession.length, 'products with analysis metadata');
+        return searchResult;
 
       } catch (error) {
         console.error('[Search] Product search error:', error);
@@ -475,7 +512,7 @@ class MainApplication {
           stack: (error as Error).stack,
           name: (error as Error).name
         });
-        return [];
+        return { products: [], imageAnalysis: undefined };
       }
     })
 

@@ -16,7 +16,7 @@ export interface ElectronAPI {
   getDiscoverySetting: () => Promise<DiscoveryPercentage>
   
   // Search
-  searchProducts: (query: string, imageData?: string) => Promise<Product[]>
+  searchProducts: (query: string, imageData?: string) => Promise<IPCSearchResult>
   
   // External links
   openExternal: (url: string) => Promise<void>
@@ -63,6 +63,16 @@ export interface SearchSession {
   timestamp: Date
   imageAnalysisKeywords?: string[]
   resultCount: number
+}
+
+// IPC Search result with analysis metadata
+export interface IPCSearchResult {
+  products: Product[]
+  imageAnalysis?: {
+    keywords: string[]
+    category?: string
+    searchQuery: string
+  }
 }
 
 // Product types
