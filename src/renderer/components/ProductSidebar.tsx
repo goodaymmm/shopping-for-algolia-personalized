@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ChevronRight, ChevronLeft, ShoppingBag, Sparkles, Trash2, Package } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ChevronRight, ChevronLeft, ShoppingBag, Sparkles, Trash2, Package, GripVertical } from 'lucide-react';
 import { ProductCard } from './ProductCard';
 import { ClearProductsDialog } from './ClearProductsDialog';
 import { Product, ProductWithContext } from '../types';
@@ -11,6 +11,7 @@ interface ProductSidebarProps {
   onProductSave?: (product: Product) => Promise<{ success: boolean }>;
   onProductRemove?: (productId: string) => Promise<{ success: boolean }>;
   onClearProducts: () => void;
+  onWidthChange?: (width: number) => void;
   savedProductIds?: Set<string>;
   isDark: boolean;
 }
@@ -22,10 +23,58 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
   onProductSave,
   onProductRemove,
   onClearProducts,
+  onWidthChange,
   savedProductIds = new Set(),
   isDark
 }) => {
   const [showClearDialog, setShowClearDialog] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(() => {
+    // Load saved width from localStorage, default to 600px
+    const saved = localStorage.getItem('productSidebarWidth');
+    return saved ? parseInt(saved, 10) : 600;
+  });
+  const [isResizing, setIsResizing] = useState(false);
+  const resizeRef = useRef<HTMLDivElement>(null);
+
+  // Save width to localStorage and notify parent when it changes
+  useEffect(() => {
+    localStorage.setItem('productSidebarWidth', sidebarWidth.toString());
+    if (onWidthChange) {
+      onWidthChange(sidebarWidth);
+    }
+  }, [sidebarWidth, onWidthChange]);
+
+  // Handle mouse down on resize handle
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
+  // Handle resizing
+  useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      
+      const newWidth = window.innerWidth - e.clientX;
+      // Constrain width between 400px and 1200px
+      const constrainedWidth = Math.max(400, Math.min(1200, newWidth));
+      setSidebarWidth(constrainedWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
   // Separate personalized and inspiration products
   const personalizedProducts = products.filter(p => 
@@ -51,11 +100,12 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
       {/* Toggle Button */}
       <button
         onClick={onToggle}
-        className={`fixed right-4 top-1/2 -translate-y-1/2 z-40 p-3 rounded-l-xl shadow-lg transition-all duration-300 border-l border-t border-b ${
+        className={`fixed top-1/2 -translate-y-1/2 z-40 p-3 rounded-l-xl shadow-lg transition-all duration-300 border-l border-t border-b ${
           isDark
             ? 'bg-gray-800 hover:bg-gray-700 border-gray-700 text-gray-300'
             : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-600'
-        } ${isOpen ? 'right-[900px]' : 'right-4'}`}
+        }`}
+        style={{ right: isOpen ? `${sidebarWidth}px` : '16px' }}
       >
         {isOpen ? (
           <ChevronRight className="w-5 h-5" />
@@ -73,12 +123,27 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
 
       {/* Sidebar Panel */}
       <div
-        className={`fixed top-0 right-0 h-full w-[900px] z-30 transform transition-transform duration-300 ease-in-out border-l ${
+        className={`fixed top-0 right-0 h-full z-30 transform transition-transform duration-300 ease-in-out border-l ${
           isDark
             ? 'bg-gray-900 border-gray-700'
             : 'bg-white border-gray-200'
         } ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{ width: `${sidebarWidth}px` }}
       >
+        {/* Resize Handle */}
+        <div
+          ref={resizeRef}
+          onMouseDown={handleMouseDown}
+          className={`absolute left-0 top-0 w-1 h-full cursor-col-resize hover:bg-orange-500 transition-colors ${
+            isResizing ? 'bg-orange-500' : 'bg-transparent'
+          } group`}
+        >
+          <div className={`absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 p-1 rounded ${
+            isDark ? 'bg-gray-800 text-gray-400' : 'bg-gray-100 text-gray-600'
+          } opacity-0 group-hover:opacity-100 transition-opacity`}>
+            <GripVertical className="w-3 h-3" />
+          </div>
+        </div>
         {/* Header */}
         <div className={`p-6 border-b ${
           isDark ? 'border-gray-700' : 'border-gray-200'

@@ -192,8 +192,8 @@ export const InspirationProductCard: React.FC<InspirationProductCardProps> = ({
             isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
           }`}>
             <div className="text-center">
-              <Sparkles size={32} className="mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Image not available</p>
+              <Sparkles size={24} className="mx-auto mb-1 opacity-50" />
+              <p className="text-xs">Image not available</p>
             </div>
           </div>
         )}
@@ -242,15 +242,15 @@ export const InspirationProductCard: React.FC<InspirationProductCardProps> = ({
       </div>
 
       {/* Product Info */}
-      <div className="p-4">
-        <h3 className={`font-semibold mb-2 line-clamp-2 ${
+      <div className="p-3">
+        <h3 className={`font-semibold text-sm mb-1.5 line-clamp-2 ${
           isDark ? 'text-white' : 'text-gray-900'
         }`}>
           {product.name}
         </h3>
         
         {product.description && (
-          <p className={`text-sm mb-3 line-clamp-2 ${
+          <p className={`text-xs mb-2 line-clamp-2 ${
             isDark ? 'text-gray-400' : 'text-gray-600'
           }`}>
             {product.description}

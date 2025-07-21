@@ -1,5 +1,4 @@
-import { readFileSync } from 'fs';
-import { join } from 'path';
+// Removed fs imports as we now fetch data from GitHub online
 
 interface Product {
   objectID: string;
@@ -122,30 +121,42 @@ export class SampleDataLoader {
   private async collectAllData(): Promise<Product[]> {
     const allProducts: Product[] = [];
 
-    // ローカルデータの読み込み
+    // GitHub データセットの読み込み（主要データソース）
+    console.log('[SampleDataLoader] Downloading datasets from GitHub (27 MB total)...');
     const bestBuyData = await this.loadBestBuyData();
     allProducts.push(...bestBuyData);
+    console.log(`[SampleDataLoader] Progress: ${allProducts.length} products loaded`);
 
     const fashionData = await this.loadFashionData();
     allProducts.push(...fashionData);
+    console.log(`[SampleDataLoader] Progress: ${allProducts.length} products loaded`);
 
-    // APIデータの取得
-    const dummyJsonData = await this.fetchFromDummyJSON();
-    allProducts.push(...dummyJsonData);
+    // フォールバック: APIデータの取得
+    if (allProducts.length < 1000) {
+      console.log('[SampleDataLoader] GitHub datasets unavailable, using API fallbacks...');
+      const dummyJsonData = await this.fetchFromDummyJSON();
+      allProducts.push(...dummyJsonData);
 
-    const fakeStoreData = await this.fetchFromFakeStore();
-    allProducts.push(...fakeStoreData);
+      const fakeStoreData = await this.fetchFromFakeStore();
+      allProducts.push(...fakeStoreData);
+    } else {
+      console.log('[SampleDataLoader] Sufficient data from GitHub, skipping API fallbacks');
+    }
 
     return allProducts;
   }
 
   private async loadBestBuyData(): Promise<Product[]> {
     try {
-      const dataPath = '/mnt/m/workContest/Algolia_datasets-master/ecommerce/records.json';
-      console.log('[SampleDataLoader] Loading Best Buy data...');
+      const dataUrl = 'https://raw.githubusercontent.com/algolia/datasets/master/ecommerce/records.json';
+      console.log('[SampleDataLoader] Fetching Best Buy data from GitHub... (~11 MB)');
       
-      const rawData = readFileSync(dataPath, 'utf8');
-      const bestBuyProducts = JSON.parse(rawData);
+      const response = await fetch(dataUrl);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const bestBuyProducts = await response.json() as any[];
       
       const products: Product[] = bestBuyProducts.slice(0, 3000).map((item: any) => ({
         objectID: item.objectID || String(item.id),
@@ -169,11 +180,15 @@ export class SampleDataLoader {
 
   private async loadFashionData(): Promise<Product[]> {
     try {
-      const dataPath = '/mnt/m/workContest/Algolia_datasets-master/ecommerce-federated/products.json';
-      console.log('[SampleDataLoader] Loading Fashion data...');
+      const dataUrl = 'https://raw.githubusercontent.com/algolia/datasets/master/ecommerce-federated/products.json';
+      console.log('[SampleDataLoader] Fetching Fashion data from GitHub... (~16 MB)');
       
-      const rawData = readFileSync(dataPath, 'utf8');
-      const fashionProducts = JSON.parse(rawData);
+      const response = await fetch(dataUrl);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const fashionProducts = await response.json() as any[];
       
       const products: Product[] = fashionProducts.slice(0, 1000).map((item: any) => ({
         objectID: item.objectID || String(item.parentID || Math.random()),

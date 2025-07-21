@@ -113,8 +113,8 @@ export const EditableProductCard: React.FC<EditableProductCardProps> = ({
             isDark ? 'bg-gray-700 text-gray-400' : 'bg-gray-100 text-gray-500'
           }`}>
             <div className="text-center">
-              <ShoppingCart size={32} className="mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Image not available</p>
+              <ShoppingCart size={24} className="mx-auto mb-1 opacity-50" />
+              <p className="text-xs">Image not available</p>
             </div>
           </div>
         )}
@@ -167,9 +167,9 @@ export const EditableProductCard: React.FC<EditableProductCardProps> = ({
       </div>
 
       {/* Product Info */}
-      <div className="p-4">
+      <div className="p-3">
         {/* Editable Name */}
-        <div className="mb-2">
+        <div className="mb-1.5">
           {isEditingName ? (
             <div className="flex items-center gap-2">
               <input
@@ -198,7 +198,7 @@ export const EditableProductCard: React.FC<EditableProductCardProps> = ({
             </div>
           ) : (
             <div className="flex items-center gap-2">
-              <h3 className={`font-semibold line-clamp-2 flex-1 ${
+              <h3 className={`font-semibold text-sm line-clamp-2 flex-1 ${
                 isDark ? 'text-white' : 'text-gray-900'
               }`}>
                 {customName}
@@ -219,7 +219,7 @@ export const EditableProductCard: React.FC<EditableProductCardProps> = ({
         
         {/* Original Name (if custom name is set) */}
         {product.customName && product.customName !== product.name && (
-          <p className={`text-xs mb-2 ${
+          <p className={`text-xs mb-1 ${
             isDark ? 'text-gray-500' : 'text-gray-400'
           }`}>
             Original: {product.name}
@@ -227,7 +227,7 @@ export const EditableProductCard: React.FC<EditableProductCardProps> = ({
         )}
 
         {product.description && (
-          <p className={`text-sm mb-3 line-clamp-2 ${
+          <p className={`text-xs mb-2 line-clamp-2 ${
             isDark ? 'text-gray-400' : 'text-gray-600'
           }`}>
             {product.description}
@@ -235,7 +235,7 @@ export const EditableProductCard: React.FC<EditableProductCardProps> = ({
         )}
 
         {/* Editable Tags */}
-        <div className="mb-3">
+        <div className="mb-2">
           {isEditingTags ? (
             <div className="flex items-center gap-2">
               <input
@@ -306,7 +306,7 @@ export const EditableProductCard: React.FC<EditableProductCardProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">
             <Star size={14} className="text-yellow-500" fill="currentColor" />
-            <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
               4.5
             </span>
           </div>

@@ -41,6 +41,7 @@ function App() {
   const [sidebarProducts, setSidebarProducts] = useState<(Product | ProductWithContext)[]>([]);
   const [isProductSidebarOpen, setIsProductSidebarOpen] = useState(false);
   const [searchFeedback, setSearchFeedback] = useState<string | null>(null);
+  const [sidebarWidth, setSidebarWidth] = useState(600); // Default width
 
   // Get search results from current session and update sidebar products
   const searchResults = currentSession?.searchResults || [];
@@ -343,7 +344,15 @@ function App() {
         setTimeout(() => setSaveMessage(null), 3000);
       } else {
         console.error('Save failed:', result.error);
-        setSaveMessage({ type: 'error', text: result.error || 'Failed to save product' });
+        // Special handling for "already saved" case
+        if (result.error && result.error.includes('already in your database')) {
+          // Product is already saved, so update UI to reflect this
+          setSavedProductIds(prev => new Set([...prev, product.id]));
+          setSaveMessage({ type: 'success', text: 'Product already saved!' });
+          console.log('Product already saved, updating UI:', product.id);
+        } else {
+          setSaveMessage({ type: 'error', text: result.error || 'Failed to save product' });
+        }
         setTimeout(() => setSaveMessage(null), 3000);
       }
       return result;
@@ -430,9 +439,12 @@ function App() {
           isDark={isDark}
         />
         
-        <div className={`flex flex-col flex-1 transition-all duration-300 ${
-          currentView === 'chat' && isProductSidebarOpen ? 'mr-[900px]' : ''
-        }`}>
+        <div 
+          className="flex flex-col flex-1 transition-all duration-300"
+          style={{ 
+            marginRight: currentView === 'chat' && isProductSidebarOpen ? `${sidebarWidth}px` : '0px'
+          }}
+        >
           {currentView === 'chat' ? (
             <>
               <ChatHeader isDark={isDark} />
@@ -463,6 +475,7 @@ function App() {
                 onProductSave={handleProductSave}
                 onProductRemove={handleProductRemove}
                 onClearProducts={handleClearSidebarProducts}
+                onWidthChange={setSidebarWidth}
                 savedProductIds={savedProductIds}
                 isDark={isDark}
               />
