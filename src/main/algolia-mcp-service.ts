@@ -336,6 +336,7 @@ export class AlgoliaMCPService {
       hitsPerPage?: number;
       filters?: string;
       attributesToRetrieve?: string[];
+      searchType?: 'exact' | 'fuzzy' | 'brand';
     }
   ): Promise<Product[]> {
     console.log('[AlgoliaMCP] Starting multi-index search...');
@@ -357,16 +358,49 @@ export class AlgoliaMCPService {
       console.log('[AlgoliaMCP] Searching indices:', indicesToSearch);
 
       // 複数インデックスの検索リクエストを作成
-      const searchRequests = indicesToSearch.map(indexName => ({
-        indexName,
-        query,
-        hitsPerPage: additionalParams?.hitsPerPage || 20,
-        page: 0,
-        attributesToRetrieve: additionalParams?.attributesToRetrieve || [
-          'name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'
-        ],
-        filters: additionalParams?.filters
-      }));
+      const searchRequests = indicesToSearch.map(indexName => {
+        const baseRequest = {
+          indexName,
+          query,
+          hitsPerPage: additionalParams?.hitsPerPage || 20,
+          page: 0,
+          attributesToRetrieve: additionalParams?.attributesToRetrieve || [
+            'name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'
+          ],
+          filters: additionalParams?.filters
+        };
+
+        // 検索タイプに応じて設定を追加
+        const searchType = additionalParams?.searchType || 'fuzzy';
+        
+        if (searchType === 'exact') {
+          // 完全一致検索設定
+          return {
+            ...baseRequest,
+            typoTolerance: 'min',
+            minWordSizefor1Typo: 10,
+            minWordSizefor2Typo: 12,
+            disableTypoToleranceOnWords: query.split(' ')
+          };
+        } else if (searchType === 'brand') {
+          // ブランド検索設定
+          const brandKeywords = ['Nike', 'Adidas', 'Apple', 'Samsung', 'Sony', 'Microsoft', 'Dell', 'HP'];
+          const isBrandQuery = brandKeywords.some(brand => 
+            query.toLowerCase().includes(brand.toLowerCase())
+          );
+          
+          return {
+            ...baseRequest,
+            typoTolerance: isBrandQuery ? 'min' : 'strict',
+            disableTypoToleranceOnWords: isBrandQuery ? [query] : [],
+            minWordSizefor1Typo: 8,
+            minWordSizefor2Typo: 10
+          };
+        }
+        
+        // デフォルトのfuzzy検索
+        return baseRequest;
+      });
 
       const requestBody = {
         requests: searchRequests
@@ -472,13 +506,23 @@ export class AlgoliaMCPService {
         try {
           console.log(`[AlgoliaMCP] Ensuring index '${indexName}' exists...`);
           
-          // インデックスの設定を作成（空の設定でインデックスを作成）
+          // インデックスの設定を作成（ブランド検索最適化）
           const indexSettings = {
-            searchableAttributes: ['name', 'description', 'categories'],
+            searchableAttributes: [
+              'brand',           // ブランド名を最優先
+              'name', 
+              'description', 
+              'categories'
+            ],
             attributesForFaceting: ['categories', 'brand'],
             customRanking: ['desc(price)'],
-            attributesToHighlight: ['name', 'description'],
-            attributesToSnippet: ['description:20']
+            attributesToHighlight: ['name', 'description', 'brand'],
+            attributesToSnippet: ['description:20'],
+            typoTolerance: 'min',  // タイポ許容を最小化
+            minWordSizefor1Typo: 8,
+            minWordSizefor2Typo: 10,
+            disableTypoToleranceOnAttributes: ['brand'], // ブランド属性ではタイポ許容を無効
+            exactOnSingleWordQuery: 'word'  // 単一単語クエリでは完全一致を優先
           };
 
           const response = await fetch(

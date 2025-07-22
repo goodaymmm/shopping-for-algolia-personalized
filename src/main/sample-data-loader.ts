@@ -227,57 +227,90 @@ export class SampleDataLoader {
       const esciProducts: Product[] = [
         {
           objectID: 'esci_1',
+          name: 'Nike Air Max 270 Running Shoes',
+          description: 'Nike Air Max 270 features a large heel Air unit for all-day comfort and style. Perfect for running, casual wear, and athletic activities.',
+          price: 150.00,
+          image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&h=300&fit=crop',
+          categories: ['Sports', 'Footwear', 'Running', 'Fashion'],
+          brand: 'Nike',
+          url: 'https://www.nike.com/air-max-270',
+          dataSource: 'esci'
+        },
+        {
+          objectID: 'esci_2', 
+          name: 'Nike Dunk Low Black White',
+          description: 'Classic Nike Dunk Low in iconic black and white colorway. Retro basketball style meets modern street fashion.',
+          price: 110.00,
+          image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=300&h=300&fit=crop',
+          categories: ['Sports', 'Footwear', 'Basketball', 'Fashion'],
+          brand: 'Nike',
+          url: 'https://www.nike.com/dunk-low',
+          dataSource: 'esci'
+        },
+        {
+          objectID: 'esci_3',
+          name: 'Adidas Ultraboost 22 Running Shoes',
+          description: 'Adidas Ultraboost 22 with responsive Boost midsole and Primeknit upper. Engineered for long-distance running.',
+          price: 190.00,
+          image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&h=300&fit=crop',
+          categories: ['Sports', 'Footwear', 'Running'],
+          brand: 'Adidas',
+          url: 'https://www.adidas.com/ultraboost-22',
+          dataSource: 'esci'
+        },
+        {
+          objectID: 'esci_4',
           name: 'Wireless Bluetooth Headphones',
           description: 'High-quality wireless headphones with noise cancellation and long battery life. Perfect for music, calls, and gaming.',
           price: 79.99,
           image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop',
           categories: ['Electronics', 'Audio'],
-          brand: 'TechSound',
-          url: '#',
+          brand: 'Sony',
+          url: 'https://electronics.example.com/headphones',
           dataSource: 'esci'
         },
         {
-          objectID: 'esci_2', 
+          objectID: 'esci_5', 
           name: 'Organic Cotton T-Shirt',
           description: 'Comfortable and sustainable organic cotton t-shirt in multiple colors. Soft fabric with a modern fit.',
           price: 24.99,
           image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop',
           categories: ['Clothing', 'Men', 'Tops'],
           brand: 'EcoWear',
-          url: '#',
+          url: 'https://clothing.example.com/tshirt',
           dataSource: 'esci'
         },
         {
-          objectID: 'esci_3',
+          objectID: 'esci_6',
           name: 'Stainless Steel Water Bottle',
           description: 'Insulated stainless steel water bottle keeps drinks cold for 24 hours or hot for 12 hours. BPA-free and leak-proof.',
           price: 19.99,
           image: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=300&h=300&fit=crop',
           categories: ['Home', 'Kitchen', 'Drinkware'],
           brand: 'HydroFlow',
-          url: '#',
+          url: 'https://home.example.com/water-bottle',
           dataSource: 'esci'
         },
         {
-          objectID: 'esci_4',
-          name: 'Running Shoes',
-          description: 'Lightweight running shoes with superior cushioning and breathable mesh upper. Ideal for daily training and long runs.',
-          price: 89.99,
-          image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&h=300&fit=crop',
-          categories: ['Sports', 'Footwear', 'Running'],
-          brand: 'RunFast',
-          url: '#',
+          objectID: 'esci_7',
+          name: 'Apple iPhone 15 Pro',
+          description: 'Latest Apple iPhone 15 Pro with titanium design, A17 Pro chip, and advanced camera system. Revolutionary technology in your pocket.',
+          price: 999.99,
+          image: 'https://images.unsplash.com/photo-1592750475338-74b7b21085ab?w=300&h=300&fit=crop',
+          categories: ['Electronics', 'Mobile', 'Phones'],
+          brand: 'Apple',
+          url: 'https://www.apple.com/iphone-15-pro',
           dataSource: 'esci'
         },
         {
-          objectID: 'esci_5',
+          objectID: 'esci_8',
           name: 'Coffee Maker',
           description: 'Programmable drip coffee maker with 12-cup capacity. Features auto shut-off and keep-warm function.',
           price: 59.99,
           image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=300&h=300&fit=crop',
           categories: ['Home', 'Kitchen', 'Appliances'],
           brand: 'BrewMaster',
-          url: '#',
+          url: 'https://home.example.com/coffee-maker',
           dataSource: 'esci'
         }
       ];
@@ -288,22 +321,24 @@ export class SampleDataLoader {
         'Electronics', 'Clothing', 'Home', 'Sports', 'Beauty', 'Books', 'Automotive', 'Toys'
       ];
       const brands = [
+        'Nike', 'Adidas', 'Apple', 'Samsung', 'Sony', 'Microsoft', 'Dell', 'HP',
+        'Canon', 'Nikon', 'LG', 'Panasonic', 'Toshiba', 'Asus', 'Acer', 'Lenovo',
         'TechPro', 'StyleWear', 'HomeEssentials', 'ActiveLife', 'BeautyPlus', 'BookWorld', 'AutoMax', 'PlayTime'
       ];
 
-      for (let i = 6; i <= 1500; i++) {
+      for (let i = 9; i <= 1500; i++) {
         const category = categories[i % categories.length];
         const brand = brands[i % brands.length];
         
         expandedProducts.push({
           objectID: `esci_${i}`,
-          name: `${category} Product ${i}`,
+          name: `${brand} ${category} Product ${i}`,
           description: `High-quality ${category.toLowerCase()} product from ${brand}. Features premium materials and modern design.`,
           price: Math.floor(Math.random() * 200) + 10,
           image: `https://images.unsplash.com/photo-${1500000000000 + i}?w=300&h=300&fit=crop`,
           categories: [category],
           brand: brand,
-          url: '#',
+          url: `https://www.${brand.toLowerCase()}.com/product-${i}`,
           dataSource: 'esci'
         });
       }

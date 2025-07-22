@@ -266,74 +266,131 @@ class MainApplication {
           console.log('[Search Feedback]', message);
         };
 
-        // 統合検索の実行
+        // 統合検索の実行 - ブランド検出機能付き
         console.log('[Search] Performing multi-index search with query:', searchQuery);
+        
+        // Detect brands for initial search optimization
+        const commonBrands = [
+          'Nike', 'Adidas', 'Apple', 'Samsung', 'Sony', 'Microsoft', 'Dell', 'HP', 
+          'Canon', 'Nikon', 'LG', 'Panasonic', 'Toshiba', 'Asus', 'Acer', 'Lenovo',
+          'Intel', 'AMD', 'Nvidia', 'Google', 'Amazon', 'Facebook', 'Tesla', 'BMW',
+          'Mercedes', 'Audi', 'Toyota', 'Honda', 'Ford', 'Chevrolet', 'Puma', 'Reebok',
+          'New Balance', 'Converse', 'Vans', 'Under Armour', 'Jordan', 'Yeezy'
+        ];
+        
+        const detectedBrands = commonBrands.filter(brand => 
+          searchQuery.toLowerCase().includes(brand.toLowerCase())
+        );
+        const isBrandQuery = detectedBrands.length > 0;
+        
+        console.log('[Search] Brand detection:', { detectedBrands, isBrandQuery });
+        
         let products = await this.algoliaMCPService.searchProductsMultiIndex(
           searchQuery,
           inferredCategories.length > 0 ? inferredCategories : undefined, // カテゴリ指定がない場合は全インデックス検索
           {
             hitsPerPage: 20,
-            attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID']
+            attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'],
+            searchType: isBrandQuery ? 'brand' : 'fuzzy' // ブランド検索では厳密マッチング
           }
         );
 
         console.log('[Search] Algolia search results:', products ? products.length : 0, 'products');
         
-        // Implement fallback search strategy if no results found
+        // Implement improved multi-stage search strategy if no results found
         if (!products || products.length === 0) {
-          console.log('[Search] No products found with original query, attempting fallback searches...');
+          console.log('[Search] No products found with original query, attempting multi-stage search...');
+          
+          // Use the same searchQuery that was already constructed
+          const fallbackSearchQuery = imageAnalysis?.searchKeywords.join(' ') || query;
+          
+          if (isBrandQuery) {
+            console.log('[Search] Brand-focused query detected:', detectedBrands);
+            sendFeedback(`Searching for ${detectedBrands.join(' ')} products with exact matching...`);
+            
+            // Strategy 1: Brand exact match search (already tried in initial search, so try with stricter settings)
+            products = await this.algoliaMCPService.searchProductsMultiIndex(
+              fallbackSearchQuery,
+              inferredCategories.length > 0 ? inferredCategories : undefined,
+              {
+                hitsPerPage: 20,
+                attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'],
+                searchType: 'exact'
+              }
+            );
+            
+            console.log('[Search] Brand exact search results:', products ? products.length : 0, 'products');
+            
+            // Strategy 2: Try with brand filter if no results
+            if ((!products || products.length === 0) && detectedBrands.length > 0) {
+              const brandFilters = detectedBrands.map(brand => `brand:"${brand}"`).join(' OR ');
+              sendFeedback(`Trying brand filter search: ${detectedBrands.join(' or ')}...`);
+              
+              products = await this.algoliaMCPService.searchProductsMultiIndex(
+                query,
+                inferredCategories.length > 0 ? inferredCategories : undefined,
+                {
+                  hitsPerPage: 20,
+                  attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'],
+                  filters: brandFilters,
+                  searchType: 'exact'
+                }
+              );
+              
+              console.log('[Search] Brand filter search results:', products ? products.length : 0, 'products');
+            }
+          }
           
           // If we have image analysis keywords, try fallback searches
-          if (imageAnalysis && imageAnalysis.searchKeywords.length > 0) {
+          if (imageAnalysis && imageAnalysis.searchKeywords.length > 0 && (!products || products.length === 0)) {
             const originalKeywords = imageAnalysis.searchKeywords.join(' ');
-            sendFeedback(`No products found with analyzed keywords "${originalKeywords}". Trying broader search...`);
+            sendFeedback(`Trying broader search with "${originalKeywords}"...`);
             
-            // Strategy 1: Try generic keywords without brand names
-            const commonBrands = [
-              'Nike', 'Adidas', 'Apple', 'Samsung', 'Sony', 'Microsoft', 'Dell', 'HP', 
-              'Canon', 'Nikon', 'LG', 'Panasonic', 'Toshiba', 'Asus', 'Acer', 'Lenovo',
-              'Intel', 'AMD', 'Nvidia', 'Google', 'Amazon', 'Facebook', 'Tesla', 'BMW',
-              'Mercedes', 'Audi', 'Toyota', 'Honda', 'Ford', 'Chevrolet', 'Puma', 'Reebok',
-              'New Balance', 'Converse', 'Vans', 'Under Armour', 'Jordan', 'Yeezy'
-            ];
+            // Strategy 3: Try with brand names preserved but as boost terms
+            const allKeywords = [...imageAnalysis.searchKeywords];
+            if (!isBrandQuery || products.length === 0) {
+              const preservedBrandQuery = allKeywords.join(' ') + ' ' + query;
+              sendFeedback(`Searching with preserved brand terms: "${allKeywords.join(' ')}"...`);
+              
+              products = await this.algoliaMCPService.searchProductsMultiIndex(
+                preservedBrandQuery,
+                inferredCategories.length > 0 ? inferredCategories : undefined,
+                {
+                  hitsPerPage: 20,
+                  attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'],
+                  searchType: 'fuzzy'
+                }
+              );
+              
+              console.log('[Search] Preserved brand search results:', products ? products.length : 0, 'products');
+            }
+          }
+          
+          // Strategy 4: Category-only search
+          if ((!products || products.length === 0) && imageAnalysis?.category && imageAnalysis.category !== 'general') {
+            sendFeedback(`Switching to category search: "${imageAnalysis.category}"...`);
+            
+            products = await this.algoliaMCPService.searchProductsMultiIndex(
+              query, // Use original user query
+              [imageAnalysis.category],
+              {
+                hitsPerPage: 20,
+                attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'],
+                searchType: 'fuzzy'
+              }
+            );
+            
+            console.log('[Search] Category-only search results:', products ? products.length : 0, 'products');
+          }
+          
+          // Strategy 5: Synonym expansion (only for non-brand keywords)
+          if ((!products || products.length === 0) && imageAnalysis?.searchKeywords && imageAnalysis.searchKeywords.length > 0) {
+            // Filter out brand names for synonym search
             const genericKeywords = imageAnalysis.searchKeywords.filter(keyword => 
               !commonBrands.some(brand => keyword.toLowerCase().includes(brand.toLowerCase()))
             );
             
             if (genericKeywords.length > 0) {
-              const genericQuery = genericKeywords.join(' ') + ' ' + query;
-              sendFeedback(`Searching with generic keywords "${genericKeywords.join(' ')}" (brand names removed)...`);
-              
-              products = await this.algoliaMCPService.searchProductsMultiIndex(
-                genericQuery,
-                inferredCategories.length > 0 ? inferredCategories : undefined,
-                {
-                  hitsPerPage: 20,
-                  attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID']
-                }
-              );
-              
-              console.log('[Search] Generic keywords search results:', products ? products.length : 0, 'products');
-            }
-            
-            // Strategy 2: If still no results, try category-only search
-            if ((!products || products.length === 0) && imageAnalysis.category && imageAnalysis.category !== 'general') {
-              sendFeedback(`Switching to category search: "${imageAnalysis.category}"...`);
-              
-              products = await this.algoliaMCPService.searchProductsMultiIndex(
-                query, // Use original user query
-                [imageAnalysis.category],
-                {
-                  hitsPerPage: 20,
-                  attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID']
-                }
-              );
-              
-              console.log('[Search] Category-only search results:', products ? products.length : 0, 'products');
-            }
-            
-            // Strategy 3: Try with synonym variations
-            if ((!products || products.length === 0) && genericKeywords.length > 0) {
               const synonymMap: Record<string, string[]> = {
                 'shoes': ['footwear', 'sneakers', 'boots', 'sandals'],
                 'sneakers': ['shoes', 'trainers', 'athletic shoes'],
@@ -345,6 +402,11 @@ class MainApplication {
               };
               
               const expandedKeywords = [...genericKeywords];
+              // Add brand names back if this was a brand query
+              if (isBrandQuery) {
+                expandedKeywords.push(...detectedBrands);
+              }
+              
               genericKeywords.forEach(keyword => {
                 const synonyms = synonymMap[keyword.toLowerCase()];
                 if (synonyms) {
@@ -360,28 +422,30 @@ class MainApplication {
                 inferredCategories.length > 0 ? inferredCategories : undefined,
                 {
                   hitsPerPage: 20,
-                  attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID']
+                  attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'],
+                  searchType: 'fuzzy'
                 }
               );
               
               console.log('[Search] Synonym search results:', products ? products.length : 0, 'products');
             }
+          }
+          
+          // Strategy 6: Final fallback - all indices search (last resort)
+          if (!products || products.length === 0) {
+            sendFeedback(`Searching all categories for "${query}"...`);
             
-            // Strategy 4: If still no results, try all indices with user query only
-            if (!products || products.length === 0) {
-              sendFeedback(`Searching all categories for "${query}"...`);
-              
-              products = await this.algoliaMCPService.searchProductsMultiIndex(
-                query,
-                undefined, // Search all indices
-                {
-                  hitsPerPage: 20,
-                  attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID']
-                }
-              );
-              
-              console.log('[Search] All-categories search results:', products ? products.length : 0, 'products');
-            }
+            products = await this.algoliaMCPService.searchProductsMultiIndex(
+              query,
+              undefined, // Search all indices
+              {
+                hitsPerPage: 20,
+                attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'],
+                searchType: 'fuzzy'
+              }
+            );
+            
+            console.log('[Search] All-categories search results:', products ? products.length : 0, 'products');
           }
           
           if (!products || products.length === 0) {
