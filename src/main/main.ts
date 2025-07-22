@@ -1023,6 +1023,60 @@ class MainApplication {
       }
     })
 
+    // Sample data loader handler
+    ipcMain.handle('load-sample-data', async () => {
+      try {
+        console.log('[Main] Loading sample data into Algolia indices...');
+        const { SampleDataLoader } = require('./sample-data-loader');
+        
+        // Get Algolia API keys
+        const allKeys = await this.database.getAPIKeys();
+        const algoliaKeys = allKeys.filter(k => k.provider === 'algolia');
+        
+        if (algoliaKeys.length < 2) {
+          return { success: false, error: 'Please configure Algolia API keys first' };
+        }
+        
+        // Get decrypted keys
+        const config: any = {};
+        for (const encKey of algoliaKeys) {
+          const decrypted = encKey.encrypted_key; // Keys are stored in plain text for Algolia
+          if (decrypted.includes('applicationId')) {
+            config.applicationId = decrypted.split(':')[1];
+          } else if (decrypted.includes('writeApiKey')) {
+            config.writeApiKey = decrypted;
+          }
+        }
+        
+        // Alternative approach: get from the main process response format
+        const keysResult = await this.database.getAPIKeys();
+        const geminiKey = keysResult.find((k: any) => k.provider === 'gemini')?.encrypted_key || '';
+        
+        // Get from settings properly
+        const stmt = this.database.database.prepare(`
+          SELECT service, key, value FROM api_configs WHERE service = 'algolia'
+        `);
+        const algoliaSettings = stmt.all() as Array<{ service: string; key: string; value: string }>;
+        
+        algoliaSettings.forEach(setting => {
+          if (setting.key === 'applicationId') config.applicationId = setting.value;
+          if (setting.key === 'writeApiKey') config.writeApiKey = setting.value;
+        });
+        
+        if (!config.applicationId || !config.writeApiKey) {
+          return { success: false, error: 'Missing Algolia API configuration' };
+        }
+        
+        const loader = new SampleDataLoader(config.applicationId, config.writeApiKey);
+        await loader.loadSampleData();
+        
+        return { success: true, message: 'Sample data loaded successfully' };
+      } catch (error: any) {
+        console.error('[Main] Failed to load sample data:', error);
+        return { success: false, error: error?.message || 'Failed to load sample data' };
+      }
+    });
+
     // 破損したAPIキーを完全削除
     ipcMain.handle('delete-corrupted-api-keys', async () => {
       try {

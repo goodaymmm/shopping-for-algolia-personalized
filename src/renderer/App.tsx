@@ -430,6 +430,17 @@ function App() {
     setIsProductSidebarOpen(false);
   };
 
+  // Debug logging
+  console.log('[App] Rendering App component:', {
+    isDark,
+    currentView,
+    sessionsCount: sessions.length,
+    currentSessionId,
+    messagesCount: currentSession?.messages.length || 0,
+    isProductSidebarOpen,
+    sidebarProductsCount: sidebarProducts.length
+  });
+
   return (
     <ErrorBoundary isDark={isDark}>
       <div className="flex h-screen overflow-hidden bg-white dark:bg-gray-900">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Monitor, Moon, Sun, Type, Keyboard, Clock, Save, Database, Key, Trash2, RefreshCw, FolderOpen, FileText, Download, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Monitor, Moon, Sun, Type, Keyboard, Clock, Save, Database, Key, Trash2, RefreshCw, FolderOpen, FileText, Download, RotateCcw, Upload } from 'lucide-react';
 import { AppSettings } from '../types';
 import { Theme } from '../hooks/useTheme';
 
@@ -31,6 +31,8 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const [apiSaveMessage, setApiSaveMessage] = useState<string>('');
   const [isCleaningUp, setIsCleaningUp] = useState(false);
   const [debugInfo, setDebugInfo] = useState<string>('');
+  const [isLoadingSampleData, setIsLoadingSampleData] = useState(false);
+  const [sampleDataMessage, setSampleDataMessage] = useState<string>('');
   const [logs, setLogs] = useState<string>('');
   const [logFilePath, setLogFilePath] = useState<string>('');
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
@@ -377,6 +379,30 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     } catch (error) {
       console.error('Failed to debug API keys:', error);
       setDebugInfo('Error: ' + (error as Error).message);
+    }
+  };
+
+  const handleLoadSampleData = async () => {
+    setIsLoadingSampleData(true);
+    setSampleDataMessage('');
+    
+    try {
+      if (window.electronAPI?.loadSampleData) {
+        const result = await window.electronAPI.loadSampleData();
+        if (result.success) {
+          setSampleDataMessage('Sample data loaded successfully! You can now search for products.');
+        } else {
+          setSampleDataMessage('Failed to load sample data: ' + (result.error || 'Unknown error'));
+        }
+      } else {
+        setSampleDataMessage('Sample data loading not available');
+      }
+    } catch (error) {
+      console.error('Failed to load sample data:', error);
+      setSampleDataMessage('Error loading sample data: ' + (error as Error).message);
+    } finally {
+      setIsLoadingSampleData(false);
+      setTimeout(() => setSampleDataMessage(''), 5000);
     }
   };
 
@@ -803,7 +829,37 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   Delete Corrupted
                 </button>
               </div>
+              
+              <div className="mt-4">
+                <button
+                  onClick={handleLoadSampleData}
+                  disabled={isLoadingSampleData || !hasExistingAlgoliaKeys}
+                  className="flex items-center gap-2 px-4 py-3 rounded-xl bg-purple-500 hover:bg-purple-600 disabled:bg-purple-300 text-white transition-colors w-full"
+                >
+                  {isLoadingSampleData ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Upload className="w-4 h-4" />
+                  )}
+                  {isLoadingSampleData ? 'Loading Sample Data...' : 'Load Sample Data into Algolia'}
+                </button>
+                {!hasExistingAlgoliaKeys && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                    Please configure Algolia API keys first before loading sample data.
+                  </p>
+                )}
+              </div>
             </div>
+            
+            {sampleDataMessage && (
+              <div className={`p-3 rounded-xl text-sm font-medium transition-all ${
+                sampleDataMessage.includes('success') 
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800' 
+                  : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
+              }`}>
+                {sampleDataMessage}
+              </div>
+            )}
             
             {apiSaveMessage && (
               <div className={`p-3 rounded-xl text-sm font-medium transition-all ${

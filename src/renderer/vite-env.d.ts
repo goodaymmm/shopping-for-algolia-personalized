@@ -18,6 +18,7 @@ interface ElectronAPI {
   resetMLData?: () => Promise<{ success: boolean; error?: string }>;
   getAPIKeys?: () => Promise<{ success: boolean; keys?: Record<string, string>; error?: string }>;
   saveAPIKeys?: (keys: Record<string, string>) => Promise<{ success: boolean; error?: string }>;
+  loadSampleData?: () => Promise<{ success: boolean; message?: string; error?: string }>;
 }
 
 interface Window {

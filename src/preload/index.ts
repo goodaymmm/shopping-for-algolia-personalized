@@ -97,6 +97,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   deleteCorruptedAPIKeys: () =>
     ipcRenderer.invoke('delete-corrupted-api-keys'),
+  
+  // Load sample data into Algolia indices
+  loadSampleData: () =>
+    ipcRenderer.invoke('load-sample-data'),
 
   // Event listeners for progress tracking
   onImageAnalysisProgress: (callback: (data: { status: string; progress: number }) => void) => {

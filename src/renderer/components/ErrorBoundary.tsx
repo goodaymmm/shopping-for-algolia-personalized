@@ -45,6 +45,8 @@ export class ErrorBoundary extends Component<Props, State> {
 
     // Log error to console for development
     console.error('ErrorBoundary caught an error:', error, errorInfo);
+    console.error('Error stack:', error.stack);
+    console.error('Component stack:', errorInfo.componentStack);
     
     // In production, you might want to send this to an error reporting service
     if (process.env.NODE_ENV === 'production') {
