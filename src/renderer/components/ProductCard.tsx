@@ -28,10 +28,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const viewStartTime = useRef<number>(Date.now());
   const hasTrackedView = useRef<boolean>(false);
   
+  // Debug logging
+  console.log('[ProductCard] Rendering product:', {
+    hasProduct: !!product,
+    productId: product?.id || (product && 'product' in product ? product.product?.id : 'no-id'),
+    displayType: product && 'displayType' in product ? product.displayType : 'personalized'
+  });
+
+  if (!product) {
+    console.error('[ProductCard] Product is null/undefined');
+    return null;
+  }
+
   // Extract product data and display info
   const productData = 'product' in product ? product.product : product;
   const displayType: ProductDisplayType = 'displayType' in product ? product.displayType : 'personalized';
   const inspirationReason = 'inspirationReason' in product ? product.inspirationReason : undefined;
+
+  if (!productData) {
+    console.error('[ProductCard] Product data is null/undefined after extraction');
+    return null;
+  }
 
   // Utility function to extract domain from URL
   const getDomainFromUrl = (url: string): string => {

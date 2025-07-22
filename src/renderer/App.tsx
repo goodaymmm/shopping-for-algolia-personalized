@@ -188,7 +188,13 @@ function App() {
         }
 
         searchResult = await window.electronAPI.searchProducts(content, imageData);
-        products = searchResult.products;
+        products = searchResult.products || []; // Ensure products is always an array
+        
+        console.log('[App] Search completed:', {
+          productsCount: products.length,
+          hasImageAnalysis: !!searchResult.imageAnalysis,
+          imageAnalysisKeywords: searchResult.imageAnalysis?.keywords
+        });
         
         // Clear progress and feedback when done
         setImageAnalysisProgress(null);
@@ -200,21 +206,32 @@ function App() {
       }
       
       // Apply discovery mixing for diverse recommendations
-      let finalResults: (Product | ProductWithContext)[];
-      if (discoveryPercentage > 0 && products.length > 0) {
-        try {
-          finalResults = await outlierMixer.mixResults(products, discoveryPercentage, content);
-          console.log(`Applied ${discoveryPercentage}% discovery mixing:`, {
-            total: finalResults.length,
-            personalized: finalResults.filter(p => !('displayType' in p) || p.displayType === 'personalized').length,
-            inspiration: finalResults.filter(p => 'displayType' in p && p.displayType === 'inspiration').length
-          });
-        } catch (error) {
-          console.warn('Discovery mixing failed, using original results:', error);
-          finalResults = products;
+      let finalResults: (Product | ProductWithContext)[] = [];
+      
+      try {
+        if (products && products.length > 0) {
+          if (discoveryPercentage > 0) {
+            try {
+              finalResults = await outlierMixer.mixResults(products, discoveryPercentage, content);
+              console.log(`Applied ${discoveryPercentage}% discovery mixing:`, {
+                total: finalResults.length,
+                personalized: finalResults.filter(p => !('displayType' in p) || p.displayType === 'personalized').length,
+                inspiration: finalResults.filter(p => 'displayType' in p && p.displayType === 'inspiration').length
+              });
+            } catch (error) {
+              console.warn('Discovery mixing failed, using original results:', error);
+              finalResults = products;
+            }
+          } else {
+            finalResults = products;
+          }
+        } else {
+          console.log('[App] No products found, finalResults is empty array');
+          finalResults = [];
         }
-      } else {
-        finalResults = products;
+      } catch (error) {
+        console.error('[App] Error processing search results:', error);
+        finalResults = [];
       }
       
       // Save search results to current session (append to existing results)
@@ -438,12 +455,14 @@ function App() {
     currentSessionId,
     messagesCount: currentSession?.messages.length || 0,
     isProductSidebarOpen,
-    sidebarProductsCount: sidebarProducts.length
+    sidebarProductsCount: sidebarProducts.length,
+    currentSession: currentSession ? 'exists' : 'null'
   });
 
-  return (
-    <ErrorBoundary isDark={isDark}>
-      <div className="flex h-screen overflow-hidden bg-white dark:bg-gray-900">
+  try {
+    return (
+      <ErrorBoundary isDark={isDark}>
+        <div className="flex h-screen overflow-hidden bg-white dark:bg-gray-900">
         <Sidebar
           sessions={sessions}
           currentSessionId={currentSessionId}
@@ -523,6 +542,24 @@ function App() {
       </div>
     </ErrorBoundary>
   );
+  } catch (error) {
+    console.error('[App] Render error:', error);
+    console.error('[App] Error stack:', (error as Error).stack);
+    // Fallback UI
+    return (
+      <div className="flex h-screen items-center justify-center bg-white dark:bg-gray-900">
+        <div className="text-center p-8">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Rendering Error</h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            An error occurred while rendering the application.
+          </p>
+          <pre className="text-sm text-left bg-gray-100 dark:bg-gray-800 p-4 rounded">
+            {(error as Error).message}
+          </pre>
+        </div>
+      </div>
+    );
+  }
 }
 
 export default App;

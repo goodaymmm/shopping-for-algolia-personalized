@@ -24,6 +24,16 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Debug logging
+  console.log('[ChatContainer] Rendering with:', {
+    messagesCount: messages?.length || 0,
+    isLoading,
+    isDark,
+    hasSaveMessage: !!saveMessage,
+    hasImageAnalysisProgress: !!imageAnalysisProgress,
+    hasSearchFeedback: !!searchFeedback
+  });
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };

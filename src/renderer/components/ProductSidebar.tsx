@@ -27,6 +27,14 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
   savedProductIds = new Set(),
   isDark
 }) => {
+  // Debug logging
+  console.log('[ProductSidebar] Rendering with:', {
+    productsCount: products?.length || 0,
+    isOpen,
+    savedProductIdsCount: savedProductIds?.size || 0,
+    isDark
+  });
+
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     // Load saved width from localStorage, default to 600px

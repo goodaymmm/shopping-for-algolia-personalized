@@ -13,6 +13,19 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   showTimestamp, 
   isDark 
 }) => {
+  // Debug logging
+  console.log('[ChatMessage] Rendering message:', {
+    id: message?.id,
+    sender: message?.sender,
+    hasContent: !!message?.content,
+    hasImage: !!message?.image
+  });
+
+  if (!message) {
+    console.error('[ChatMessage] Message is null/undefined');
+    return null;
+  }
+
   const isUser = message.sender === 'user';
 
   return (
