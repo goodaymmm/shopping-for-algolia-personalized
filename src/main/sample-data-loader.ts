@@ -55,7 +55,10 @@ export class SampleDataLoader {
       'mens-shoes', 'mens-watches', 'womens-watches', 'womens-bags', 
       'womens-jewellery', 'sunglasses',
       // Fake Store
-      'jewelery', "men's clothing", "women's clothing"
+      'jewelery', "men's clothing", "women's clothing",
+      // Sports footwear that should be in fashion
+      'Footwear', 'Basketball', 'Sports > Footwear', 'Running',
+      'Athletic Shoes', 'Sneakers', 'Trainers', 'Sports Shoes'
     ],
     'home': [
       // Best Buy
@@ -206,7 +209,7 @@ export class SampleDataLoader {
         image: item.image_urls?.[0] || this.getDefaultImage(),
         categories: item.list_categories || [item.product_type] || [],
         brand: item.brand || '',
-        url: '',
+        url: item.url || `https://fashion.example.com/product/${item.objectID || item.parentID || Math.random()}`,
         dataSource: 'fashion'
       }));
 

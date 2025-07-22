@@ -379,8 +379,7 @@ export class AlgoliaMCPService {
             ...baseRequest,
             typoTolerance: 'min',
             minWordSizefor1Typo: 10,
-            minWordSizefor2Typo: 12,
-            disableTypoToleranceOnWords: query.split(' ')
+            minWordSizefor2Typos: 12
           };
         } else if (searchType === 'brand') {
           // ブランド検索設定
@@ -392,9 +391,8 @@ export class AlgoliaMCPService {
           return {
             ...baseRequest,
             typoTolerance: isBrandQuery ? 'min' : 'strict',
-            disableTypoToleranceOnWords: isBrandQuery ? [query] : [],
             minWordSizefor1Typo: 8,
-            minWordSizefor2Typo: 10
+            minWordSizefor2Typos: 10
           };
         }
         
@@ -520,7 +518,7 @@ export class AlgoliaMCPService {
             attributesToSnippet: ['description:20'],
             typoTolerance: 'min',  // タイポ許容を最小化
             minWordSizefor1Typo: 8,
-            minWordSizefor2Typo: 10,
+            minWordSizefor2Typos: 10,
             disableTypoToleranceOnAttributes: ['brand'], // ブランド属性ではタイポ許容を無効
             exactOnSingleWordQuery: 'word'  // 単一単語クエリでは完全一致を優先
           };
