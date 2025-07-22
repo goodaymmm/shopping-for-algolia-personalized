@@ -489,7 +489,6 @@ class MainApplication {
             /^https?:\/\/(localhost|127\.0\.0\.1)/,  // localhost URLs
             /\.(tmp|temp)$/i,                        // temporary file extensions
             /\/temp\//i,                             // temp directories
-            /example\.com/i                          // example domains
           ];
           
           // Check both image and URL for invalid patterns
@@ -1027,7 +1026,7 @@ class MainApplication {
     ipcMain.handle('load-sample-data', async () => {
       try {
         console.log('[Main] Loading sample data into Algolia indices...');
-        const { SampleDataLoader } = require('./sample-data-loader');
+        const { RealDataLoader } = require('./real-data-loader');
         
         // Get Algolia API keys
         const allKeys = await this.database.getAPIKeys();
@@ -1067,8 +1066,8 @@ class MainApplication {
           return { success: false, error: 'Missing Algolia API configuration' };
         }
         
-        const loader = new SampleDataLoader(config.applicationId, config.writeApiKey);
-        await loader.loadSampleData();
+        const loader = new RealDataLoader(config.applicationId, config.writeApiKey);
+        await loader.loadRealData();
         
         return { success: true, message: 'Sample data loaded successfully' };
       } catch (error: any) {
