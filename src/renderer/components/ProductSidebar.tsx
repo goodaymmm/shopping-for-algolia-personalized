@@ -78,7 +78,7 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
   }, [isResizing]);
 
   // Group products by search session
-  const productsBySession = products.reduce((acc, product) => {
+  const productsBySession = (products || []).reduce((acc, product) => {
     // Extract search session from either Product or ProductWithContext
     const searchSession = 'searchSession' in product ? product.searchSession : 
                          ('product' in product && product.product.searchSession ? product.product.searchSession : null);
@@ -304,10 +304,10 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
               {/* Search Session Groups */}
               {sessionGroups.map((group, groupIndex) => {
                 const isCollapsed = collapsedSections.has(group.session.sessionId);
-                const personalizedProducts = group.products.filter(p => 
+                const personalizedProducts = (group.products || []).filter(p => 
                   !('displayType' in p) || p.displayType === 'personalized'
                 );
-                const inspirationProducts = group.products.filter(p => 
+                const inspirationProducts = (group.products || []).filter(p => 
                   'displayType' in p && p.displayType === 'inspiration'
                 );
 
@@ -355,7 +355,7 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
                                 ? 'bg-gray-700 text-gray-300'
                                 : 'bg-gray-200 text-gray-600'
                             }`}>
-                              {group.products.length} items
+                              {(group.products || []).length} items
                             </span>
                             {isCollapsed ? (
                               <ChevronRight className="w-4 h-4 text-gray-400" />

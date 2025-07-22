@@ -23,14 +23,14 @@ export class SampleDataLoader {
   
   // カテゴリ別の目標データ数
   private readonly DISTRIBUTION = {
-    'products': 800,      // Reduced to make room for ESCI
-    'electronics': 800,   // Reduced to make room for ESCI
-    'fashion': 800,       // Reduced to make room for ESCI
-    'home': 700,          // Increased (ESCI has many home products)
-    'books': 400,         // Slightly increased
-    'sports': 400,        // Slightly increased (ESCI covers these well)
-    'beauty': 400,        // Slightly increased
-    'food': 400           // Slightly increased
+    'products': 1000,     // Increased to catch more unclassified products
+    'electronics': 800,   // Keep as is
+    'fashion': 1000,      // Increased to accommodate Nike and other footwear
+    'home': 600,          // Reduced slightly
+    'books': 300,         // Reduced (has only 186 products)
+    'sports': 200,        // Reduced (pure sports equipment only)
+    'beauty': 300,        // Reduced (has only 215 products)
+    'food': 300           // Reduced but increased from actual (only has 2)
   };
 
   // 包括的カテゴリマッピング
@@ -84,9 +84,8 @@ export class SampleDataLoader {
       'Fitness & Sports', 'Outdoor Recreation', 'Sports & Fitness',
       'Exercise & Fitness',
       // DummyJSON
-      'motorcycle',
-      // スポーツシューズ関連
-      'Sneakers'
+      'motorcycle'
+      // Sneakers removed - now in fashion category
     ],
     'books': [
       // Best Buy
@@ -452,14 +451,34 @@ export class SampleDataLoader {
     // すべてのテキストを結合して検索
     const searchText = [...productCategories, productName, productDescription].join(' ');
 
-    // カテゴリマッピングでマッチング
+    // 複数カテゴリがマッチする可能性があるため、すべてのマッチを収集
+    const matchedCategories: string[] = [];
+    
     for (const [targetCategory, keywords] of Object.entries(this.CATEGORY_MAPPINGS)) {
       if (keywords.some(keyword => 
         searchText.includes(keyword.toLowerCase()) ||
         productCategories.some(cat => cat.includes(keyword.toLowerCase()))
       )) {
-        return targetCategory;
+        matchedCategories.push(targetCategory);
       }
+    }
+
+    // 優先順位の実装
+    // 1. Footwear/Shoesを含む場合はfashionを優先
+    if (matchedCategories.includes('fashion') && 
+        (searchText.includes('footwear') || searchText.includes('shoe') || 
+         searchText.includes('sneaker') || searchText.includes('basketball'))) {
+      return 'fashion';
+    }
+    
+    // 2. 複数マッチの場合は、fashionを優先（Nike等のブランド製品のため）
+    if (matchedCategories.includes('fashion')) {
+      return 'fashion';
+    }
+    
+    // 3. その他の場合は最初にマッチしたカテゴリ
+    if (matchedCategories.length > 0) {
+      return matchedCategories[0];
     }
 
     return 'products'; // デフォルトカテゴリ
