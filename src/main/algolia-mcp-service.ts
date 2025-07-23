@@ -567,33 +567,44 @@ export class AlgoliaMCPService {
   // 初回のみサンプルデータを投入
   private async loadSampleDataIfNeeded(): Promise<void> {
     try {
-      // productsインデックスでデータの存在を確認
-      const response = await fetch(
-        `https://${this.multiSearchConfig!.applicationId}-dsn.algolia.net/1/indexes/products/search`,
-        {
-          method: 'POST',
-          headers: {
-            'X-Algolia-API-Key': this.multiSearchConfig!.apiKey,
-            'X-Algolia-Application-Id': this.multiSearchConfig!.applicationId,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            query: '',
-            hitsPerPage: 1
-          })
-        }
-      );
+      // 主要なインデックスのデータ存在を確認
+      const indicesToCheck = ['fashion', 'electronics', 'products'];
+      let totalHits = 0;
+      
+      for (const indexName of indicesToCheck) {
+        try {
+          const response = await fetch(
+            `https://${this.multiSearchConfig!.applicationId}-dsn.algolia.net/1/indexes/${indexName}/search`,
+            {
+              method: 'POST',
+              headers: {
+                'X-Algolia-API-Key': this.multiSearchConfig!.apiKey,
+                'X-Algolia-Application-Id': this.multiSearchConfig!.applicationId,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                query: '',
+                hitsPerPage: 1
+              })
+            }
+          );
 
-      if (response.ok) {
-        const searchResult = await response.json() as { nbHits: number };
-        if (searchResult.nbHits > 0) {
-          console.log('[AlgoliaMCP] Data already exists in index, skipping import');
-          return;
+          if (response.ok) {
+            const searchResult = await response.json() as { nbHits: number };
+            totalHits += searchResult.nbHits;
+            console.log(`[AlgoliaMCP] Index '${indexName}' has ${searchResult.nbHits} products`);
+          }
+        } catch (error) {
+          console.warn(`[AlgoliaMCP] Failed to check index '${indexName}':`, error);
         }
-        console.log('[AlgoliaMCP] Index is empty (nbHits: 0), proceeding with data import...');
-      } else {
-        console.log('[AlgoliaMCP] Failed to check index status, proceeding with data import...');
       }
+
+      if (totalHits > 0) {
+        console.log(`[AlgoliaMCP] Data already exists across indices (total: ${totalHits} products), skipping import`);
+        return;
+      }
+
+      console.log('[AlgoliaMCP] All indices are empty, proceeding with data import...');
 
       // データが存在しない場合、最適化されたデータを投入
       console.log('[AlgoliaMCP] No data found, starting optimized data import...');

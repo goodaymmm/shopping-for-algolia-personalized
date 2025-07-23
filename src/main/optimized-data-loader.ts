@@ -26,31 +26,110 @@ interface OptimizedProduct {
   url: string;          // Product URL
 }
 
+// Best Buy product interface
+interface BestBuyProduct {
+  name: string;
+  description: string;
+  brand: string;
+  categories: string[];
+  hierarchicalCategories: {
+    lvl0: string;
+    lvl1?: string;
+    lvl2?: string;
+    lvl3?: string;
+  };
+  type: string;
+  price: number;
+  price_range: string;
+  image: string;
+  url: string;
+  free_shipping: boolean;
+  popularity: number;
+  rating: number;
+  objectID: string;
+}
+
+// Fashion product interface
+interface FashionProduct {
+  available_sizes: string[];
+  brand: string;
+  category_page_id: string[];
+  color: {
+    filter_group: string;
+    original_name: string;
+  };
+  created_at: number;
+  description: string;
+  gender: string;
+  hierarchical_categories: {
+    lvl0: string;
+    lvl1: string;
+    lvl2: string;
+  };
+  image_blurred: string;
+  image_urls: string[];
+  list_categories: string[];
+  name: string;
+  objectID: string;
+  parentID: string;
+  price: {
+    currency: string;
+    discount_level: number;
+    discounted_value: number;
+    on_sales: boolean;
+    value: number;
+  };
+  product_type: string;
+  related_products: any;
+  reviews: {
+    bayesian_avg: number;
+    count: number;
+    rating: number;
+  };
+  sku: string;
+  slug: string;
+  units_in_stock: number;
+  updated_at: number;
+  variants: any[];
+}
+
 export class OptimizedDataLoader {
   private readonly applicationId: string;
   private readonly writeApiKey: string;
   private readonly dataPath: string;
 
-  // カテゴリ別の目標数（前処理で作成されたデータ構成に合わせる）
+  // データソース別の上限と全体目標（8,849件）
+  private readonly DATA_SOURCE_LIMITS = {
+    amazon: 6270,     // Amazon Reviews 2023 (変更なし)
+    bestBuy: 2000,    // Best Buy dataset (10,000から選択)
+    fashion: 579      // Fashion Products (1,787から選択、品質基準適用後)
+  };
+
+  // カテゴリ別の目標数（マルチデータソース対応）
   private readonly CATEGORY_TARGETS = {
-    fashion: 3000,      // 40%
-    electronics: 2000,  // 30%
-    other: 2000,        // 30%
-    beauty: 0,          // Algoliaインデックス用（空）
-    sports: 0,          // Algoliaインデックス用（空）
-    books: 0,           // Algoliaインデックス用（空）
-    home: 0,            // Algoliaインデックス用（空）
-    food: 0,            // Algoliaインデックス用（空）
-    products: 0         // Algoliaインデックス用（空）
+    fashion: 3500,      // Amazon fashion + Fashion Products + Best Buy fashion
+    electronics: 3500,  // Amazon electronics + Best Buy electronics
+    products: 2000,     // その他の商品
+    beauty: 0,          // Algoliaインデックス用（将来拡張用）
+    sports: 0,          // Algoliaインデックス用（将来拡張用）
+    books: 0,           // Algoliaインデックス用（将来拡張用）
+    home: 0,            // Algoliaインデックス用（将来拡張用）
+    food: 0             // Algoliaインデックス用（将来拡張用）
   };
 
   constructor(applicationId: string, writeApiKey: string) {
     this.applicationId = applicationId;
     this.writeApiKey = writeApiKey;
     
-    // Electronのapp.isPackagedを使用して環境を判定
-    const { app } = require('electron');
-    const isPackaged = app.isPackaged;
+    // Electronのapp.isPackagedを使用して環境を判定（エラーハンドリング付き）
+    let isPackaged = false;
+    try {
+      const { app } = require('electron');
+      isPackaged = app.isPackaged;
+    } catch (error) {
+      // 開発時やテスト時にElectronが利用できない場合はfalseとする
+      isPackaged = false;
+    }
     
     // パッケージ環境では app.asar の外側の src/data を参照
     // 開発環境では src/data を直接参照
@@ -62,30 +141,65 @@ export class OptimizedDataLoader {
   }
 
   async loadOptimizedData(): Promise<void> {
-    console.log('[OptimizedDataLoader] Starting optimized data import...');
+    console.log('[OptimizedDataLoader] Starting multi-source optimized data import...');
     
     try {
       // Clear all indices first
       await this.clearAllIndices();
       
-      // Load preprocessed data
-      const allProducts = this.loadPreprocessedData();
-      console.log(`[OptimizedDataLoader] Loaded ${allProducts.length} preprocessed products`);
-
-      // Convert to Algolia format
-      const algoliaProducts = this.convertToAlgoliaFormat(allProducts);
-      console.log(`[OptimizedDataLoader] Converted ${algoliaProducts.length} products for Algolia`);
+      // Load data from all sources
+      const allProducts = await this.loadMultiSourceData();
+      console.log(`[OptimizedDataLoader] Loaded ${allProducts.length} products from all sources`);
 
       // Upload to indices
-      await this.uploadToIndices(algoliaProducts);
+      await this.uploadToIndices(allProducts);
       
-      console.log('[OptimizedDataLoader] Optimized data import completed successfully!');
+      console.log('[OptimizedDataLoader] Multi-source optimized data import completed successfully!');
     } catch (error) {
-      console.error('[OptimizedDataLoader] Error during optimized data import:', error);
+      console.error('[OptimizedDataLoader] Error during multi-source optimized data import:', error);
       throw error;
     }
   }
 
+  // 新しいマルチソースデータローダー
+  private async loadMultiSourceData(): Promise<Product[]> {
+    const allProducts: Product[] = [];
+
+    try {
+      // 1. Amazon Reviews 2023データ（既存のOptimizedProduct形式）
+      console.log('[OptimizedDataLoader] Loading Amazon Reviews 2023 data...');
+      const amazonProducts = this.loadPreprocessedData();
+      const convertedAmazonProducts = this.convertToAlgoliaFormat(amazonProducts);
+      allProducts.push(...convertedAmazonProducts.slice(0, this.DATA_SOURCE_LIMITS.amazon));
+      console.log(`[OptimizedDataLoader] Loaded ${convertedAmazonProducts.length} Amazon products`);
+
+      // 2. Best Buyデータ
+      console.log('[OptimizedDataLoader] Loading Best Buy data...');
+      const bestBuyProducts = this.loadBestBuyData();
+      allProducts.push(...bestBuyProducts.slice(0, this.DATA_SOURCE_LIMITS.bestBuy));
+      console.log(`[OptimizedDataLoader] Loaded ${bestBuyProducts.length} Best Buy products`);
+
+      // 3. Fashion Productsデータ
+      console.log('[OptimizedDataLoader] Loading Fashion Products data...');
+      const fashionProducts = this.loadFashionData();
+      allProducts.push(...fashionProducts.slice(0, this.DATA_SOURCE_LIMITS.fashion));
+      console.log(`[OptimizedDataLoader] Loaded ${fashionProducts.length} Fashion products`);
+
+      console.log(`[OptimizedDataLoader] Total products loaded: ${allProducts.length}`);
+      
+      return allProducts;
+      
+    } catch (error) {
+      console.error('[OptimizedDataLoader] Error loading multi-source data:', error);
+      console.log('[OptimizedDataLoader] Falling back to Amazon data only...');
+      
+      // フォールバック: Amazonデータのみ
+      const amazonProducts = this.loadPreprocessedData();
+      return this.convertToAlgoliaFormat(amazonProducts);
+    }
+  }
+
+  // 従来のAmazonデータローダー（後方互換性のため維持）
   private loadPreprocessedData(): OptimizedProduct[] {
     try {
       // Try to load main products file first
@@ -109,17 +223,17 @@ export class OptimizedDataLoader {
           const rawData = readFileSync(filePath, 'utf-8');
           const categoryProducts = JSON.parse(rawData) as OptimizedProduct[];
           allProducts.push(...categoryProducts);
-          console.log(`[OptimizedDataLoader] Loaded ${categoryProducts.length} products from ${filename}`);
+          console.log(`[OptimizedDataLoader] Loaded ${categoryProducts.length} Amazon products from ${filename}`);
         } else {
-          console.warn(`[OptimizedDataLoader] File not found: ${filename}`);
+          console.warn(`[OptimizedDataLoader] Amazon file not found: ${filename}`);
         }
       }
       
       return allProducts;
       
     } catch (error) {
-      console.error('[OptimizedDataLoader] Error loading preprocessed data:', error);
-      console.log('[OptimizedDataLoader] Falling back to empty dataset...');
+      console.error('[OptimizedDataLoader] Error loading Amazon preprocessed data:', error);
+      console.log('[OptimizedDataLoader] Falling back to empty Amazon dataset...');
       return [];
     }
   }
@@ -134,7 +248,7 @@ export class OptimizedDataLoader {
 
   private convertToAlgoliaFormat(optimizedProducts: OptimizedProduct[]): Product[] {
     return optimizedProducts.map((product, index) => ({
-      objectID: product.asin || product.id,
+      objectID: `amazon_${product.asin || product.id}`,
       name: product.title,
       description: `${product.brand} ${product.title}`,
       price: Math.round(product.price),
@@ -147,6 +261,78 @@ export class OptimizedDataLoader {
     }));
   }
 
+  // Best Buyデータローダー
+  private loadBestBuyData(): Product[] {
+    try {
+      const dataPath = join(this.dataPath, 'bestbuy-products.json');
+      
+      if (!this.fileExists(dataPath)) {
+        console.warn('[OptimizedDataLoader] Best Buy data file not found at:', dataPath);
+        return [];
+      }
+      
+      const rawData = readFileSync(dataPath, 'utf-8');
+      const bestBuyData: BestBuyProduct[] = JSON.parse(rawData);
+      
+      console.log(`[OptimizedDataLoader] Loaded ${bestBuyData.length} pre-filtered Best Buy products`);
+      
+      // Algolia Product形式に変換（既にフィルタリング済みなのでそのまま使用）
+      return bestBuyData.map(product => ({
+        objectID: `bestbuy_${product.objectID}`,
+        name: product.name,
+        description: product.description,
+        price: Math.round(product.price),
+        salePrice: Math.random() > 0.7 ? Math.round(product.price * 0.9) : undefined,
+        image: product.image,
+        categories: this.categorizeBestBuyProduct(product),
+        brand: product.brand,
+        url: product.url,
+        sourceIndex: this.categorizeBestBuyForIndex(product)
+      }));
+      
+    } catch (error) {
+      console.error('[OptimizedDataLoader] Error loading Best Buy data:', error);
+      return [];
+    }
+  }
+
+  // Fashion Productsデータローダー
+  private loadFashionData(): Product[] {
+    try {
+      const dataPath = join(this.dataPath, 'fashion-products.json');
+      
+      if (!this.fileExists(dataPath)) {
+        console.warn('[OptimizedDataLoader] Fashion Products data file not found at:', dataPath);
+        return [];
+      }
+      
+      const rawData = readFileSync(dataPath, 'utf-8');
+      const fashionData: FashionProduct[] = JSON.parse(rawData);
+      
+      console.log(`[OptimizedDataLoader] Loaded ${fashionData.length} pre-filtered Fashion products`);
+      
+      // Algolia Product形式に変換（既にフィルタリング済みなのでそのまま使用）
+      return fashionData.map(product => ({
+        objectID: `fashion_${product.objectID}`,
+        name: product.name,
+        description: product.description || `${product.brand} ${product.product_type}`,
+        price: Math.round(product.price.value),
+        salePrice: product.price.on_sales ? Math.round(product.price.discounted_value || product.price.value * 0.85) : undefined,
+        image: product.image_urls[0],
+        categories: this.categorizeFashionProduct(product),
+        brand: product.brand,
+        color: product.color?.original_name,
+        url: `https://example-fashion-store.com/products/${product.slug}`,
+        sourceIndex: 'fashion'
+      }));
+      
+    } catch (error) {
+      console.error('[OptimizedDataLoader] Error loading Fashion data:', error);
+      return [];
+    }
+  }
+
+  // カテゴリマッピングヘルパー
   private mapCategoryToAlgolia(category: string): string {
     switch (category) {
       case 'fashion':
@@ -157,6 +343,78 @@ export class OptimizedDataLoader {
       default:
         return 'products';
     }
+  }
+
+  // Best Buy商品のカテゴリ分類
+  private categorizeBestBuyProduct(product: BestBuyProduct): string[] {
+    const categories = [...product.categories];
+    const name = product.name.toLowerCase();
+    const type = product.type?.toLowerCase() || '';
+    
+    // ブランドを追加
+    if (product.brand) {
+      categories.push(product.brand);
+    }
+    
+    // 階層カテゴリから推論
+    if (product.hierarchicalCategories) {
+      if (product.hierarchicalCategories.lvl0) categories.push(product.hierarchicalCategories.lvl0);
+      if (product.hierarchicalCategories.lvl1) {
+        const level1 = product.hierarchicalCategories.lvl1.split(' > ').pop();
+        if (level1) categories.push(level1);
+      }
+    }
+    
+    return [...new Set(categories.filter(cat => cat && cat.length > 0))];
+  }
+
+  // Best Buy商品のインデックス分類
+  private categorizeBestBuyForIndex(product: BestBuyProduct): string {
+    const name = product.name.toLowerCase();
+    const categories = product.categories.map(cat => cat.toLowerCase()).join(' ');
+    const type = product.type?.toLowerCase() || '';
+    
+    // エレクトロニクス
+    if (name.match(/phone|laptop|computer|tv|television|monitor|camera|headphone|tablet|gaming|console|software/) ||
+        categories.match(/electronic|computer|mobile|gaming|camera|tv|audio|software/) ||
+        type.match(/hardgood|software/)) {
+      return 'electronics';
+    }
+    
+    // ファッション（衣類、靴、アクセサリー）
+    if (name.match(/shoe|sneaker|clothing|shirt|jacket|watch|jewelry|accessory/) ||
+        categories.match(/clothing|shoes|accessories|jewelry|watch/)) {
+      return 'fashion';
+    }
+    
+    return 'products';
+  }
+
+  // Fashion商品のカテゴリ分類
+  private categorizeFashionProduct(product: FashionProduct): string[] {
+    const categories = [...product.list_categories];
+    
+    // ブランドを追加
+    if (product.brand) {
+      categories.push(product.brand);
+    }
+    
+    // 色を追加
+    if (product.color?.original_name) {
+      categories.push(product.color.original_name);
+    }
+    
+    // 商品タイプを追加
+    if (product.product_type) {
+      categories.push(product.product_type);
+    }
+    
+    // 性別を追加
+    if (product.gender) {
+      categories.push(product.gender);
+    }
+    
+    return [...new Set(categories.filter(cat => cat && cat.length > 0))];
   }
 
   private async clearAllIndices(): Promise<void> {
