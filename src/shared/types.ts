@@ -73,6 +73,16 @@ export interface IPCSearchResult {
     category?: string
     searchQuery: string
   }
+  constraints?: {
+    priceRange?: {
+      min?: number
+      max?: number
+    }
+    colors?: string[]
+    styles?: string[]
+    gender?: string
+    applied: boolean
+  }
 }
 
 // Product types

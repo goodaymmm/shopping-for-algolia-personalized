@@ -41,6 +41,8 @@ function App() {
   const [sidebarProducts, setSidebarProducts] = useState<(Product | ProductWithContext)[]>([]);
   const [isProductSidebarOpen, setIsProductSidebarOpen] = useState(false);
   const [searchFeedback, setSearchFeedback] = useState<string | null>(null);
+  const [lastSearchResult, setLastSearchResult] = useState<IPCSearchResult | null>(null);
+  const [lastSearchQuery, setLastSearchQuery] = useState<string>('');
   const [sidebarWidth, setSidebarWidth] = useState(600); // Default width
 
   // Get search results from current session and update sidebar products
@@ -193,8 +195,13 @@ function App() {
         console.log('[App] Search completed:', {
           productsCount: products.length,
           hasImageAnalysis: !!searchResult.imageAnalysis,
-          imageAnalysisKeywords: searchResult.imageAnalysis?.keywords
+          imageAnalysisKeywords: searchResult.imageAnalysis?.keywords,
+          hasConstraints: !!searchResult.constraints
         });
+        
+        // Store the search result and query for display
+        setLastSearchResult(searchResult);
+        setLastSearchQuery(content);
         
         // Clear progress and feedback when done
         setImageAnalysisProgress(null);
@@ -492,6 +499,8 @@ function App() {
                 saveMessage={saveMessage}
                 imageAnalysisProgress={imageAnalysisProgress}
                 searchFeedback={searchFeedback}
+                lastSearchResult={lastSearchResult}
+                lastSearchQuery={lastSearchQuery}
               />
               <ChatInput 
                 onSendMessage={handleSendMessage}

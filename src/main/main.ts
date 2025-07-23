@@ -7,6 +7,7 @@ import { AlgoliaMCPService } from './algolia-mcp-service'
 import { Logger } from './logger'
 import { copyFileSync, existsSync } from 'fs'
 import { SearchSession, IPCSearchResult } from '../shared/types'
+import { NaturalLanguageParser, ParsedConstraints } from './natural-language-parser'
 
 class MainApplication {
   private mainWindow: BrowserWindow | null = null
@@ -15,9 +16,11 @@ class MainApplication {
   private geminiService: GeminiService
   private algoliaMCPService: AlgoliaMCPService
   private logger: Logger
+  private nlpParser: NaturalLanguageParser
 
   constructor() {
     this.logger = Logger.getInstance()
+    this.nlpParser = new NaturalLanguageParser()
     this.database = new DatabaseService()
     this.personalization = new PersonalizationEngine(this.database.database)
     this.geminiService = new GeminiService()
@@ -83,6 +86,11 @@ class MainApplication {
       try {
         let searchQuery = query;
         let imageAnalysis: ImageAnalysis | null = null;
+        let searchConstraints: ParsedConstraints | undefined;
+
+        // Parse natural language constraints from query (for both image and text searches)
+        searchConstraints = this.nlpParser.parse(query);
+        console.log('[Search] Parsed constraints:', searchConstraints);
 
         // If image data is provided, analyze it with Gemini API
         if (imageData) {
@@ -109,16 +117,27 @@ class MainApplication {
                 console.log(`[Search] Analysis progress: ${status} (${progress}%)`);
               });
               
-              // Enhance search query with image analysis keywords
+              // Use image keywords as primary search terms
               const originalQuery = searchQuery;
-              searchQuery = imageAnalysis.searchKeywords.join(' ') + ' ' + query;
-              console.log('[Search] Enhanced search query:', originalQuery, '->', searchQuery);
-              console.log('[Search] Image analysis keywords:', imageAnalysis.searchKeywords);
+              searchQuery = imageAnalysis.searchKeywords.join(' ');
+              console.log('[Search] Using image keywords for search:', searchQuery);
+              console.log('[Search] Natural language constraints will be applied after search');
             } else {
               console.warn('[Search] Gemini API key not available, skipping image analysis');
             }
           } catch (error) {
             console.warn('[Search] Gemini image analysis failed, continuing with text search:', error);
+          }
+        } else {
+          // For text-only searches, extract product keywords and clean the query
+          if (searchConstraints?.productKeywords && searchConstraints.productKeywords.length > 0) {
+            // Use extracted product keywords as the primary search query
+            searchQuery = searchConstraints.productKeywords.join(' ');
+            console.log('[Search] Using extracted product keywords:', searchQuery);
+          } else {
+            // Clean the query by removing constraint terms
+            searchQuery = this.nlpParser.cleanQuery(query, searchConstraints || {});
+            console.log('[Search] Cleaned search query:', searchQuery);
           }
         }
 
@@ -501,6 +520,70 @@ class MainApplication {
         console.log(`[Search] Filtered ${products.length - validProducts.length} products with invalid images/URLs, ${validProducts.length} remain`);
         products = validProducts;
 
+        // Apply constraint filtering if we have parsed constraints
+        if (searchConstraints && products.length > 0) {
+          console.log('[Search] Applying constraint filters...');
+          const constraintFilteredProducts = products.filter((product: any) => {
+            // Price filtering
+            if (searchConstraints.priceRange) {
+              const price = product.salePrice || product.price;
+              if (searchConstraints.priceRange.min !== undefined && price < searchConstraints.priceRange.min) {
+                return false;
+              }
+              if (searchConstraints.priceRange.max !== undefined && price > searchConstraints.priceRange.max) {
+                return false;
+              }
+            }
+
+            // Color filtering (check in product name and description)
+            if (searchConstraints.colors && searchConstraints.colors.length > 0) {
+              const productText = `${product.name} ${product.description || ''}`.toLowerCase();
+              const hasMatchingColor = searchConstraints.colors.some(color => 
+                productText.includes(color.toLowerCase())
+              );
+              if (!hasMatchingColor) {
+                return false;
+              }
+            }
+
+            // Gender filtering
+            if (searchConstraints.gender) {
+              const productText = `${product.name} ${product.description || ''} ${(product.categories || []).join(' ')}`.toLowerCase();
+              const genderTerms = {
+                men: ["men's", "mens", "men", "male"],
+                women: ["women's", "womens", "women", "female", "ladies"],
+                unisex: ["unisex", "unisex"]
+              };
+              const hasGenderMatch = genderTerms[searchConstraints.gender].some(term => 
+                productText.includes(term)
+              );
+              if (!hasGenderMatch) {
+                return false;
+              }
+            }
+
+            // Style filtering
+            if (searchConstraints.styles && searchConstraints.styles.length > 0) {
+              const productText = `${product.name} ${product.description || ''}`.toLowerCase();
+              const hasMatchingStyle = searchConstraints.styles.some(style => 
+                productText.includes(style.toLowerCase())
+              );
+              // Styles are more flexible, so only filter if no match and it's a specific style
+              if (!hasMatchingStyle && !searchConstraints.styles.includes('similar style')) {
+                return false;
+              }
+            }
+
+            return true;
+          });
+
+          console.log(`[Search] Constraint filtering: ${products.length} -> ${constraintFilteredProducts.length} products`);
+          if (searchConstraints.priceRange) {
+            console.log(`[Search] Price range applied: $${searchConstraints.priceRange.min || 0} - $${searchConstraints.priceRange.max || '∞'}`);
+          }
+          products = constraintFilteredProducts;
+        }
+
         // Apply personalization scoring if we have ML data
         console.log('[Search] Checking user profile for personalization...');
         const userProfile = await this.personalization.getUserProfile();
@@ -580,6 +663,13 @@ class MainApplication {
             keywords: imageAnalysis.searchKeywords,
             category: imageAnalysis.category,
             searchQuery: imageAnalysis.searchKeywords.join(' ')
+          } : undefined,
+          constraints: searchConstraints ? {
+            priceRange: searchConstraints.priceRange,
+            colors: searchConstraints.colors,
+            styles: searchConstraints.styles,
+            gender: searchConstraints.gender,
+            applied: true
           } : undefined
         };
 

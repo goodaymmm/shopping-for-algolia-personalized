@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { ChatMessage } from './ChatMessage';
-import { Message, ImageAnalysisProgress } from '../types';
+import { SearchAnalysisDisplay } from './SearchAnalysisDisplay';
+import { Message, ImageAnalysisProgress, IPCSearchResult } from '../types';
 import { Sparkles, Clock, Loader } from 'lucide-react';
 
 interface ChatContainerProps {
@@ -11,6 +12,8 @@ interface ChatContainerProps {
   saveMessage?: { type: 'success' | 'error'; text: string } | null;
   imageAnalysisProgress?: ImageAnalysisProgress | null;
   searchFeedback?: string | null;
+  lastSearchResult?: IPCSearchResult | null;
+  lastSearchQuery?: string;
 }
 
 export const ChatContainer: React.FC<ChatContainerProps> = ({ 
@@ -20,7 +23,9 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
   isDark,
   saveMessage,
   imageAnalysisProgress,
-  searchFeedback
+  searchFeedback,
+  lastSearchResult,
+  lastSearchQuery
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -87,13 +92,24 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
           </div>
         ) : (
           <div className="py-6">
-            {messages.map((message) => (
-              <ChatMessage 
-                key={message.id} 
-                message={message} 
-                showTimestamp={showTimestamps}
-                isDark={isDark}
-              />
+            {messages.map((message, index) => (
+              <React.Fragment key={message.id}>
+                <ChatMessage 
+                  message={message} 
+                  showTimestamp={showTimestamps}
+                  isDark={isDark}
+                />
+                {/* Show search analysis after the last user message that triggered a search */}
+                {index === messages.length - 2 && 
+                 message.sender === 'user' && 
+                 lastSearchResult && 
+                 lastSearchQuery === message.content && (
+                  <SearchAnalysisDisplay 
+                    searchResult={lastSearchResult} 
+                    query={lastSearchQuery} 
+                  />
+                )}
+              </React.Fragment>
             ))}
             
             {/* Save Message Notification */}
