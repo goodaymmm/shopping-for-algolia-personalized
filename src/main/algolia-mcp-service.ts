@@ -486,11 +486,15 @@ export class AlgoliaMCPService {
       return;
     }
 
-    // Check if indices are already initialized
+    // Check if indices are already initialized (only skip if we don't have write access)
     const configKey = `${this.multiSearchConfig.applicationId}-${this.multiSearchConfig.writeApiKey.substring(0, 8)}`;
-    if (this.initializedIndices.has(configKey)) {
-      console.log('[AlgoliaMCP] Indices already initialized, skipping creation');
+    if (this.initializedIndices.has(configKey) && !this.multiSearchConfig.writeApiKey) {
+      console.log('[AlgoliaMCP] Indices already initialized and no write API key available, skipping creation');
       return;
+    }
+    
+    if (this.initializedIndices.has(configKey)) {
+      console.log('[AlgoliaMCP] Indices marked as initialized, but checking if data needs to be loaded...');
     }
 
     console.log('[AlgoliaMCP] Checking and creating standard indices with Write API Key...');
@@ -583,9 +587,12 @@ export class AlgoliaMCPService {
       if (response.ok) {
         const searchResult = await response.json() as { nbHits: number };
         if (searchResult.nbHits > 0) {
-          console.log('[AlgoliaMCP] Sample data already exists, skipping import');
+          console.log('[AlgoliaMCP] Data already exists in index, skipping import');
           return;
         }
+        console.log('[AlgoliaMCP] Index is empty (nbHits: 0), proceeding with data import...');
+      } else {
+        console.log('[AlgoliaMCP] Failed to check index status, proceeding with data import...');
       }
 
       // データが存在しない場合、最適化されたデータを投入

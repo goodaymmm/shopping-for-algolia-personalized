@@ -53,6 +53,13 @@ jobs:
         run: |
           # Pre-install electron-builder dependencies to avoid download issues during build
           npx electron-builder install-app-deps --arch=x64 || true
+      
+      - name: Generate Amazon product data
+        run: |
+          echo "Generating optimized Amazon product data..."
+          npm run preprocess-amazon-data
+          echo "Data generation complete. Checking generated files:"
+          ls -la src/data/
         
       - name: Build TypeScript
         run: npm run build:all

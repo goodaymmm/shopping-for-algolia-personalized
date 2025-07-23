@@ -47,7 +47,18 @@ export class OptimizedDataLoader {
   constructor(applicationId: string, writeApiKey: string) {
     this.applicationId = applicationId;
     this.writeApiKey = writeApiKey;
-    this.dataPath = join(__dirname, '..', 'data');
+    
+    // Electronのapp.isPackagedを使用して環境を判定
+    const { app } = require('electron');
+    const isPackaged = app.isPackaged;
+    
+    // パッケージ環境では app.asar の外側の src/data を参照
+    // 開発環境では src/data を直接参照
+    this.dataPath = isPackaged
+      ? join(__dirname, '../../src/data')
+      : join(__dirname, '../../src/data');
+    
+    console.log(`[OptimizedDataLoader] Data path: ${this.dataPath} (packaged: ${isPackaged})`);
   }
 
   async loadOptimizedData(): Promise<void> {
