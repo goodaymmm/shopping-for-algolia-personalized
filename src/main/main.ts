@@ -1026,7 +1026,7 @@ class MainApplication {
     ipcMain.handle('load-sample-data', async () => {
       try {
         console.log('[Main] Loading sample data into Algolia indices...');
-        const { RealDataLoader } = require('./real-data-loader');
+        const { OptimizedDataLoader } = require('./optimized-data-loader');
         
         // Get Algolia API keys
         const allKeys = await this.database.getAPIKeys();
@@ -1066,10 +1066,10 @@ class MainApplication {
           return { success: false, error: 'Missing Algolia API configuration' };
         }
         
-        const loader = new RealDataLoader(config.applicationId, config.writeApiKey);
-        await loader.loadRealData();
+        const loader = new OptimizedDataLoader(config.applicationId, config.writeApiKey);
+        await loader.loadOptimizedData();
         
-        return { success: true, message: 'Sample data loaded successfully' };
+        return { success: true, message: 'Optimized product data loaded successfully' };
       } catch (error: any) {
         console.error('[Main] Failed to load sample data:', error);
         return { success: false, error: error?.message || 'Failed to load sample data' };

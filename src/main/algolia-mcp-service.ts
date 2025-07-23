@@ -8,7 +8,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import Ajv from 'ajv';
 import { Product } from '../shared/types';
-import { SampleDataLoader } from './sample-data-loader';
+// OptimizedDataLoader is imported dynamically when needed
 
 interface AlgoliaConfig {
   applicationId: string;
@@ -588,15 +588,16 @@ export class AlgoliaMCPService {
         }
       }
 
-      // データが存在しない場合、サンプルデータを投入
-      console.log('[AlgoliaMCP] No data found, starting sample data import...');
-      const dataLoader = new SampleDataLoader(
+      // データが存在しない場合、最適化されたデータを投入
+      console.log('[AlgoliaMCP] No data found, starting optimized data import...');
+      const { OptimizedDataLoader } = require('./optimized-data-loader');
+      const dataLoader = new OptimizedDataLoader(
         this.multiSearchConfig!.applicationId,
         this.multiSearchConfig!.writeApiKey!
       );
       
-      await dataLoader.loadSampleData();
-      console.log('[AlgoliaMCP] Sample data import completed');
+      await dataLoader.loadOptimizedData();
+      console.log('[AlgoliaMCP] Optimized data import completed');
     } catch (error) {
       console.error('[AlgoliaMCP] Error during sample data loading:', error);
       // エラーが発生してもアプリケーションは継続

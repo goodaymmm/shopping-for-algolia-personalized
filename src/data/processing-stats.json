@@ -1,0 +1,11 @@
+{
+  "totalProducts": 6270,
+  "withAmazonData": 6270,
+  "categories": {
+    "fashion": 3000,
+    "electronics": 2000,
+    "other": 1270
+  },
+  "averagePrice": 112,
+  "generatedAt": "2025-07-23T09:19:59.462Z"
+}
