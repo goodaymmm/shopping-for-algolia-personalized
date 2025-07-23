@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { parquetRead } from 'hyparquet';
 
 interface Product {
   objectID: string;
@@ -48,15 +49,25 @@ interface EcommerceProduct {
   objectID: string;
 }
 
+interface ESCIProduct {
+  product_id: string;
+  product_title: string;
+  product_description?: string;
+  product_bullet_point?: string;
+  product_brand?: string;
+  product_color?: string;
+  product_locale: string;
+}
+
 export class RealDataLoader {
   private readonly applicationId: string;
   private readonly writeApiKey: string;
 
   // データセット別の割り当て数
   private readonly DATASET_LIMITS = {
-    bestBuy: 2500,
+    bestBuy: 2000,
     ecommerce: 2000,
-    amazonESCI: 2500
+    amazonESCI: 3000
   };
 
   // カテゴリ別の目標数
@@ -112,9 +123,9 @@ export class RealDataLoader {
     const ecommerceProducts = await this.loadEcommerceData();
     allProducts.push(...ecommerceProducts);
 
-    // Note: Amazon ESCI data requires parquet parsing which is complex
-    // For now, we'll focus on Best Buy and ecommerce data which gives us 4500 products
-    console.log('[RealDataLoader] Skipping Amazon ESCI data for now (parquet parsing required)');
+    console.log('[RealDataLoader] Loading Amazon ESCI dataset...');
+    const esciProducts = await this.loadAmazonESCIData();
+    allProducts.push(...esciProducts);
 
     return allProducts;
   }
@@ -223,6 +234,148 @@ export class RealDataLoader {
     }
   }
 
+  private async loadAmazonESCIData(): Promise<Product[]> {
+    try {
+      const productsPath = '/mnt/m/workContest/esci-data-main/shopping_queries_dataset/shopping_queries_dataset_products.parquet';
+      
+      console.log('[RealDataLoader] Reading Amazon ESCI parquet file...');
+      
+      // Check if file exists
+      const fs = require('fs');
+      if (!fs.existsSync(productsPath)) {
+        console.warn('[RealDataLoader] Amazon ESCI parquet file not found at:', productsPath);
+        return [];
+      }
+      
+      // Read parquet file using hyparquet
+      const buffer = readFileSync(productsPath);
+      const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+      
+      const products: ESCIProduct[] = [];
+      await parquetRead({
+        file: arrayBuffer,
+        onComplete: (rows: any[]) => {
+          // Filter for English products only
+          const englishProducts = rows.filter((row: any) => 
+            row.product_locale === 'us' && 
+            row.product_title && 
+            row.product_title.length > 0
+          );
+          
+          console.log(`[RealDataLoader] Found ${englishProducts.length} English products in ESCI dataset`);
+          
+          // Convert to ESCIProduct interface
+          englishProducts.forEach((row: any) => {
+            products.push({
+              product_id: row.product_id,
+              product_title: row.product_title,
+              product_description: row.product_description,
+              product_bullet_point: row.product_bullet_point,
+              product_brand: row.product_brand,
+              product_color: row.product_color,
+              product_locale: row.product_locale
+            });
+          });
+        }
+      });
+
+      console.log(`[RealDataLoader] Loaded ${products.length} products from ESCI dataset`);
+
+      // Filter and select best products
+      const qualityProducts = products
+        .filter(product => {
+          // Must have title and brand
+          return product.product_title && 
+                 product.product_title.length > 10 &&
+                 product.product_brand &&
+                 product.product_brand.length > 0;
+        })
+        .slice(0, this.DATASET_LIMITS.amazonESCI);
+
+      console.log(`[RealDataLoader] Selected ${qualityProducts.length} quality ESCI products`);
+
+      // Convert to our Product interface
+      return qualityProducts.map((product, index) => {
+        // Generate a reasonable price based on product category
+        const price = this.generatePriceForProduct(product.product_title);
+        
+        return {
+          objectID: `esci_${product.product_id}`,
+          name: product.product_title,
+          description: product.product_description || product.product_bullet_point || '',
+          price: price,
+          salePrice: Math.random() > 0.8 ? Math.round(price * 0.85) : undefined,
+          // Use a placeholder image since ESCI doesn't include images
+          image: `https://picsum.photos/seed/${product.product_id}/400/400`,
+          categories: this.categorizeESCIProduct(product),
+          brand: product.product_brand,
+          color: product.product_color,
+          url: `https://www.amazon.com/dp/${product.product_id}`,
+          sourceIndex: this.categorizeProduct({
+            name: product.product_title,
+            categories: [],
+            brand: product.product_brand,
+            type: ''
+          })
+        };
+      });
+    } catch (error) {
+      console.error('[RealDataLoader] Error loading Amazon ESCI data:', error);
+      return [];
+    }
+  }
+
+  private generatePriceForProduct(title: string): number {
+    const lowerTitle = title.toLowerCase();
+    
+    // Price ranges based on product type
+    if (lowerTitle.includes('laptop') || lowerTitle.includes('computer')) return Math.round(Math.random() * 800 + 400);
+    if (lowerTitle.includes('phone') || lowerTitle.includes('iphone')) return Math.round(Math.random() * 600 + 300);
+    if (lowerTitle.includes('shoe') || lowerTitle.includes('sneaker')) return Math.round(Math.random() * 80 + 40);
+    if (lowerTitle.includes('watch') || lowerTitle.includes('smartwatch')) return Math.round(Math.random() * 200 + 100);
+    if (lowerTitle.includes('headphone') || lowerTitle.includes('earbuds')) return Math.round(Math.random() * 150 + 50);
+    if (lowerTitle.includes('shirt') || lowerTitle.includes('pants')) return Math.round(Math.random() * 40 + 20);
+    if (lowerTitle.includes('book')) return Math.round(Math.random() * 20 + 10);
+    
+    // Default price range
+    return Math.round(Math.random() * 50 + 20);
+  }
+
+  private categorizeESCIProduct(product: ESCIProduct): string[] {
+    const categories: string[] = [];
+    const title = product.product_title.toLowerCase();
+    const brand = (product.product_brand || '').toLowerCase();
+    
+    // Add brand as category
+    if (product.product_brand) {
+      categories.push(product.product_brand);
+    }
+    
+    // Add color as category if present
+    if (product.product_color) {
+      categories.push(product.product_color);
+    }
+    
+    // Infer categories from title
+    if (title.includes('shoe') || title.includes('sneaker') || title.includes('boot')) {
+      categories.push('Shoes', 'Footwear');
+    }
+    if (title.includes('shirt') || title.includes('jacket') || title.includes('dress')) {
+      categories.push('Clothing', 'Apparel');
+    }
+    if (title.includes('phone') || title.includes('laptop') || title.includes('computer')) {
+      categories.push('Electronics');
+    }
+    if (title.includes('book')) {
+      categories.push('Books', 'Media');
+    }
+    if (title.includes('toy') || title.includes('game')) {
+      categories.push('Toys', 'Games');
+    }
+    
+    return categories.length > 0 ? categories : ['General'];
+  }
+
   private categorizeBestBuyProduct(product: BestBuyProduct): string[] {
     const categories = [...(product.categories || [])];
     const name = product.name.toLowerCase();
@@ -266,11 +419,13 @@ export class RealDataLoader {
     const type = (product.type || '').toLowerCase();
     const hierarchical = product.hierarchicalCategories?.lvl0?.toLowerCase() || '';
 
-    // Fashion category
-    if (name.match(/shoe|sneaker|boot|sandal|clothing|shirt|pants|jacket|dress|fashion|apparel/) ||
-        categories.some((cat: string) => cat.match(/fashion|clothing|shoe|apparel|accessories/)) ||
-        brand.match(/nike|adidas|puma|vans|converse|under armour|reebok/) ||
-        hierarchical.includes('clothing')) {
+    // Fashion category - expanded shoe brand detection
+    const shoeBrands = /nike|adidas|puma|vans|converse|under armour|reebok|new balance|asics|saucony|jordan|yeezy|balenciaga|gucci|louis vuitton|fila|champion|sketchers|timberland|dr\.? martens|ugg|crocs|birkenstock|salomon|merrell|columbia/i;
+    
+    if (name.match(/shoe|sneaker|boot|sandal|loafer|heel|pump|slipper|clog|moccasin|oxford|derby|clothing|shirt|pants|jacket|dress|fashion|apparel|dunk|air max|air force|jordan/) ||
+        categories.some((cat: string) => cat.match(/fashion|clothing|shoe|footwear|apparel|accessories/)) ||
+        brand.match(shoeBrands) ||
+        hierarchical.match(/clothing|fashion|footwear/)) {
       return 'fashion';
     }
 
@@ -405,13 +560,23 @@ export class RealDataLoader {
       productsByIndex[index].push(product);
     });
     
+    // Log distribution summary
+    console.log('[RealDataLoader] Product distribution by index:');
+    Object.entries(productsByIndex).forEach(([index, prods]) => {
+      console.log(`  ${index}: ${prods.length} products`);
+    });
+    
     // Upload to each index
     for (const [indexName, indexProducts] of Object.entries(productsByIndex)) {
       if (indexProducts.length > 0) {
         await this.uploadToAlgolia(indexName, indexProducts);
-        console.log(`[RealDataLoader] Uploaded ${indexProducts.length} products to ${indexName}`);
+        console.log(`[RealDataLoader] ✓ Uploaded ${indexProducts.length} products to ${indexName} index`);
       }
     }
+    
+    // Final summary
+    const totalUploaded = Object.values(productsByIndex).reduce((sum, prods) => sum + prods.length, 0);
+    console.log(`[RealDataLoader] Upload complete! Total products uploaded: ${totalUploaded}`);
   }
 
   private async uploadToAlgolia(indexName: string, products: Product[]): Promise<void> {
