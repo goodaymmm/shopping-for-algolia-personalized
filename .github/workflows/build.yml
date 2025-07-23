@@ -55,11 +55,24 @@ jobs:
           npx electron-builder install-app-deps --arch=x64 || true
       
       - name: Generate Amazon product data
+        shell: bash
         run: |
           echo "Generating optimized Amazon product data..."
-          npm run preprocess-amazon-data
-          echo "Data generation complete. Checking generated files:"
-          ls -la src/data/
+          # Check if data files already exist (from repository)
+          if [ -f "src/data/amazon-products.json" ]; then
+            echo "Amazon product data already exists in repository, skipping generation"
+            echo "Existing data files:"
+            ls -la src/data/ || dir src/data/
+          else
+            echo "Data files not found in repository, skipping generation for CI build"
+            echo "Note: Run 'npm run preprocess-amazon-data' locally with Amazon data to generate files"
+            # Create empty data directory for build to succeed
+            mkdir -p src/data
+            echo "[]" > src/data/amazon-products.json
+            echo "[]" > src/data/products-fashion.json
+            echo "[]" > src/data/products-electronics.json
+            echo "[]" > src/data/products-other.json
+          fi
         
       - name: Build TypeScript
         run: npm run build:all
