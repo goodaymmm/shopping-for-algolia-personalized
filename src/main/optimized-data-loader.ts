@@ -49,49 +49,6 @@ interface BestBuyProduct {
   objectID: string;
 }
 
-// Fashion product interface
-interface FashionProduct {
-  available_sizes: string[];
-  brand: string;
-  category_page_id: string[];
-  color: {
-    filter_group: string;
-    original_name: string;
-  };
-  created_at: number;
-  description: string;
-  gender: string;
-  hierarchical_categories: {
-    lvl0: string;
-    lvl1: string;
-    lvl2: string;
-  };
-  image_blurred: string;
-  image_urls: string[];
-  list_categories: string[];
-  name: string;
-  objectID: string;
-  parentID: string;
-  price: {
-    currency: string;
-    discount_level: number;
-    discounted_value: number;
-    on_sales: boolean;
-    value: number;
-  };
-  product_type: string;
-  related_products: any;
-  reviews: {
-    bayesian_avg: number;
-    count: number;
-    rating: number;
-  };
-  sku: string;
-  slug: string;
-  units_in_stock: number;
-  updated_at: number;
-  variants: any[];
-}
 
 export class OptimizedDataLoader {
   private readonly applicationId: string;
@@ -101,15 +58,14 @@ export class OptimizedDataLoader {
   // データソース別の上限と全体目標（8,849件）
   private readonly DATA_SOURCE_LIMITS = {
     amazon: 6270,     // Amazon Reviews 2023 (変更なし)
-    bestBuy: 2000,    // Best Buy dataset (10,000から選択)
-    fashion: 579      // Fashion Products (1,787から選択、品質基準適用後)
+    bestBuy: 2579     // Best Buy dataset (10,000から選択、Fashionデータ分を統合)
   };
 
   // カテゴリ別の目標数（マルチデータソース対応）
   private readonly CATEGORY_TARGETS = {
-    fashion: 3500,      // Amazon fashion + Fashion Products + Best Buy fashion
-    electronics: 3500,  // Amazon electronics + Best Buy electronics
-    products: 2000,     // その他の商品
+    fashion: 3500,      // Amazon fashion + Best Buy fashion
+    electronics: 4500,  // Amazon electronics + Best Buy electronics（増量）
+    products: 849,      // その他の商品
     beauty: 0,          // Algoliaインデックス用（将来拡張用）
     sports: 0,          // Algoliaインデックス用（将来拡張用）
     books: 0,           // Algoliaインデックス用（将来拡張用）
@@ -144,15 +100,12 @@ export class OptimizedDataLoader {
     console.log('[OptimizedDataLoader] Starting multi-source optimized data import...');
     
     try {
-      // Clear all indices first
-      await this.clearAllIndices();
-      
       // Load data from all sources
       const allProducts = await this.loadMultiSourceData();
       console.log(`[OptimizedDataLoader] Loaded ${allProducts.length} products from all sources`);
 
-      // Upload to indices
-      await this.uploadToIndices(allProducts);
+      // Upload to indices using optimized method (no clearing)
+      await this.uploadToIndicesOptimized(allProducts);
       
       console.log('[OptimizedDataLoader] Multi-source optimized data import completed successfully!');
     } catch (error) {
@@ -178,12 +131,6 @@ export class OptimizedDataLoader {
       const bestBuyProducts = this.loadBestBuyData();
       allProducts.push(...bestBuyProducts.slice(0, this.DATA_SOURCE_LIMITS.bestBuy));
       console.log(`[OptimizedDataLoader] Loaded ${bestBuyProducts.length} Best Buy products`);
-
-      // 3. Fashion Productsデータ
-      console.log('[OptimizedDataLoader] Loading Fashion Products data...');
-      const fashionProducts = this.loadFashionData();
-      allProducts.push(...fashionProducts.slice(0, this.DATA_SOURCE_LIMITS.fashion));
-      console.log(`[OptimizedDataLoader] Loaded ${fashionProducts.length} Fashion products`);
 
       console.log(`[OptimizedDataLoader] Total products loaded: ${allProducts.length}`);
       
@@ -296,41 +243,6 @@ export class OptimizedDataLoader {
     }
   }
 
-  // Fashion Productsデータローダー
-  private loadFashionData(): Product[] {
-    try {
-      const dataPath = join(this.dataPath, 'fashion-products.json');
-      
-      if (!this.fileExists(dataPath)) {
-        console.warn('[OptimizedDataLoader] Fashion Products data file not found at:', dataPath);
-        return [];
-      }
-      
-      const rawData = readFileSync(dataPath, 'utf-8');
-      const fashionData: FashionProduct[] = JSON.parse(rawData);
-      
-      console.log(`[OptimizedDataLoader] Loaded ${fashionData.length} pre-filtered Fashion products`);
-      
-      // Algolia Product形式に変換（既にフィルタリング済みなのでそのまま使用）
-      return fashionData.map(product => ({
-        objectID: `fashion_${product.objectID}`,
-        name: product.name,
-        description: product.description || `${product.brand} ${product.product_type}`,
-        price: Math.round(product.price.value),
-        salePrice: product.price.on_sales ? Math.round(product.price.discounted_value || product.price.value * 0.85) : undefined,
-        image: product.image_urls[0],
-        categories: this.categorizeFashionProduct(product),
-        brand: product.brand,
-        color: product.color?.original_name,
-        url: `https://example-fashion-store.com/products/${product.slug}`,
-        sourceIndex: 'fashion'
-      }));
-      
-    } catch (error) {
-      console.error('[OptimizedDataLoader] Error loading Fashion data:', error);
-      return [];
-    }
-  }
 
   // カテゴリマッピングヘルパー
   private mapCategoryToAlgolia(category: string): string {
@@ -390,32 +302,6 @@ export class OptimizedDataLoader {
     return 'products';
   }
 
-  // Fashion商品のカテゴリ分類
-  private categorizeFashionProduct(product: FashionProduct): string[] {
-    const categories = [...product.list_categories];
-    
-    // ブランドを追加
-    if (product.brand) {
-      categories.push(product.brand);
-    }
-    
-    // 色を追加
-    if (product.color?.original_name) {
-      categories.push(product.color.original_name);
-    }
-    
-    // 商品タイプを追加
-    if (product.product_type) {
-      categories.push(product.product_type);
-    }
-    
-    // 性別を追加
-    if (product.gender) {
-      categories.push(product.gender);
-    }
-    
-    return [...new Set(categories.filter(cat => cat && cat.length > 0))];
-  }
 
   private async clearAllIndices(): Promise<void> {
     console.log('[OptimizedDataLoader] Clearing all indices...');
@@ -441,6 +327,38 @@ export class OptimizedDataLoader {
         console.warn(`[OptimizedDataLoader] Failed to clear index ${indexName}:`, error);
       }
     }
+  }
+
+  // 高速化された新しいアップロードメソッド（インデックスクリアなし）
+  private async uploadToIndicesOptimized(products: Product[]): Promise<void> {
+    // Group products by their target index
+    const productsByIndex: { [index: string]: Product[] } = {};
+    
+    products.forEach(product => {
+      const index = product.sourceIndex || 'products';
+      if (!productsByIndex[index]) {
+        productsByIndex[index] = [];
+      }
+      productsByIndex[index].push(product);
+    });
+    
+    // Log distribution summary
+    console.log('[OptimizedDataLoader] Product distribution by index:');
+    Object.entries(productsByIndex).forEach(([index, prods]) => {
+      console.log(`  ${index}: ${prods.length} products`);
+    });
+    
+    // Upload to each index with replace objects method
+    for (const [indexName, indexProducts] of Object.entries(productsByIndex)) {
+      if (indexProducts.length > 0) {
+        await this.uploadToAlgoliaWithReplace(indexName, indexProducts);
+        console.log(`[OptimizedDataLoader] ✓ Uploaded ${indexProducts.length} products to ${indexName} index`);
+      }
+    }
+    
+    // Final summary
+    const totalUploaded = Object.values(productsByIndex).reduce((sum, prods) => sum + prods.length, 0);
+    console.log(`[OptimizedDataLoader] Upload complete! Total products uploaded: ${totalUploaded}`);
   }
 
   private async uploadToIndices(products: Product[]): Promise<void> {
@@ -472,6 +390,54 @@ export class OptimizedDataLoader {
     // Final summary
     const totalUploaded = Object.values(productsByIndex).reduce((sum, prods) => sum + prods.length, 0);
     console.log(`[OptimizedDataLoader] Upload complete! Total products uploaded: ${totalUploaded}`);
+  }
+
+  // 高速化されたreplaceAllObjectsを使用したアップロード
+  private async uploadToAlgoliaWithReplace(indexName: string, products: Product[]): Promise<void> {
+    try {
+      const batchSize = 200; // バッチサイズを増加
+      const total = products.length;
+
+      for (let i = 0; i < total; i += batchSize) {
+        const batch = products.slice(i, i + batchSize);
+        
+        // replaceAllObjectsを使用してより高速にアップロード
+        const response = await fetch(
+          `https://${this.applicationId}-dsn.algolia.net/1/indexes/${indexName}/batch`,
+          {
+            method: 'POST',
+            headers: {
+              'X-Algolia-API-Key': this.writeApiKey,
+              'X-Algolia-Application-Id': this.applicationId,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              requests: batch.map(product => ({
+                action: 'updateObject',
+                body: product
+              }))
+            })
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`[OptimizedDataLoader] Failed to upload batch to ${indexName}:`, errorText);
+          continue;
+        }
+
+        const result = await response.json() as { taskID?: number };
+        const progress = Math.min(100, Math.round((i + batchSize) / total * 100));
+        console.log(`[OptimizedDataLoader] Uploading to ${indexName}: ${progress}% - TaskID: ${result.taskID}`);
+        
+        // Rate limiting（短縮）
+        if (i + batchSize < total) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+      }
+    } catch (error) {
+      console.error(`[OptimizedDataLoader] Error uploading to ${indexName}:`, error);
+    }
   }
 
   private async uploadToAlgolia(indexName: string, products: Product[]): Promise<void> {
