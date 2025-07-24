@@ -257,8 +257,8 @@ function App() {
         finalResults = [];
       }
       
-      // Save search results to current session (append to existing results)
-      appendSessionSearchResults(sessionId, finalResults);
+      // Save search results to current session (replace existing results for filtering)
+      updateSessionSearchResults(sessionId, finalResults);
       
       // Update sidebar products and open sidebar if products found
       setSidebarProducts(finalResults);
