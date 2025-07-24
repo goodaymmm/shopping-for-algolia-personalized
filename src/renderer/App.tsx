@@ -8,7 +8,7 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { ChatHistory } from './components/ChatHistory';
 import { MyDatabase } from './components/MyDatabase';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { Message, AppView, Product, ProductWithContext, DiscoveryPercentage, ImageAnalysisProgress, IPCSearchResult } from './types';
+import { Message, AppView, Product, ProductWithContext, DiscoveryPercentage, ImageAnalysisProgress, IPCSearchResult, SearchSession } from './types';
 import { useTheme } from './hooks/useTheme';
 import { useSettings } from './hooks/useSettings';
 import { useChatSessions } from './hooks/useChatSessions';
@@ -257,11 +257,41 @@ function App() {
         finalResults = [];
       }
       
-      // Save search results to current session (replace existing results for filtering)
-      updateSessionSearchResults(sessionId, finalResults);
+      // Create search session for this search
+      const searchSession: SearchSession = {
+        sessionId: Date.now().toString(),
+        searchQuery: content,
+        searchType: imageDataUrl ? 'image' : 'text',
+        timestamp: new Date(),
+        imageAnalysisKeywords: searchResult.imageAnalysis?.keywords,
+        resultCount: finalResults.length
+      };
       
-      // Update sidebar products and open sidebar if products found
-      setSidebarProducts(finalResults);
+      // Add search session metadata to each product
+      const finalResultsWithSession = finalResults.map(item => {
+        if ('product' in item) {
+          // ProductWithContext
+          return {
+            ...item,
+            product: {
+              ...item.product,
+              searchSession
+            }
+          };
+        } else {
+          // Product
+          return {
+            ...item,
+            searchSession
+          };
+        }
+      });
+      
+      // Save search results to current session (replace existing results for filtering)
+      updateSessionSearchResults(sessionId, finalResultsWithSession);
+      
+      // Update sidebar products - append to existing results for history tracking
+      setSidebarProducts(prev => [...prev, ...finalResultsWithSession]);
       if (finalResults.length > 0) {
         setIsProductSidebarOpen(true);
       }
