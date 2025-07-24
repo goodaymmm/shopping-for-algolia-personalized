@@ -88,7 +88,8 @@
     "asar": true,
     "asarUnpack": [
       "node_modules/better-sqlite3/**/*",
-      "node_modules/keytar/**/*"
+      "node_modules/keytar/**/*",
+      "src/data/**/*"
     ],
     "extraMetadata": {
       "main": "dist/main/main.js"

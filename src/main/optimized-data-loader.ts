@@ -87,10 +87,10 @@ export class OptimizedDataLoader {
       isPackaged = false;
     }
     
-    // パッケージ環境では app.asar の外側の data を参照
+    // パッケージ環境では app.asar 内の src/data を参照
     // 開発環境では data を直接参照
     this.dataPath = isPackaged
-      ? join(__dirname, '../../data')
+      ? join(__dirname, '../src/data')
       : join(__dirname, '../../data');
     
     console.log(`[OptimizedDataLoader] Data path: ${this.dataPath} (packaged: ${isPackaged})`);
@@ -104,10 +104,16 @@ export class OptimizedDataLoader {
       const allProducts = await this.loadMultiSourceData();
       console.log(`[OptimizedDataLoader] Loaded ${allProducts.length} products from all sources`);
 
+      if (allProducts.length === 0) {
+        console.error('[OptimizedDataLoader] WARNING: No products loaded! Check data file paths.');
+        throw new Error('No products loaded from data files');
+      }
+
       // Upload to indices using optimized method (no clearing)
       await this.uploadToIndicesOptimized(allProducts);
       
       console.log('[OptimizedDataLoader] Multi-source optimized data import completed successfully!');
+      console.log(`[OptimizedDataLoader] Summary: ${allProducts.length} total products uploaded`);
     } catch (error) {
       console.error('[OptimizedDataLoader] Error during multi-source optimized data import:', error);
       throw error;

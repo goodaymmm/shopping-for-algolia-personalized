@@ -527,14 +527,20 @@ class MainApplication {
         
         if (searchConstraints && products.length > 0) {
           console.log('[Search] Applying constraint filters...');
+          console.log('[Search] Constraints:', JSON.stringify(searchConstraints, null, 2));
+          
           const constraintFilteredProducts = products.filter((product: any) => {
             // Price filtering
             if (searchConstraints.priceRange) {
               const price = product.salePrice || product.price;
+              const priceMax = searchConstraints.priceRange.max;
+              
               if (searchConstraints.priceRange.min !== undefined && price < searchConstraints.priceRange.min) {
+                console.log(`[Search] Product ${product.name} filtered out: price $${price} < min $${searchConstraints.priceRange.min}`);
                 return false;
               }
-              if (searchConstraints.priceRange.max !== undefined && price > searchConstraints.priceRange.max) {
+              if (priceMax !== undefined && price > priceMax) {
+                console.log(`[Search] Product ${product.name} filtered out: price $${price} > max $${priceMax}`);
                 return false;
               }
             }
@@ -584,11 +590,20 @@ class MainApplication {
           console.log(`[Search] Constraint filtering: ${products.length} -> ${constraintFilteredProducts.length} products`);
           if (searchConstraints.priceRange) {
             console.log(`[Search] Price range applied: $${searchConstraints.priceRange.min || 0} - $${searchConstraints.priceRange.max || '∞'}`);
+            console.log(`[Search] Filtered out ${products.length - constraintFilteredProducts.length} products due to price constraints`);
           }
           
           // Store the pre-filter count for reporting
           const postFilterCount = constraintFilteredProducts.length;
           filteringDetails.filteredOut = preFilterCount - postFilterCount;
+          
+          // Log some sample products that passed the filter
+          if (constraintFilteredProducts.length > 0) {
+            console.log('[Search] Sample products that passed filters:');
+            constraintFilteredProducts.slice(0, 3).forEach((p: any) => {
+              console.log(`  - ${p.name}: $${p.salePrice || p.price}`);
+            });
+          }
           
           products = constraintFilteredProducts;
         }
