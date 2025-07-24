@@ -173,6 +173,22 @@ function App() {
       let products = [];
       let searchResult: IPCSearchResult = { products: [], imageAnalysis: undefined };
       
+      // Check if this is a follow-up query (e.g., "Can you find one for under $100?")
+      const isFollowUpQuery = !imageDataUrl && (
+        content.toLowerCase().includes('under') || 
+        content.toLowerCase().includes('less than') ||
+        content.toLowerCase().includes('cheaper') ||
+        content.toLowerCase().includes('for under')
+      );
+      
+      // If it's a follow-up query and we have previous results, combine the queries
+      let searchQuery = content;
+      if (isFollowUpQuery && lastSearchQuery && sidebarProducts.length > 0) {
+        // Combine previous search with new constraints
+        searchQuery = lastSearchQuery + ' ' + content;
+        console.log('[App] Follow-up query detected, combining with previous:', searchQuery);
+      }
+      
       // Check if Electron API is available
       if (window.electronAPI && window.electronAPI.searchProducts) {
         // Search for products using Electron API
@@ -189,7 +205,7 @@ function App() {
           });
         }
 
-        searchResult = await window.electronAPI.searchProducts(content, imageData);
+        searchResult = await window.electronAPI.searchProducts(searchQuery, imageData);
         products = searchResult.products || []; // Ensure products is always an array
         
         console.log('[App] Search completed:', {
@@ -256,7 +272,25 @@ function App() {
       
       let responseText = '';
       if (finalResults.length === 0) {
-        if (imageDataUrl && searchResult.imageAnalysis) {
+        if (searchResult.constraints?.applied) {
+          // Products were found but filtered out
+          const filterInfo = [];
+          if (searchResult.constraints.priceRange) {
+            filterInfo.push(`price $${searchResult.constraints.priceRange.min || 0}-$${searchResult.constraints.priceRange.max || '∞'}`);
+          }
+          if (searchResult.constraints.colors?.length) {
+            filterInfo.push(`colors: ${searchResult.constraints.colors.join(', ')}`);
+          }
+          if (searchResult.constraints.gender) {
+            filterInfo.push(`gender: ${searchResult.constraints.gender}`);
+          }
+          
+          if (products.length > 0) {
+            responseText = `Found ${products.length} products initially, but none matched your filters (${filterInfo.join(', ')}). Try relaxing your constraints.`;
+          } else {
+            responseText = `No products found matching your search. Filters applied: ${filterInfo.join(', ')}.`;
+          }
+        } else if (imageDataUrl && searchResult.imageAnalysis) {
           responseText = `I analyzed the image and identified: ${searchResult.imageAnalysis.keywords.join(', ')}. However, I couldn't find any matching products. Please try adjusting your search keywords.`;
         } else if (imageDataUrl) {
           responseText = `I analyzed the image but couldn't find any products. Please try adjusting your search keywords.`;

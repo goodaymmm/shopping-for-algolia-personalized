@@ -99,14 +99,13 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
                   showTimestamp={showTimestamps}
                   isDark={isDark}
                 />
-                {/* Show search analysis after the last user message that triggered a search */}
+                {/* Show search analysis after the most recent user message */}
                 {index === messages.length - 2 && 
                  message.sender === 'user' && 
-                 lastSearchResult && 
-                 lastSearchQuery === message.content && (
+                 lastSearchResult && (
                   <SearchAnalysisDisplay 
                     searchResult={lastSearchResult} 
-                    query={lastSearchQuery} 
+                    query={lastSearchQuery || message.content} 
                   />
                 )}
               </React.Fragment>

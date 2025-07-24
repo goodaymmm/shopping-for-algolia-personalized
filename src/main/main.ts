@@ -130,6 +130,9 @@ class MainApplication {
           }
         } else {
           // For text-only searches, extract product keywords and clean the query
+          console.log('[Search] Processing text-only search');
+          console.log('[Search] Product keywords found:', searchConstraints?.productKeywords);
+          
           if (searchConstraints?.productKeywords && searchConstraints.productKeywords.length > 0) {
             // Use extracted product keywords as the primary search query
             searchQuery = searchConstraints.productKeywords.join(' ');
@@ -137,7 +140,7 @@ class MainApplication {
           } else {
             // Clean the query by removing constraint terms
             searchQuery = this.nlpParser.cleanQuery(query, searchConstraints || {});
-            console.log('[Search] Cleaned search query:', searchQuery);
+            console.log('[Search] No product keywords found, using cleaned query:', searchQuery);
           }
         }
 
@@ -521,6 +524,9 @@ class MainApplication {
         products = validProducts;
 
         // Apply constraint filtering if we have parsed constraints
+        let preFilterCount = products.length;
+        let filteringDetails: { priceFiltered?: number; colorFiltered?: number; genderFiltered?: number; filteredOut?: number } = {};
+        
         if (searchConstraints && products.length > 0) {
           console.log('[Search] Applying constraint filters...');
           const constraintFilteredProducts = products.filter((product: any) => {
@@ -581,6 +587,11 @@ class MainApplication {
           if (searchConstraints.priceRange) {
             console.log(`[Search] Price range applied: $${searchConstraints.priceRange.min || 0} - $${searchConstraints.priceRange.max || '∞'}`);
           }
+          
+          // Store the pre-filter count for reporting
+          const postFilterCount = constraintFilteredProducts.length;
+          filteringDetails.filteredOut = preFilterCount - postFilterCount;
+          
           products = constraintFilteredProducts;
         }
 
