@@ -87,11 +87,11 @@ export class OptimizedDataLoader {
       isPackaged = false;
     }
     
-    // パッケージ環境では app.asar の外側の src/data を参照
-    // 開発環境では src/data を直接参照
+    // パッケージ環境では app.asar の外側の data を参照
+    // 開発環境では data を直接参照
     this.dataPath = isPackaged
-      ? join(__dirname, '../../src/data')
-      : join(__dirname, '../../src/data');
+      ? join(__dirname, '../../data')
+      : join(__dirname, '../../data');
     
     console.log(`[OptimizedDataLoader] Data path: ${this.dataPath} (packaged: ${isPackaged})`);
   }
@@ -151,11 +151,16 @@ export class OptimizedDataLoader {
     try {
       // Try to load main products file first
       const mainDataPath = join(this.dataPath, 'amazon-products.json');
+      console.log(`[OptimizedDataLoader] Checking for main products file at: ${mainDataPath}`);
       
       if (this.fileExists(mainDataPath)) {
         console.log('[OptimizedDataLoader] Loading main products file...');
         const rawData = readFileSync(mainDataPath, 'utf-8');
-        return JSON.parse(rawData) as OptimizedProduct[];
+        const products = JSON.parse(rawData) as OptimizedProduct[];
+        console.log(`[OptimizedDataLoader] Successfully loaded ${products.length} products from amazon-products.json`);
+        return products;
+      } else {
+        console.log('[OptimizedDataLoader] Main products file not found at:', mainDataPath);
       }
       
       // Fallback: load category-specific files
@@ -413,7 +418,7 @@ export class OptimizedDataLoader {
             },
             body: JSON.stringify({
               requests: batch.map(product => ({
-                action: 'updateObject',
+                action: 'addObject',
                 body: product
               }))
             })

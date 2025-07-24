@@ -165,36 +165,34 @@ class MainApplication {
         
         let actualAppId, actualApiKey;
         
-        let usingDemoKeys = false;
         
         if (!algoliaAppId || !algoliaApiKey || !algoliaWriteKey) {
-          console.warn('[Search] User Algolia API keys not found or incomplete. Using demo keys.');
-          // フォールバック: デモAPIキーを使用 (Best Buy データセット)
-          actualAppId = 'latency';
-          actualApiKey = '6be0576ff61c053d5f9a3225e2a90f76';
-          usingDemoKeys = true;
+          console.error('[Search] User Algolia API keys not found or incomplete.');
+          console.error('[Search] Please configure all Algolia API keys in Settings.');
+          // API keys are required - return error
+          const error = 'Algolia API keys are not configured. Please go to Settings and add your Algolia Application ID, Search API Key, and Write API Key.';
+          return {
+            products: [],
+            totalResults: 0,
+            searchTime: Date.now() - searchStartTime,
+            query: query,
+            imageAnalysis: null,
+            searchConstraints: undefined,
+            error: error
+          };
         } else {
           console.log('[Search] Using user-configured Algolia API keys.');
           actualAppId = algoliaAppId;
           actualApiKey = algoliaApiKey;
         }
 
-        // 統合検索用の設定（デモキー使用時は Best Buy インデックスを使用）
-        const indexMappings = usingDemoKeys ? {
-          all: 'bestbuy',
-          electronics: 'bestbuy',
-          fashion: 'bestbuy',
-          books: 'bestbuy',
-          home: 'bestbuy',
-          sports: 'bestbuy',
-          beauty: 'bestbuy',
-          food: 'bestbuy'
-        } : STANDARD_INDICES;
+        // 統合検索用の設定（標準インデックスを使用）
+        const indexMappings = STANDARD_INDICES;
         
         const multiSearchConfig = {
           applicationId: actualAppId,
           apiKey: actualApiKey,
-          writeApiKey: usingDemoKeys ? undefined : algoliaWriteKey,
+          writeApiKey: algoliaWriteKey,
           indexMappings: indexMappings
         };
         
