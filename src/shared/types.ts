@@ -68,6 +68,8 @@ export interface SearchSession {
 // IPC Search result with analysis metadata
 export interface IPCSearchResult {
   products: Product[]
+  totalResultsBeforeFilter?: number // フィルタリング前の総件数
+  totalResultsAfterFilter?: number  // フィルタリング後の総件数
   imageAnalysis?: {
     keywords: string[]
     category?: string
@@ -82,6 +84,12 @@ export interface IPCSearchResult {
     styles?: string[]
     gender?: string
     applied: boolean
+  }
+  filteringDetails?: {
+    priceFiltered?: number
+    colorFiltered?: number
+    genderFiltered?: number
+    filteredOut?: number
   }
 }
 

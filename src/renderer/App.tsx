@@ -285,8 +285,8 @@ function App() {
             filterInfo.push(`gender: ${searchResult.constraints.gender}`);
           }
           
-          if (products.length > 0) {
-            responseText = `Found ${products.length} products initially, but none matched your filters (${filterInfo.join(', ')}). Try relaxing your constraints.`;
+          if (searchResult.totalResultsBeforeFilter && searchResult.totalResultsBeforeFilter > 0) {
+            responseText = `Found ${searchResult.totalResultsBeforeFilter} products initially, but none matched your filters (${filterInfo.join(', ')}). Try relaxing your constraints.`;
           } else {
             responseText = `No products found matching your search. Filters applied: ${filterInfo.join(', ')}.`;
           }
@@ -304,6 +304,14 @@ function App() {
           responseText = `I analyzed the image and found ${finalResults.length} products!`;
         } else {
           responseText = `Found ${finalResults.length} products matching "${content}".`;
+        }
+        
+        // Add filtering information if products were filtered
+        if (searchResult.totalResultsBeforeFilter && 
+            searchResult.totalResultsAfterFilter && 
+            searchResult.totalResultsBeforeFilter > searchResult.totalResultsAfterFilter) {
+          const filteredCount = searchResult.totalResultsBeforeFilter - searchResult.totalResultsAfterFilter;
+          responseText += ` (${filteredCount} products filtered out based on your criteria)`;
         }
       }
       

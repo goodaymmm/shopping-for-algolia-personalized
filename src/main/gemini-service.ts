@@ -281,22 +281,38 @@ export class GeminiService {
 
   private buildAnalysisPrompt(userQuery: string): string {
     return `
-Analyze this product image and generate search keywords and category.
+Analyze this product image in detail and extract specific attributes for product search.
 
-User query: "${userQuery}"
+User query context: "${userQuery}"
 
-Provide response in this format:
+Examine the image and identify:
+1. Brand name (if visible on product/packaging)
+2. Product type/category (shoes, shirt, phone, etc.)
+3. Specific model or style name (if identifiable)
+4. Main colors (primary color first)
+5. Notable features (high-top, wireless, leather, etc.)
+6. Any visible text, model numbers, or identifiers
+
+Provide response in this exact format:
 CATEGORY: [electronics|fashion|books|home|sports|beauty|food|general]
-KEYWORDS: [3-5 keywords under 50 characters total]
+KEYWORDS: [4-6 specific keywords, most important first]
 
 Examples:
 CATEGORY: fashion
-KEYWORDS: Nike sneakers black
+KEYWORDS: Adidas Grand Court white sneakers low-top
 
-CATEGORY: electronics  
-KEYWORDS: iPhone smartphone Apple
+CATEGORY: electronics
+KEYWORDS: Apple iPhone 15 Pro black smartphone
 
-Focus on brand, product type, key features. Keep keywords concise and searchable.
+CATEGORY: fashion  
+KEYWORDS: Nike Air Jordan black red high-top
+
+Important:
+- Include brand name if visible
+- Use specific model names when identifiable
+- Include distinctive colors and features
+- Consider the user query context for relevance
+- Keywords should help find this exact product or very similar ones
     `;
   }
 
@@ -335,10 +351,10 @@ Focus on brand, product type, key features. Keep keywords concise and searchable
         );
       }
 
-      // Ensure keywords are under 50 characters total
+      // Ensure keywords are reasonable length (allow up to 60 characters for better specificity)
       const keywordString = keywords.join(' ');
-      if (keywordString.length > 50) {
-        keywords = keywords.slice(0, 3); // Reduce to top 3 keywords if too long
+      if (keywordString.length > 60) {
+        keywords = keywords.slice(0, 4); // Reduce to top 4 keywords if too long
       }
       
       this.logger.info('Gemini', 'Extracted category and keywords from response', {

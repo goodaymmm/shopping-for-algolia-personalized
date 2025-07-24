@@ -117,10 +117,31 @@ class MainApplication {
                 console.log(`[Search] Analysis progress: ${status} (${progress}%)`);
               });
               
-              // Use image keywords as primary search terms
+              // Combine image keywords with original query for better matching
               const originalQuery = searchQuery;
-              searchQuery = imageAnalysis.searchKeywords.join(' ');
-              console.log('[Search] Using image keywords for search:', searchQuery);
+              const imageKeywords = imageAnalysis.searchKeywords.join(' ');
+              
+              // Preserve original query if it contains constraints or specific details
+              if (originalQuery && (
+                originalQuery.toLowerCase().includes('under') || 
+                originalQuery.toLowerCase().includes('less than') ||
+                originalQuery.toLowerCase().includes('over') ||
+                originalQuery.toLowerCase().includes('more than') ||
+                originalQuery.toLowerCase().includes('similar') ||
+                originalQuery.toLowerCase().includes('like') ||
+                searchConstraints?.priceRange ||
+                searchConstraints?.colors?.length ||
+                searchConstraints?.styles?.length
+              )) {
+                // Combine image analysis with original query constraints
+                searchQuery = `${imageKeywords} ${originalQuery}`;
+                console.log('[Search] Combined image keywords with original query:', searchQuery);
+              } else {
+                // Use only image keywords if no constraints in original query
+                searchQuery = imageKeywords;
+                console.log('[Search] Using image keywords for search:', searchQuery);
+              }
+              console.log('[Search] Original query preserved for constraints:', originalQuery);
               console.log('[Search] Natural language constraints will be applied after search');
             } else {
               console.warn('[Search] Gemini API key not available, skipping image analysis');
@@ -680,9 +701,11 @@ class MainApplication {
           searchSession
         }));
 
-        // Create search result with analysis metadata
+        // Create search result with analysis metadata and filtering info
         const searchResult: IPCSearchResult = {
           products: productsWithSession,
+          totalResultsBeforeFilter: preFilterCount,
+          totalResultsAfterFilter: productsWithSession.length,
           imageAnalysis: imageAnalysis ? {
             keywords: imageAnalysis.searchKeywords,
             category: imageAnalysis.category,
@@ -694,7 +717,8 @@ class MainApplication {
             styles: searchConstraints.styles,
             gender: searchConstraints.gender,
             applied: true
-          } : undefined
+          } : undefined,
+          filteringDetails: filteringDetails
         };
 
         console.log('[Search] Returning', productsWithSession.length, 'products with analysis metadata');
