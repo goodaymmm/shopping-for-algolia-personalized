@@ -36,6 +36,24 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
   const [logs, setLogs] = useState<string>('');
   const [logFilePath, setLogFilePath] = useState<string>('');
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+  const [algoliaUploadStatus, setAlgoliaUploadStatus] = useState<{ status: string; message: string } | null>(null);
+
+  // Listen for Algolia upload status
+  useEffect(() => {
+    if (window.electronAPI?.onAlgoliaUploadStatus) {
+      const unsubscribe = window.electronAPI.onAlgoliaUploadStatus((data) => {
+        setAlgoliaUploadStatus(data);
+        // Auto-hide after 10 seconds for completed/error status
+        if (data.status === 'completed' || data.status === 'error') {
+          setTimeout(() => setAlgoliaUploadStatus(null), 10000);
+        }
+      });
+      
+      return () => {
+        unsubscribe();
+      };
+    }
+  }, []);
 
   // Load current settings on mount
   useEffect(() => {
@@ -868,6 +886,21 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
               }`}>
                 {apiSaveMessage}
+              </div>
+            )}
+            
+            {algoliaUploadStatus && (
+              <div className={`p-3 rounded-xl text-sm font-medium transition-all flex items-center gap-2 ${
+                algoliaUploadStatus.status === 'starting' 
+                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-800' 
+                  : algoliaUploadStatus.status === 'completed'
+                  ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-800'
+                  : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
+              }`}>
+                {algoliaUploadStatus.status === 'starting' && (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                )}
+                {algoliaUploadStatus.message}
               </div>
             )}
             

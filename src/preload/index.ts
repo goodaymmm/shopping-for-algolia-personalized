@@ -112,5 +112,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onSearchFeedback: (callback: (feedback: string) => void) => {
     ipcRenderer.on('search-feedback', (_, feedback) => callback(feedback));
     return () => ipcRenderer.removeAllListeners('search-feedback');
+  },
+
+  // Algolia upload status listener
+  onAlgoliaUploadStatus: (callback: (data: { status: string; message: string }) => void) => {
+    ipcRenderer.on('algolia-upload-status', (_, data) => callback(data));
+    return () => ipcRenderer.removeAllListeners('algolia-upload-status');
   }
 })

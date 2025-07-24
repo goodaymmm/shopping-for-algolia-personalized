@@ -921,6 +921,7 @@ class MainApplication {
       try {
         console.log('[Main] Saving API keys:', Object.keys(apiKeys));
         let savedKeys = [];
+        let hasAllAlgoliaKeys = false;
         
         // Save Gemini API key
         if (apiKeys.gemini && apiKeys.gemini.trim()) {
@@ -959,8 +960,52 @@ class MainApplication {
           return { success: false, error: 'No valid API keys provided' }
         }
         
+        // Check if all Algolia keys are now present
+        const allKeys = await this.database.getAPIKeys();
+        const keyMap = new Map(allKeys.map(k => [k.provider, k.encrypted_key]));
+        
+        hasAllAlgoliaKeys = 
+          keyMap.has('algoliaAppId') && 
+          keyMap.has('algoliaSearchKey') && 
+          keyMap.has('algoliaWriteKey');
+        
         const message = `API keys saved successfully: ${savedKeys.join(', ')}`;
         console.log('[Main]', message);
+        
+        // If all Algolia keys are present, trigger automatic data upload
+        if (hasAllAlgoliaKeys) {
+          console.log('[Main] All Algolia keys detected, initiating automatic data upload...');
+          
+          // Send notification to renderer that upload is starting
+          if (this.mainWindow) {
+            this.mainWindow.webContents.send('algolia-upload-status', {
+              status: 'starting',
+              message: 'Starting Algolia data upload...'
+            });
+          }
+          
+          // Trigger data upload in background
+          this.initializeAlgoliaAndUploadData()
+            .then(() => {
+              console.log('[Main] Automatic data upload completed successfully');
+              if (this.mainWindow) {
+                this.mainWindow.webContents.send('algolia-upload-status', {
+                  status: 'completed',
+                  message: 'Algolia data upload completed successfully!'
+                });
+              }
+            })
+            .catch((error) => {
+              console.error('[Main] Automatic data upload failed:', error);
+              if (this.mainWindow) {
+                this.mainWindow.webContents.send('algolia-upload-status', {
+                  status: 'error',
+                  message: `Data upload failed: ${error.message}`
+                });
+              }
+            });
+        }
+        
         return { success: true, message }
       } catch (error) {
         console.error('[Main] Save API keys error:', error)
@@ -1218,6 +1263,58 @@ class MainApplication {
         return { success: false, error: (error as Error).message };
       }
     })
+  }
+
+  // Initialize Algolia and upload data when API keys are configured
+  private async initializeAlgoliaAndUploadData(): Promise<void> {
+    try {
+      console.log('[Main] Starting Algolia initialization and data upload...');
+      
+      // Get API keys from database
+      const allKeys = await this.database.getAPIKeys();
+      const keyMap = new Map(allKeys.map(k => [k.provider, k.encrypted_key]));
+      
+      const algoliaAppId = keyMap.get('algoliaAppId');
+      const algoliaApiKey = keyMap.get('algoliaSearchKey');
+      const algoliaWriteKey = keyMap.get('algoliaWriteKey');
+      
+      if (!algoliaAppId || !algoliaApiKey || !algoliaWriteKey) {
+        throw new Error('Missing required Algolia API keys');
+      }
+      
+      console.log('[Main] All Algolia keys found, initializing MCP service...');
+      
+      // Initialize the MCP service with multi-search config
+      const multiSearchInitialized = await this.algoliaMCPService.initializeMultiSearch({
+        applicationId: algoliaAppId,
+        apiKey: algoliaApiKey,
+        writeApiKey: algoliaWriteKey,
+        indexMappings: {
+          fashion: 'fashion',
+          electronics: 'electronics',
+          products: 'products',
+          beauty: 'beauty',
+          sports: 'sports',
+          books: 'books',
+          home: 'home',
+          food: 'food'
+        }
+      });
+      
+      if (!multiSearchInitialized) {
+        throw new Error('Failed to initialize Algolia MCP service');
+      }
+      
+      console.log('[Main] MCP service initialized, checking indices...');
+      
+      // Ensure indices exist and load data if needed
+      await this.algoliaMCPService.ensureIndicesExist();
+      
+      console.log('[Main] Algolia initialization and data upload completed successfully');
+    } catch (error) {
+      console.error('[Main] Failed to initialize Algolia and upload data:', error);
+      throw error;
+    }
   }
 }
 

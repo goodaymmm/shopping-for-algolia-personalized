@@ -87,10 +87,10 @@ export class OptimizedDataLoader {
       isPackaged = false;
     }
     
-    // パッケージ環境では app.asar 内の src/data を参照
+    // パッケージ環境では dist/main から見た src/data を参照
     // 開発環境では data を直接参照
     this.dataPath = isPackaged
-      ? join(__dirname, '../src/data')
+      ? join(__dirname, '../../src/data')
       : join(__dirname, '../../data');
     
     console.log(`[OptimizedDataLoader] Data path: ${this.dataPath} (packaged: ${isPackaged})`);

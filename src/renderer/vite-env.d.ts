@@ -19,6 +19,7 @@ interface ElectronAPI {
   getAPIKeys?: () => Promise<{ success: boolean; keys?: Record<string, string>; error?: string }>;
   saveAPIKeys?: (keys: Record<string, string>) => Promise<{ success: boolean; error?: string }>;
   loadSampleData?: () => Promise<{ success: boolean; message?: string; error?: string }>;
+  onAlgoliaUploadStatus?: (callback: (data: { status: string; message: string }) => void) => () => void;
 }
 
 interface Window {
