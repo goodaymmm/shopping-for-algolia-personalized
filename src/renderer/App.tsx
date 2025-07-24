@@ -45,16 +45,8 @@ function App() {
   const [lastSearchQuery, setLastSearchQuery] = useState<string>('');
   const [sidebarWidth, setSidebarWidth] = useState(600); // Default width
 
-  // Get search results from current session and update sidebar products
+  // Get search results from current session
   const searchResults = currentSession?.searchResults || [];
-  
-  // Update sidebar products when search results change
-  useEffect(() => {
-    setSidebarProducts(searchResults);
-    if (searchResults.length > 0) {
-      setIsProductSidebarOpen(true);
-    }
-  }, [searchResults]);
 
   // Service instances for fallback when Electron API is not available
   const geminiService = new GeminiService();
@@ -415,8 +407,15 @@ function App() {
   const handleSessionSelect = (sessionId: string) => {
     setCurrentSessionId(sessionId);
     setCurrentView('chat');
-    // Search results will be automatically loaded from the selected session
-    // The useEffect will handle updating sidebar products
+    // Load search results from the selected session
+    const selectedSession = sessions.find(s => s.id === sessionId);
+    if (selectedSession?.searchResults) {
+      setSidebarProducts(selectedSession.searchResults);
+      setIsProductSidebarOpen(selectedSession.searchResults.length > 0);
+    } else {
+      setSidebarProducts([]);
+      setIsProductSidebarOpen(false);
+    }
   };
 
   const handleSettingsClick = () => {
