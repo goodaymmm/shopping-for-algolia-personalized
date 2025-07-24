@@ -338,6 +338,90 @@ class MainApplication {
 
         console.log('[Search] Algolia search results:', products ? products.length : 0, 'products');
         
+        // Special handling for image analysis searches that return 0 results
+        if ((!products || products.length === 0) && imageAnalysis && imageAnalysis.searchKeywords.length > 0) {
+          console.log('[Search] Image analysis query returned 0 results, implementing progressive simplification...');
+          
+          const originalKeywords = imageAnalysis.searchKeywords;
+          console.log('[Search] Original image keywords:', originalKeywords);
+          
+          // Strategy: Progressive query simplification
+          // 1. Try with just brand + category (if available)
+          const brandKeyword = originalKeywords.find(keyword => 
+            commonBrands.some(brand => keyword.toLowerCase() === brand.toLowerCase())
+          );
+          
+          if (brandKeyword) {
+            // Extract category/type keywords (common product types)
+            const typeKeywords = ['shoes', 'sneakers', 'shirt', 'pants', 'jacket', 'bag', 'watch', 'phone', 'laptop', 'headphones'];
+            const categoryKeyword = originalKeywords.find(keyword => 
+              typeKeywords.some(type => keyword.toLowerCase().includes(type.toLowerCase()))
+            );
+            
+            const simplifiedQuery = categoryKeyword ? `${brandKeyword} ${categoryKeyword}` : brandKeyword;
+            console.log('[Search] Trying simplified brand + category query:', simplifiedQuery);
+            sendFeedback(`Simplifying search to: "${simplifiedQuery}"...`);
+            
+            products = await this.algoliaMCPService.searchProductsMultiIndex(
+              simplifiedQuery,
+              inferredCategories.length > 0 ? inferredCategories : undefined,
+              {
+                hitsPerPage: 20,
+                attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'],
+                searchType: 'fuzzy'
+              }
+            );
+            
+            console.log('[Search] Simplified brand search results:', products ? products.length : 0, 'products');
+          }
+          
+          // 2. If still no results, try with just the first 2-3 keywords
+          if ((!products || products.length === 0) && originalKeywords.length > 3) {
+            const reducedQuery = originalKeywords.slice(0, 3).join(' ');
+            console.log('[Search] Trying with first 3 keywords:', reducedQuery);
+            sendFeedback(`Reducing to key terms: "${reducedQuery}"...`);
+            
+            products = await this.algoliaMCPService.searchProductsMultiIndex(
+              reducedQuery,
+              inferredCategories.length > 0 ? inferredCategories : undefined,
+              {
+                hitsPerPage: 20,
+                attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'],
+                searchType: 'fuzzy'
+              }
+            );
+            
+            console.log('[Search] Reduced keywords search results:', products ? products.length : 0, 'products');
+          }
+          
+          // 3. If still no results, try removing specific model names/numbers
+          if ((!products || products.length === 0)) {
+            // Remove patterns like "3ST.004" or model numbers
+            const withoutModels = originalKeywords.filter(keyword => 
+              !keyword.match(/^[A-Z0-9]+\.?[0-9]+$/i) && // Model numbers like "3ST.004"
+              !keyword.match(/^[0-9]+$/) // Pure numbers
+            );
+            
+            if (withoutModels.length > 0 && withoutModels.length < originalKeywords.length) {
+              const genericQuery = withoutModels.join(' ');
+              console.log('[Search] Trying without model numbers:', genericQuery);
+              sendFeedback(`Searching without model numbers: "${genericQuery}"...`);
+              
+              products = await this.algoliaMCPService.searchProductsMultiIndex(
+                genericQuery,
+                inferredCategories.length > 0 ? inferredCategories : undefined,
+                {
+                  hitsPerPage: 20,
+                  attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'],
+                  searchType: 'fuzzy'
+                }
+              );
+              
+              console.log('[Search] Generic search results:', products ? products.length : 0, 'products');
+            }
+          }
+        }
+        
         // Implement improved multi-stage search strategy if no results found
         if (!products || products.length === 0) {
           console.log('[Search] No products found with original query, attempting multi-stage search...');

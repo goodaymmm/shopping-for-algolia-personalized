@@ -261,7 +261,7 @@ function App() {
       appendSessionSearchResults(sessionId, finalResults);
       
       // Update sidebar products and open sidebar if products found
-      setSidebarProducts(prev => [...prev, ...finalResults]);
+      setSidebarProducts(finalResults);
       if (finalResults.length > 0) {
         setIsProductSidebarOpen(true);
       }
