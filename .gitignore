@@ -47,5 +47,9 @@ yarn-error.log*
 # API Keys (for development)
 keys.json
 
-# Documentation (development in progress)
+# Test documentation (internal use)
+testlist.md
+reclist.md
+
+# Documentation (pending final review)
 README.md

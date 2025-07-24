@@ -11,7 +11,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [windows-latest, macos-latest]
         include:
           - os: windows-latest
             platform: win
@@ -19,6 +19,13 @@ jobs:
             artifact-path: |
               release/**/*.exe
               release/**/win-unpacked/**
+          - os: macos-latest
+            platform: mac
+            artifact-name: macos
+            artifact-path: |
+              release/**/*.dmg
+              release/**/*.zip
+              release/**/mac/**
 
     runs-on: ${{ matrix.os }}
 
@@ -124,6 +131,8 @@ jobs:
         with:
           files: |
             windows-build/**/*.exe
+            macos-build/**/*.dmg
+            macos-build/**/*.zip
           draft: false
           prerelease: false
         env:

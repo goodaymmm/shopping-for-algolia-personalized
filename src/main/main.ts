@@ -52,6 +52,7 @@ class MainApplication {
     this.mainWindow = new BrowserWindow({
       width: 1200,
       height: 800,
+      autoHideMenuBar: true,  // PRODUCTION: Hide menu bar
       webPreferences: {
         preload: join(__dirname, '../preload/index.js'),
         contextIsolation: true,
@@ -61,11 +62,11 @@ class MainApplication {
 
     if (process.env.NODE_ENV === 'development') {
       this.mainWindow.loadURL('http://localhost:5173')
-      this.mainWindow.webContents.openDevTools()
+      // this.mainWindow.webContents.openDevTools()  // PRODUCTION: DevTools disabled
     } else {
       this.mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
-      // 強制的にDevToolsを開いてログを確認できるようにする（デバッグ用）
-      this.mainWindow.webContents.openDevTools()
+      // デバッグ用（必要時にコメントを外す）
+      // this.mainWindow.webContents.openDevTools()  // PRODUCTION: Enable only for debugging
     }
   }
 
@@ -1236,6 +1237,8 @@ class MainApplication {
       }
     })
 
+    // PRODUCTION: Developer tools disabled - uncomment for debugging
+    /*
     ipcMain.handle('clear-logs', async () => {
       try {
         this.logger.clearLogs()
@@ -1317,7 +1320,8 @@ class MainApplication {
         // Alternative approach: get from the main process response format
         const keysResult = await this.database.getAPIKeys();
         const geminiKey = keysResult.find((k: any) => k.provider === 'gemini')?.encrypted_key || '';
-        
+    */
+        /*
         // Get from settings properly
         const stmt = this.database.database.prepare(`
           SELECT service, key, value FROM api_configs WHERE service = 'algolia'
@@ -1342,7 +1346,10 @@ class MainApplication {
         return { success: false, error: error?.message || 'Failed to load sample data' };
       }
     });
+    */
 
+    // PRODUCTION: Developer tools disabled - uncomment for debugging
+    /*
     // 破損したAPIキーを完全削除
     ipcMain.handle('delete-corrupted-api-keys', async () => {
       try {
@@ -1371,6 +1378,7 @@ class MainApplication {
         return { success: false, error: (error as Error).message };
       }
     })
+    */
   }
 
   // Initialize Algolia and upload data when API keys are configured
