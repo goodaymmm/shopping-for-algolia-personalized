@@ -830,6 +830,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                 </button>
               </div>
               
+              {/* Developer buttons - commented out for production
               <div className="flex gap-3">
                 <button
                   onClick={handleDebugAPIKeys}
@@ -867,6 +868,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                   </p>
                 )}
               </div>
+              */}
             </div>
             
             {sampleDataMessage && (
