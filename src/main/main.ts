@@ -1146,6 +1146,36 @@ class MainApplication {
       }
     })
 
+    // Delete a specific API key
+    ipcMain.handle('delete-api-key', async (event, provider: string) => {
+      try {
+        console.log('[Main] Deleting API key for provider:', provider);
+        const success = await this.database.deleteAPIKey(provider);
+        return { 
+          success, 
+          message: success ? `API key for ${provider} deleted successfully` : `No API key found for ${provider}` 
+        };
+      } catch (error) {
+        console.error('[Main] Delete API key error:', error);
+        return { success: false, error: (error as Error).message };
+      }
+    })
+
+    // Delete all API keys
+    ipcMain.handle('delete-all-api-keys', async () => {
+      try {
+        console.log('[Main] Deleting all API keys');
+        const success = await this.database.deleteAllAPIKeys();
+        return { 
+          success, 
+          message: success ? 'All API keys deleted successfully' : 'No API keys found to delete' 
+        };
+      } catch (error) {
+        console.error('[Main] Delete all API keys error:', error);
+        return { success: false, error: (error as Error).message };
+      }
+    })
+
     // Track product view interaction
     ipcMain.handle('track-product-view', async (event, productId: string, timeSpent: number) => {
       try {

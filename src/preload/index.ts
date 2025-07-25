@@ -64,6 +64,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   cleanupAPIKeys: (provider?: string) =>
     ipcRenderer.invoke('cleanup-api-keys', provider),
+  
+  deleteAPIKey: (provider: string) =>
+    ipcRenderer.invoke('delete-api-key', provider),
+  
+  deleteAllAPIKeys: () =>
+    ipcRenderer.invoke('delete-all-api-keys'),
 
   // ML interaction tracking
   trackProductView: (productId: string, timeSpent: number) =>

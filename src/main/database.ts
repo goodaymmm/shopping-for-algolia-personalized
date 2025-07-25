@@ -655,4 +655,36 @@ export class DatabaseService {
       return [];
     }
   }
+
+  // Delete a specific API key
+  async deleteAPIKey(provider: string): Promise<boolean> {
+    console.log('[Database] Deleting API key for provider:', provider);
+    
+    try {
+      const stmt = this.db.prepare('DELETE FROM api_configs WHERE provider = ?');
+      const result = stmt.run(provider);
+      
+      console.log('[Database] Delete result:', { provider, changes: result.changes });
+      return result.changes > 0;
+    } catch (error) {
+      console.error('[Database] Error deleting API key:', error);
+      return false;
+    }
+  }
+
+  // Delete all API keys
+  async deleteAllAPIKeys(): Promise<boolean> {
+    console.log('[Database] Deleting all API keys');
+    
+    try {
+      const stmt = this.db.prepare('DELETE FROM api_configs');
+      const result = stmt.run();
+      
+      console.log('[Database] Delete all result:', { changes: result.changes });
+      return result.changes > 0;
+    } catch (error) {
+      console.error('[Database] Error deleting all API keys:', error);
+      return false;
+    }
+  }
 }

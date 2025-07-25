@@ -700,10 +700,27 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       </span>
                     </div>
                     <button
-                      onClick={() => {
-                        setHasExistingApiKey(false);
-                        setMaskedApiKey('');
-                        setGeminiApiKey('');
+                      onClick={async () => {
+                        try {
+                          // Delete the API key from database
+                          if (window.electronAPI?.deleteAPIKey) {
+                            const result = await window.electronAPI.deleteAPIKey('gemini');
+                            if (result.success) {
+                              setHasExistingApiKey(false);
+                              setMaskedApiKey('');
+                              setGeminiApiKey('');
+                              setApiSaveMessage('Gemini API key cleared successfully');
+                              setTimeout(() => setApiSaveMessage(''), 3000);
+                            } else {
+                              setApiSaveMessage('Failed to clear Gemini API key: ' + (result.error || 'Unknown error'));
+                              setTimeout(() => setApiSaveMessage(''), 3000);
+                            }
+                          }
+                        } catch (error) {
+                          console.error('Failed to delete API key:', error);
+                          setApiSaveMessage('Failed to clear API key: ' + (error as Error).message);
+                          setTimeout(() => setApiSaveMessage(''), 3000);
+                        }
                       }}
                       className="text-xs text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 underline"
                     >
@@ -742,12 +759,35 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                       </span>
                     </div>
                     <button
-                      onClick={() => {
-                        setHasExistingAlgoliaKeys(false);
-                        setMaskedAlgoliaKeys({appId: '', searchKey: '', writeKey: ''});
-                        setAlgoliaAppId('');
-                        setAlgoliaSearchKey('');
-                        setAlgoliaWriteKey('');
+                      onClick={async () => {
+                        try {
+                          // Delete all Algolia API keys from database
+                          if (window.electronAPI?.deleteAPIKey) {
+                            const results = await Promise.all([
+                              window.electronAPI.deleteAPIKey('algoliaAppId'),
+                              window.electronAPI.deleteAPIKey('algoliaSearchKey'),
+                              window.electronAPI.deleteAPIKey('algoliaWriteKey')
+                            ]);
+                            
+                            if (results.every(r => r.success)) {
+                              setHasExistingAlgoliaKeys(false);
+                              setMaskedAlgoliaKeys({appId: '', searchKey: '', writeKey: ''});
+                              setAlgoliaAppId('');
+                              setAlgoliaSearchKey('');
+                              setAlgoliaWriteKey('');
+                              setApiSaveMessage('Algolia API keys cleared successfully');
+                              setTimeout(() => setApiSaveMessage(''), 3000);
+                            } else {
+                              const failedKeys = results.filter(r => !r.success).map(r => r.error).join(', ');
+                              setApiSaveMessage('Failed to clear some Algolia API keys: ' + failedKeys);
+                              setTimeout(() => setApiSaveMessage(''), 3000);
+                            }
+                          }
+                        } catch (error) {
+                          console.error('Failed to delete Algolia API keys:', error);
+                          setApiSaveMessage('Failed to clear Algolia API keys: ' + (error as Error).message);
+                          setTimeout(() => setApiSaveMessage(''), 3000);
+                        }
                       }}
                       className="text-xs text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200 underline"
                     >
