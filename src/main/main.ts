@@ -969,6 +969,8 @@ class MainApplication {
 
     // Save product to database
     ipcMain.handle('save-product', async (event, product) => {
+      console.log(`[DEBUG] save-product handler called (this path should not be reached if save-product-with-tracking exists)`);
+      console.log(`[DEBUG] Product: ${product.name} (ID: ${product.id})`);
       try {
         const result = await this.database.saveProduct(product)
         

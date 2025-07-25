@@ -272,10 +272,11 @@ function App() {
         }
       });
       
-      // Save search results to current session (replace existing results for filtering)
-      updateSessionSearchResults(sessionId, finalResultsWithSession);
+      // Save search results to current session - append to existing results
+      appendSessionSearchResults(sessionId, finalResultsWithSession);
       
-      // Update sidebar products - append to existing results for history tracking
+      // Update sidebar products to match session's accumulated results
+      // We need to manually append here because state updates are async
       setSidebarProducts(prev => [...prev, ...finalResultsWithSession]);
       if (finalResults.length > 0) {
         setIsProductSidebarOpen(true);
@@ -400,7 +401,7 @@ function App() {
   const handleSessionSelect = (sessionId: string) => {
     setCurrentSessionId(sessionId);
     setCurrentView('chat');
-    // Load search results from the selected session
+    // Load search results from the selected session - using sessions state directly
     const selectedSession = sessions.find(s => s.id === sessionId);
     if (selectedSession?.searchResults) {
       setSidebarProducts(selectedSession.searchResults);
@@ -506,9 +507,10 @@ function App() {
   const handleSettingsBack = () => {
     setCurrentView('chat');
     
-    // Restore search results from current session when returning from settings
-    if (currentSession?.searchResults && currentSession.searchResults.length > 0) {
-      setSidebarProducts(currentSession.searchResults);
+    // Get the latest session data directly from sessions state to avoid stale closure
+    const latestSession = sessions.find(s => s.id === currentSessionId);
+    if (latestSession?.searchResults && latestSession.searchResults.length > 0) {
+      setSidebarProducts(latestSession.searchResults);
       setIsProductSidebarOpen(true);
     }
   };

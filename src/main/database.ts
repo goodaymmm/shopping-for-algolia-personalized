@@ -372,27 +372,45 @@ export class DatabaseService {
   resetDatabase() {
     console.log('[DEBUG][Database] resetDatabase() called');
     
+    // Disable foreign key constraints temporarily
+    console.log('[DEBUG][Database] Disabling foreign key constraints...');
+    this.db.pragma('foreign_keys = OFF');
+    
     // Drop all tables
     console.log('[DEBUG][Database] Dropping all tables...');
-    this.db.exec(`
-      DROP TABLE IF EXISTS users;
-      DROP TABLE IF EXISTS chat_sessions;
-      DROP TABLE IF EXISTS chat_messages;
-      DROP TABLE IF EXISTS saved_products;
-      DROP TABLE IF EXISTS ml_training_data;
-      DROP TABLE IF EXISTS ml_training_events;
-      DROP TABLE IF EXISTS outlier_interactions;
-      DROP TABLE IF EXISTS search_logs;
-      DROP TABLE IF EXISTS user_profile;
-      DROP TABLE IF EXISTS user_settings;
-      DROP TABLE IF EXISTS api_configs;
-    `)
-    console.log('[DEBUG][Database] All tables dropped successfully');
+    try {
+      this.db.exec(`
+        DROP TABLE IF EXISTS chat_messages;
+        DROP TABLE IF EXISTS chat_sessions;
+        DROP TABLE IF EXISTS saved_products;
+        DROP TABLE IF EXISTS ml_training_data;
+        DROP TABLE IF EXISTS ml_training_events;
+        DROP TABLE IF EXISTS outlier_interactions;
+        DROP TABLE IF EXISTS search_logs;
+        DROP TABLE IF EXISTS user_profile;
+        DROP TABLE IF EXISTS user_settings;
+        DROP TABLE IF EXISTS api_configs;
+        DROP TABLE IF EXISTS users;
+      `)
+      console.log('[DEBUG][Database] All tables dropped successfully');
+    } catch (dropError) {
+      console.error('[DEBUG][Database] Error dropping tables:', dropError);
+      throw dropError;
+    }
+    
+    // Re-enable foreign key constraints
+    console.log('[DEBUG][Database] Re-enabling foreign key constraints...');
+    this.db.pragma('foreign_keys = ON');
     
     // Recreate tables
     console.log('[DEBUG][Database] Recreating tables...');
-    this.createTables()
-    console.log('[DEBUG][Database] Tables recreated successfully');
+    try {
+      this.createTables()
+      console.log('[DEBUG][Database] Tables recreated successfully');
+    } catch (error) {
+      console.error('[DEBUG][Database] Error recreating tables:', error);
+      throw error;
+    }
     console.log('[DEBUG][Database] resetDatabase() completed');
   }
 
