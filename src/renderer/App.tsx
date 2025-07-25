@@ -165,42 +165,8 @@ function App() {
       let products = [];
       let searchResult: IPCSearchResult = { products: [], imageAnalysis: undefined };
       
-      // Check if this is a follow-up query (e.g., "Can you find one for under $100?")
-      const isFollowUpQuery = !imageDataUrl && (
-        content.toLowerCase().includes('under') || 
-        content.toLowerCase().includes('less than') ||
-        content.toLowerCase().includes('cheaper') ||
-        content.toLowerCase().includes('for under') ||
-        content.toLowerCase().includes('more than') ||
-        content.toLowerCase().includes('over') ||
-        content.toLowerCase().includes('between') ||
-        content.toLowerCase().includes('can you find') ||
-        content.toLowerCase().includes('show me') ||
-        content.toLowerCase().includes('filter') ||
-        content.toLowerCase().includes('in black') ||
-        content.toLowerCase().includes('in white') ||
-        content.toLowerCase().includes('in red') ||
-        content.toLowerCase().includes('in blue')
-      );
-      
-      // If it's a follow-up query and we have previous results, combine the queries
+      // Let the backend handle follow-up query detection and filtering
       let searchQuery = content;
-      if (isFollowUpQuery && lastSearchResult && sidebarProducts.length > 0) {
-        // Check if the last search was an image analysis
-        if (lastSearchResult.imageAnalysis && lastSearchResult.imageAnalysis.searchQuery) {
-          // Use the image analysis keywords for the base query
-          searchQuery = lastSearchResult.imageAnalysis.searchQuery + ' ' + content;
-          console.log('[App] Follow-up query with image analysis detected:', {
-            imageKeywords: lastSearchResult.imageAnalysis.searchQuery,
-            constraint: content,
-            combined: searchQuery
-          });
-        } else {
-          // For regular text searches, combine with previous query
-          searchQuery = lastSearchQuery + ' ' + content;
-          console.log('[App] Follow-up query detected, combining with previous:', searchQuery);
-        }
-      }
       
       // Check if Electron API is available
       if (window.electronAPI && window.electronAPI.searchProducts) {

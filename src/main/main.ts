@@ -17,6 +17,13 @@ class MainApplication {
   private algoliaMCPService: AlgoliaMCPService
   private logger: Logger
   private nlpParser: NaturalLanguageParser
+  private searchResultCache: Map<string, { 
+    timestamp: number, 
+    result: IPCSearchResult, 
+    originalQuery: string,
+    imageAnalysis?: ImageAnalysis 
+  }> = new Map()
+  private readonly CACHE_EXPIRY_MS = 5 * 60 * 1000 // 5 minutes
 
   constructor() {
     this.logger = Logger.getInstance()
@@ -85,6 +92,94 @@ class MainApplication {
       console.log('[Search] Has image data:', !!imageData);
       
       try {
+        // Check if this is a follow-up query (e.g., "Can you find one for under $200?")
+        const isFollowUpQuery = !imageData && (
+          query.toLowerCase().includes('under') || 
+          query.toLowerCase().includes('less than') ||
+          query.toLowerCase().includes('cheaper') ||
+          query.toLowerCase().includes('for under') ||
+          query.toLowerCase().includes('more than') ||
+          query.toLowerCase().includes('over') ||
+          query.toLowerCase().includes('between') ||
+          query.toLowerCase().includes('can you find') ||
+          query.toLowerCase().includes('show me') ||
+          query.toLowerCase().includes('filter') ||
+          query.toLowerCase().includes('in black') ||
+          query.toLowerCase().includes('in white') ||
+          query.toLowerCase().includes('in red') ||
+          query.toLowerCase().includes('in blue')
+        );
+
+        // Clean up expired cache entries
+        const now = Date.now();
+        for (const [key, value] of this.searchResultCache.entries()) {
+          if (now - value.timestamp > this.CACHE_EXPIRY_MS) {
+            this.searchResultCache.delete(key);
+          }
+        }
+
+        // If this is a follow-up query and we have cached results, filter them instead of searching again
+        if (isFollowUpQuery && this.searchResultCache.size > 0) {
+          console.log('[Search] Follow-up query detected, checking cache...');
+          
+          // Get the most recent cached result
+          const latestCachedResult = Array.from(this.searchResultCache.values())
+            .sort((a, b) => b.timestamp - a.timestamp)[0];
+          
+          if (latestCachedResult && now - latestCachedResult.timestamp < this.CACHE_EXPIRY_MS) {
+            console.log('[Search] Using cached results for follow-up filtering');
+            
+            // Parse the new constraints from the follow-up query
+            const followUpConstraints = this.nlpParser.parse(query);
+            console.log('[Search] Follow-up constraints:', followUpConstraints);
+            
+            // Apply the new constraints to the cached products
+            let filteredProducts = [...latestCachedResult.result.products];
+            
+            // Apply price filter
+            if (followUpConstraints?.priceRange) {
+              const { min, max } = followUpConstraints.priceRange;
+              filteredProducts = filteredProducts.filter(product => {
+                const price = product.price;
+                if (min !== undefined && price < min) return false;
+                if (max !== undefined && price > max) return false;
+                return true;
+              });
+              console.log(`[Search] Applied price filter: ${min || 0} - ${max || '∞'}, remaining: ${filteredProducts.length}`);
+            }
+            
+            // Apply color filter
+            if (followUpConstraints?.colors && followUpConstraints.colors.length > 0) {
+              const colors = followUpConstraints.colors.map(c => c.toLowerCase());
+              filteredProducts = filteredProducts.filter(product => {
+                const productText = `${product.name} ${product.description || ''}`.toLowerCase();
+                return colors.some(color => productText.includes(color));
+              });
+              console.log(`[Search] Applied color filter: ${colors.join(', ')}, remaining: ${filteredProducts.length}`);
+            }
+            
+            // Create the filtered result
+            const filteredResult: IPCSearchResult = {
+              products: filteredProducts,
+              totalResultsBeforeFilter: latestCachedResult.result.products.length,
+              totalResultsAfterFilter: filteredProducts.length,
+              imageAnalysis: latestCachedResult.result.imageAnalysis,
+              constraints: {
+                ...latestCachedResult.result.constraints,
+                ...followUpConstraints,
+                applied: true
+              },
+              filteringDetails: {
+                priceFiltered: latestCachedResult.result.products.length - filteredProducts.length,
+                filteredOut: latestCachedResult.result.products.length - filteredProducts.length
+              }
+            };
+            
+            console.log('[Search] Returning filtered cached results:', filteredProducts.length, 'products');
+            return filteredResult;
+          }
+        }
+
         let searchQuery = query;
         let imageAnalysis: ImageAnalysis | null = null;
         let searchConstraints: ParsedConstraints | undefined;
@@ -819,6 +914,17 @@ class MainApplication {
         };
 
         console.log('[Search] Returning', productsWithSession.length, 'products with analysis metadata');
+        
+        // Cache the search result for follow-up queries
+        const cacheKey = `search_${Date.now()}`;
+        this.searchResultCache.set(cacheKey, {
+          timestamp: Date.now(),
+          result: searchResult,
+          originalQuery: query,
+          imageAnalysis: imageAnalysis || undefined
+        });
+        console.log('[Search] Cached search result with key:', cacheKey);
+        
         return searchResult;
 
       } catch (error) {
@@ -1518,6 +1624,14 @@ class MainApplication {
     count: number,
     excludeProducts: any[]
   ): Promise<any[]> {
+    // Simplify the query for discovery - use only the first 1-2 keywords
+    const queryWords = originalQuery.split(' ').filter(word => 
+      word.length > 2 && !['the', 'and', 'for', 'with', 'can', 'you', 'find', 'one'].includes(word.toLowerCase())
+    );
+    const simplifiedQuery = queryWords.slice(0, 2).join(' ') || 'product';
+    
+    console.log(`[Discovery] Original query: "${originalQuery}", Simplified: "${simplifiedQuery}"`);
+    
     const discoveryStrategies = [
       // Strategy 1: Different category
       async () => {
@@ -1526,27 +1640,41 @@ class MainApplication {
         if (otherCategories.length > 0) {
           const randomCategory = otherCategories[Math.floor(Math.random() * otherCategories.length)];
           console.log(`[Discovery] Strategy 1: Searching in different category: ${randomCategory}`);
-          const results = await this.algoliaMCPService.searchProductsMultiIndex(
-            originalQuery.split(' ')[0], // Use first keyword only
-            [randomCategory],
-            { hitsPerPage: count * 3 }
-          );
-          return results || [];
+          try {
+            const results = await this.algoliaMCPService.searchProductsMultiIndex(
+              simplifiedQuery, // Use simplified query
+              [randomCategory],
+              { hitsPerPage: count * 3 }
+            );
+            console.log(`[Discovery] Strategy 1 returned ${results?.length || 0} products`);
+            return results || [];
+          } catch (error) {
+            console.error('[Discovery] Strategy 1 error:', error);
+            return [];
+          }
         }
         return [];
       },
       
       // Strategy 2: Different price range
       async () => {
-        const avgPrice = excludeProducts.reduce((sum, p) => sum + (p.price || 0), 0) / excludeProducts.length;
+        const avgPrice = excludeProducts.length > 0 
+          ? excludeProducts.reduce((sum, p) => sum + (p.price || 0), 0) / excludeProducts.length
+          : 100;
         const priceFilter = avgPrice > 100 ? 'price < 50' : 'price > 200';
         console.log(`[Discovery] Strategy 2: Searching with price filter: ${priceFilter}`);
-        const results = await this.algoliaMCPService.searchProductsMultiIndex(
-          originalQuery,
-          categories.length > 0 ? categories : undefined,
-          { hitsPerPage: count * 3, filters: priceFilter }
-        );
-        return results || [];
+        try {
+          const results = await this.algoliaMCPService.searchProductsMultiIndex(
+            simplifiedQuery, // Use simplified query
+            categories.length > 0 ? categories : undefined,
+            { hitsPerPage: count * 3, filters: priceFilter }
+          );
+          console.log(`[Discovery] Strategy 2 returned ${results?.length || 0} products`);
+          return results || [];
+        } catch (error) {
+          console.error('[Discovery] Strategy 2 error:', error);
+          return [];
+        }
       },
       
       // Strategy 3: Popular brands
@@ -1554,12 +1682,18 @@ class MainApplication {
         const popularBrands = ['Nike', 'Adidas', 'Apple', 'Samsung', 'Sony', 'Canon', 'Dell', 'HP'];
         const randomBrand = popularBrands[Math.floor(Math.random() * popularBrands.length)];
         console.log(`[Discovery] Strategy 3: Searching for brand: ${randomBrand}`);
-        const results = await this.algoliaMCPService.searchProductsMultiIndex(
-          randomBrand,
-          categories.length > 0 ? categories : undefined,
-          { hitsPerPage: count * 3 }
-        );
-        return results || [];
+        try {
+          const results = await this.algoliaMCPService.searchProductsMultiIndex(
+            randomBrand,
+            categories.length > 0 ? categories : undefined,
+            { hitsPerPage: count * 3 }
+          );
+          console.log(`[Discovery] Strategy 3 returned ${results?.length || 0} products`);
+          return results || [];
+        } catch (error) {
+          console.error('[Discovery] Strategy 3 error:', error);
+          return [];
+        }
       }
     ];
     
@@ -1582,15 +1716,23 @@ class MainApplication {
     // Filter out duplicates and invalid products
     const uniqueProducts = discoveryResults.filter(dp => {
       // Check if product already exists in original results
-      const isDuplicate = excludeProducts.some(ep => ep.objectID === dp.objectID);
+      const isDuplicate = excludeProducts.some(ep => 
+        ep.objectID === dp.objectID || ep.id === dp.id || ep.name === dp.name
+      );
       
-      // Check if product has valid image and URL
-      const hasValidImage = dp.image && dp.image !== '' && dp.image !== '#' && 
-                           !dp.image.includes('placeholder') && !dp.image.includes('default');
-      const hasValidUrl = dp.url && dp.url !== '' && dp.url !== '#';
+      // Check if product has valid data (more lenient filtering)
+      const hasValidImage = dp.image && dp.image !== '';
+      const hasValidName = dp.name && dp.name !== '';
+      const hasValidPrice = typeof dp.price === 'number' && dp.price > 0;
       
-      return !isDuplicate && hasValidImage && hasValidUrl;
+      if (!hasValidImage || !hasValidName || !hasValidPrice) {
+        console.log(`[Discovery] Filtering out invalid product: ${dp.name || 'unnamed'}, image: ${!!dp.image}, price: ${dp.price}`);
+      }
+      
+      return !isDuplicate && hasValidImage && hasValidName && hasValidPrice;
     });
+    
+    console.log(`[Discovery] Filtered to ${uniqueProducts.length} unique valid products from ${discoveryResults.length} results`);
     
     // Shuffle and return requested count
     return this.shuffleArray(uniqueProducts).slice(0, count);
