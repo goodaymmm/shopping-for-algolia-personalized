@@ -971,6 +971,23 @@ class MainApplication {
     ipcMain.handle('save-product', async (event, product) => {
       try {
         const result = await this.database.saveProduct(product)
+        
+        // MLトラッキングを追加
+        if (result.lastInsertRowid) {
+          await this.personalization.trackUserInteraction({
+            eventType: 'save',
+            productId: product.id,
+            timestamp: Date.now(),
+            context: { 
+              category: product.category || product.categories?.[0],
+              price: product.price 
+            },
+            weight: 1.0,
+            source: 'standalone-app'
+          })
+          console.log(`[ML] Tracked save event for product: ${product.name} (ID: ${product.id})`);
+        }
+        
         return { success: true, id: result.lastInsertRowid }
       } catch (error) {
         console.error('Save product error:', error)

@@ -239,6 +239,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
         const result = await window.electronAPI.resetDatabase();
         if (result.success) {
           console.log('Database reset successfully');
+          
+          // localStorageとsessionStorageをクリア
+          localStorage.clear();
+          sessionStorage.clear();
+          
           // Reload the app to reflect the changes
           window.location.reload();
         }

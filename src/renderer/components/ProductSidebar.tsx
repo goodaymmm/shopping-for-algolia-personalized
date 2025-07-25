@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronRight, ChevronLeft, ChevronDown, ChevronUp, ShoppingBag, Sparkles, Trash2, Package, GripVertical, Image, Type, Search } from 'lucide-react';
+import { ChevronRight, ChevronLeft, ChevronDown, ChevronUp, ShoppingBag, Sparkles, Package, GripVertical, Image, Type, Search } from 'lucide-react';
 import { ProductCard } from './ProductCard';
-import { ClearProductsDialog } from './ClearProductsDialog';
 import { Product, ProductWithContext, SearchSession } from '../types';
 
 interface ProductSidebarProps {
@@ -35,7 +34,6 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
     isDark
   });
 
-  const [showClearDialog, setShowClearDialog] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     // Load saved width from localStorage, default to 600px
     const saved = localStorage.getItem('productSidebarWidth');
@@ -119,14 +117,6 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
 
   const totalCount = products.length;
 
-  const handleClearClick = () => {
-    setShowClearDialog(true);
-  };
-
-  const handleClearConfirm = () => {
-    onClearProducts();
-    setShowClearDialog(false);
-  };
 
   const toggleSection = (sessionId: string) => {
     setCollapsedSections(prev => {
@@ -241,19 +231,6 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
                 </span>
               )}
             </div>
-            {totalCount > 0 && (
-              <button
-                onClick={handleClearClick}
-                className={`p-2 rounded-lg transition-colors ${
-                  isDark
-                    ? 'hover:bg-gray-800 text-gray-400 hover:text-red-400'
-                    : 'hover:bg-gray-100 text-gray-500 hover:text-red-500'
-                }`}
-                title="Clear all products"
-              >
-                <Trash2 className="w-5 h-5" />
-              </button>
-            )}
           </div>
 
           {/* Expand/Collapse All Controls */}
@@ -480,14 +457,6 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
         </div>
       </div>
 
-      {/* Clear Confirmation Dialog */}
-      <ClearProductsDialog
-        isOpen={showClearDialog}
-        onClose={() => setShowClearDialog(false)}
-        onConfirm={handleClearConfirm}
-        productCount={totalCount}
-        isDark={isDark}
-      />
     </>
   );
 };
