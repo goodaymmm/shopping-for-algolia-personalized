@@ -1656,25 +1656,57 @@ class MainApplication {
     
     // Create a more generic query for discovery
     const productType = queryWords.find(word => 
-      ['shoes', 'shirt', 'pants', 'watch', 'phone', 'laptop', 'camera', 'headphones'].includes(word)
+      ['shoes', 'shoe', 'sneakers', 'boots', 'shirt', 'pants', 'jacket', 'coat', 'dress', 'watch', 'phone', 'laptop', 'camera', 'headphones', 'bag', 'accessories'].includes(word)
     ) || 'product';
+    
+    // Product type mappings for same-category discovery
+    const productTypeAlternatives: Record<string, string[]> = {
+      // Fashion category
+      'shoes': ['shirt', 'pants', 'jacket', 'hoodie', 'shorts', 'accessories'],
+      'shoe': ['shirt', 'pants', 'jacket', 'hoodie', 'shorts', 'accessories'],
+      'sneakers': ['t-shirt', 'joggers', 'sweatshirt', 'cap', 'socks'],
+      'boots': ['jeans', 'leather jacket', 'belt', 'scarf'],
+      'shirt': ['pants', 'shoes', 'jacket', 'tie', 'belt'],
+      'pants': ['shirt', 'shoes', 'belt', 'jacket', 'sweater'],
+      'jacket': ['shirt', 'pants', 'shoes', 'scarf', 'gloves'],
+      'dress': ['heels', 'purse', 'jewelry', 'cardigan', 'scarf'],
+      // Electronics category
+      'phone': ['case', 'headphones', 'charger', 'watch', 'speaker'],
+      'laptop': ['bag', 'mouse', 'keyboard', 'monitor', 'stand'],
+      'camera': ['lens', 'tripod', 'bag', 'memory card', 'flash'],
+      'headphones': ['phone', 'speaker', 'cable', 'case', 'amplifier'],
+      // Sports category
+      'running': ['shorts', 'shirt', 'water bottle', 'armband', 'socks'],
+      'gym': ['gloves', 'towel', 'shaker', 'mat', 'bag']
+    };
     
     console.log(`[Discovery] Original query: "${originalQuery}"`);
     console.log(`[Discovery] Extracted: brand="${brandFromQuery}", type="${productType}", categories=${JSON.stringify(categories)}`);
     
     const discoveryStrategies = [
-      // Strategy 1: Different category
+      // Strategy 1: Same category, different product type (PRIORITY)
       async () => {
-        const otherCategories = ['electronics', 'fashion', 'home', 'sports', 'beauty', 'books']
-          .filter(cat => !categories.includes(cat));
-        if (otherCategories.length > 0) {
-          const randomCategory = otherCategories[Math.floor(Math.random() * otherCategories.length)];
-          console.log(`[Discovery] Strategy 1: Searching in different category: ${randomCategory}`);
+        const alternatives = productTypeAlternatives[productType];
+        if (alternatives && alternatives.length > 0 && categories.length > 0) {
+          // Pick a random alternative product type
+          const alternativeType = alternatives[Math.floor(Math.random() * alternatives.length)];
+          
+          // Build query with brand (if exists) + alternative product type
+          let discoveryQuery = alternativeType;
+          if (brandFromQuery) {
+            discoveryQuery = `${brandFromQuery} ${alternativeType}`;
+          } else if (existingBrands.length > 0) {
+            // Use a brand from existing products
+            const randomBrand = existingBrands[Math.floor(Math.random() * existingBrands.length)];
+            discoveryQuery = `${randomBrand} ${alternativeType}`;
+          }
+          
+          console.log(`[Discovery] Strategy 1: Same category "${categories[0]}", different type: "${discoveryQuery}"`);
           try {
             const results = await this.algoliaMCPService.searchProductsMultiIndex(
-              productType,
-              [randomCategory],
-              { hitsPerPage: count * 5 } // Increase results to have better selection
+              discoveryQuery,
+              categories, // Use same categories
+              { hitsPerPage: count * 10 } // Get more results to ensure variety
             );
             console.log(`[Discovery] Strategy 1 returned ${results?.length || 0} products`);
             return results || [];
@@ -1686,20 +1718,43 @@ class MainApplication {
         return [];
       },
       
-      // Strategy 2: Different price range
+      // Strategy 2: Different category
+      async () => {
+        const otherCategories = ['electronics', 'fashion', 'home', 'sports', 'beauty', 'books']
+          .filter(cat => !categories.includes(cat));
+        if (otherCategories.length > 0) {
+          const randomCategory = otherCategories[Math.floor(Math.random() * otherCategories.length)];
+          console.log(`[Discovery] Strategy 2: Searching in different category: ${randomCategory}`);
+          try {
+            const results = await this.algoliaMCPService.searchProductsMultiIndex(
+              productType,
+              [randomCategory],
+              { hitsPerPage: count * 5 } // Increase results to have better selection
+            );
+            console.log(`[Discovery] Strategy 2 returned ${results?.length || 0} products`);
+            return results || [];
+          } catch (error) {
+            console.error('[Discovery] Strategy 1 error:', error);
+            return [];
+          }
+        }
+        return [];
+      },
+      
+      // Strategy 3: Different price range
       async () => {
         const avgPrice = excludeProducts.length > 0 
           ? excludeProducts.reduce((sum, p) => sum + (p.price || 0), 0) / excludeProducts.length
           : 100;
         const priceFilter = avgPrice > 100 ? 'price < 50' : 'price > 200';
-        console.log(`[Discovery] Strategy 2: Searching "${productType}" with price filter: ${priceFilter}`);
+        console.log(`[Discovery] Strategy 3: Searching "${productType}" with price filter: ${priceFilter}`);
         try {
           const results = await this.algoliaMCPService.searchProductsMultiIndex(
             productType,
             categories.length > 0 ? categories : ['fashion', 'electronics'],
             { hitsPerPage: count * 5, filters: priceFilter }
           );
-          console.log(`[Discovery] Strategy 2 returned ${results?.length || 0} products`);
+          console.log(`[Discovery] Strategy 3 returned ${results?.length || 0} products`);
           return results || [];
         } catch (error) {
           console.error('[Discovery] Strategy 2 error:', error);
@@ -1707,7 +1762,7 @@ class MainApplication {
         }
       },
       
-      // Strategy 3: Different brand in same category
+      // Strategy 4: Different brand in same category
       async () => {
         // Select a brand different from the ones in query/products
         const allBrands = ['Nike', 'Adidas', 'Puma', 'Reebok', 'Under Armour', 'New Balance', 
@@ -1719,14 +1774,14 @@ class MainApplication {
         
         if (availableBrands.length > 0) {
           const randomBrand = availableBrands[Math.floor(Math.random() * availableBrands.length)];
-          console.log(`[Discovery] Strategy 3: Searching for different brand: ${randomBrand}`);
+          console.log(`[Discovery] Strategy 4: Searching for different brand: ${randomBrand}`);
           try {
             const results = await this.algoliaMCPService.searchProductsMultiIndex(
               randomBrand,
               categories.length > 0 ? categories : ['fashion', 'electronics'],
               { hitsPerPage: count * 5 }
             );
-            console.log(`[Discovery] Strategy 3 returned ${results?.length || 0} products`);
+            console.log(`[Discovery] Strategy 4 returned ${results?.length || 0} products`);
             return results || [];
           } catch (error) {
             console.error('[Discovery] Strategy 3 error:', error);
@@ -1736,9 +1791,9 @@ class MainApplication {
         return [];
       },
       
-      // Strategy 4: Trending or popular items
+      // Strategy 5: Trending or popular items
       async () => {
-        console.log(`[Discovery] Strategy 4: Searching for trending items`);
+        console.log(`[Discovery] Strategy 5: Searching for trending items`);
         try {
           const trendingQueries = ['bestseller', 'trending', 'popular', 'new arrival'];
           const randomTrending = trendingQueries[Math.floor(Math.random() * trendingQueries.length)];
@@ -1747,7 +1802,7 @@ class MainApplication {
             undefined, // Search across all categories
             { hitsPerPage: count * 5 }
           );
-          console.log(`[Discovery] Strategy 4 returned ${results?.length || 0} products`);
+          console.log(`[Discovery] Strategy 5 returned ${results?.length || 0} products`);
           return results || [];
         } catch (error) {
           console.error('[Discovery] Strategy 4 error:', error);
@@ -1756,11 +1811,11 @@ class MainApplication {
       }
     ];
     
-    // Try strategies in random order until we get enough products
-    const shuffledStrategies = this.shuffleArray(discoveryStrategies);
+    // Try strategies in priority order until we get enough products
+    // Strategy 1 (same category, different type) has highest priority
     let discoveryResults: any[] = [];
     
-    for (const strategy of shuffledStrategies) {
+    for (const strategy of discoveryStrategies) {
       try {
         const results = await strategy();
         if (results && results.length > 0) {
@@ -1788,12 +1843,21 @@ class MainApplication {
       }
       
       // Check if product already exists in original results
-      const isDuplicate = excludeProducts.some(ep => 
-        ep.objectID === dp.objectID || ep.id === dp.id || ep.name === dp.name
-      );
+      // For Discovery products, we only check objectID to allow similar products
+      const isDuplicate = excludeProducts.some(ep => {
+        // Only check objectID for exact duplicates
+        if (ep.objectID && dp.objectID && ep.objectID === dp.objectID) {
+          return true;
+        }
+        // For products without objectID, check if the name is exactly the same
+        if (!ep.objectID || !dp.objectID) {
+          return ep.name === dp.name;
+        }
+        return false;
+      });
       
       if (isDuplicate) {
-        console.log(`[Discovery] Duplicate found: ${dp.name}`);
+        console.log(`[Discovery] Duplicate found: ${dp.name} (objectID: ${dp.objectID})`);
         return false;
       }
       
