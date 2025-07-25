@@ -34,40 +34,97 @@ function App() {
 
   // Auto-detect category from search query
   const detectCategoryFromQuery = (query: string): string => {
-    const lowerQuery = query.toLowerCase();
+    const lowerQuery = query.toLowerCase().trim();
+    console.log('[Category Detection] Analyzing query:', query, '(lowercase:', lowerQuery, ')');
     
-    // Fashion keywords
-    const fashionKeywords = ['shoes', 'shirt', 'dress', 'pants', 'jacket', 'coat', 'jeans', 
-                            'sweater', 'hoodie', 'clothes', 'clothing', 'fashion', 'wear',
-                            'adidas', 'nike', 'puma', 'reebok', 'converse'];
+    // Fashion keywords - expanded list
+    const fashionKeywords = ['shoe', 'shirt', 'dress', 'pant', 'jacket', 'coat', 'jean', 
+                            'sweater', 'hoodie', 'cloth', 'fashion', 'wear', 'outfit',
+                            'adidas', 'nike', 'puma', 'reebok', 'converse', 'bag', 'belt',
+                            'hat', 'cap', 'scarf', 'glove', 'sock', 'underwear', 'suit',
+                            'tie', 'watch', 'jewelry', 'accessory', 'sandal', 'boot',
+                            'sneaker', 'heel', 'apparel', 'garment', 'style'];
     
-    // Electronics keywords  
+    // Electronics keywords - expanded list
     const electronicsKeywords = ['laptop', 'computer', 'phone', 'tv', 'television', 'tablet',
-                                'camera', 'headphones', 'speaker', 'monitor', 'keyboard',
-                                'mouse', 'electronics', 'gadget', 'device'];
+                                'camera', 'headphone', 'speaker', 'monitor', 'keyboard',
+                                'mouse', 'electronic', 'gadget', 'device', 'iphone', 'ipad',
+                                'samsung', 'sony', 'apple', 'gaming', 'console', 'playstation',
+                                'xbox', 'nintendo', 'earbud', 'smartwatch', 'printer', 'router',
+                                'cable', 'charger', 'battery', 'screen', 'display', 'audio',
+                                'video', 'tech', 'smart', 'wireless', 'bluetooth'];
     
-    // Home & Garden keywords
+    // Home & Garden keywords - expanded list
     const homeKeywords = ['furniture', 'table', 'chair', 'sofa', 'bed', 'lamp', 'decor',
-                         'kitchen', 'bathroom', 'garden', 'tool', 'appliance'];
+                         'kitchen', 'bathroom', 'garden', 'tool', 'appliance', 'mattress',
+                         'pillow', 'blanket', 'curtain', 'rug', 'carpet', 'shelf', 'desk',
+                         'couch', 'dining', 'bedroom', 'living', 'office', 'drawer',
+                         'cabinet', 'mirror', 'frame', 'vase', 'candle', 'towel',
+                         'sheet', 'comforter', 'cookware', 'utensil', 'plate', 'bowl'];
     
-    // Sports & Outdoors keywords
+    // Sports & Outdoors keywords - expanded list
     const sportsKeywords = ['sport', 'fitness', 'gym', 'exercise', 'bike', 'bicycle',
-                           'camping', 'hiking', 'outdoor', 'tennis', 'golf', 'soccer'];
+                           'camping', 'hiking', 'outdoor', 'tennis', 'golf', 'soccer',
+                           'basketball', 'football', 'baseball', 'running', 'yoga',
+                           'weight', 'dumbbell', 'treadmill', 'athletic', 'workout',
+                           'training', 'equipment', 'gear', 'ball', 'racket', 'club',
+                           'helmet', 'pad', 'glove', 'uniform', 'jersey'];
     
-    // Check for category matches
-    if (fashionKeywords.some(keyword => lowerQuery.includes(keyword))) {
-      return 'fashion';
-    }
-    if (electronicsKeywords.some(keyword => lowerQuery.includes(keyword))) {
-      return 'electronics';
-    }
-    if (homeKeywords.some(keyword => lowerQuery.includes(keyword))) {
-      return 'home';
-    }
-    if (sportsKeywords.some(keyword => lowerQuery.includes(keyword))) {
-      return 'sports';
+    // Toys & Games keywords
+    const toysKeywords = ['toy', 'game', 'puzzle', 'lego', 'doll', 'figure',
+                         'board', 'playset', 'kid', 'child', 'baby', 'stuffed',
+                         'educational', 'building', 'blocks', 'nerf', 'barbie'];
+    
+    // Beauty & Health keywords
+    const beautyKeywords = ['makeup', 'cosmetic', 'skincare', 'perfume', 'cologne',
+                           'shampoo', 'soap', 'lotion', 'cream', 'beauty', 'health',
+                           'vitamin', 'supplement', 'medicine', 'wellness', 'facial',
+                           'hair', 'nail', 'spa', 'treatment', 'serum', 'mask'];
+    
+    // Check for category matches - check for partial matches
+    for (const keyword of fashionKeywords) {
+      if (lowerQuery.includes(keyword)) {
+        console.log('[Category Detection] Matched fashion with keyword:', keyword);
+        return 'fashion';
+      }
     }
     
+    for (const keyword of electronicsKeywords) {
+      if (lowerQuery.includes(keyword)) {
+        console.log('[Category Detection] Matched electronics with keyword:', keyword);
+        return 'electronics';
+      }
+    }
+    
+    for (const keyword of homeKeywords) {
+      if (lowerQuery.includes(keyword)) {
+        console.log('[Category Detection] Matched home with keyword:', keyword);
+        return 'home';
+      }
+    }
+    
+    for (const keyword of sportsKeywords) {
+      if (lowerQuery.includes(keyword)) {
+        console.log('[Category Detection] Matched sports with keyword:', keyword);
+        return 'sports';
+      }
+    }
+    
+    for (const keyword of toysKeywords) {
+      if (lowerQuery.includes(keyword)) {
+        console.log('[Category Detection] Matched toys with keyword:', keyword);
+        return 'toys';
+      }
+    }
+    
+    for (const keyword of beautyKeywords) {
+      if (lowerQuery.includes(keyword)) {
+        console.log('[Category Detection] Matched beauty with keyword:', keyword);
+        return 'beauty';
+      }
+    }
+    
+    console.log('[Category Detection] No category match found for query:', lowerQuery);
     return 'general';
   };
 
@@ -387,6 +444,7 @@ function App() {
       if (window.electronAPI && window.electronAPI.saveChat) {
         // Auto-detect category from search query
         const category = detectCategoryFromQuery(content);
+        console.log('[Chat Save] Query:', content, 'Detected Category:', category);
         
         await window.electronAPI.saveChat(
           { 
