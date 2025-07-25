@@ -28,6 +28,7 @@ jobs:
               release/**/mac/**
 
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
 
     steps:
       - name: Checkout code
@@ -38,8 +39,23 @@ jobs:
         with:
           node-version: '20.x'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Clean workspace and npm cache
+        shell: bash
+        run: |
+          # Clean up any existing node_modules to avoid permission issues
+          rm -rf node_modules || true
+          rm -rf ~/.npm || true
+          npm cache clean --force || true
+          
+      - name: Install dependencies with retry
+        shell: bash
+        run: |
+          # First attempt with npm ci
+          if ! npm ci; then
+            echo "npm ci failed, cleaning and retrying with npm install..."
+            rm -rf node_modules package-lock.json
+            npm install
+          fi
 
       - name: Ensure Tailwind CSS v3 compatibility
         run: |
@@ -102,6 +118,8 @@ jobs:
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Disable code signing for macOS in CI
+          CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: List build artifacts
         shell: bash
