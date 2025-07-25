@@ -188,9 +188,9 @@ export class DatabaseService {
         product.price,
         product.image,
         product.url || '',
-        product.categories?.join(', ') || '',
+        JSON.stringify(product.categories || []), // Store as JSON array
         '', // subcategory
-        product.categories?.join(', ') || '', // tags
+        JSON.stringify(product.categories || []), // tags as JSON array
         JSON.stringify(product),
         null, // user_rating
         '', // notes

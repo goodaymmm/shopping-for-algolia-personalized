@@ -213,9 +213,21 @@ export class PersonalizationEngine {
           (profile.interactionHistory[eventKey] as number)++;
         }
 
-        // Category scoring
+        // Category scoring - handle both string and JSON array formats
         if ((event as any).category) {
-          categoryWeights[(event as any).category] = (categoryWeights[(event as any).category] || 0) + weight;
+          let categories: string[] = [];
+          try {
+            // Try to parse as JSON array first
+            categories = JSON.parse((event as any).category);
+          } catch {
+            // Fall back to comma-separated string
+            categories = (event as any).category.split(',').map((c: string) => c.trim()).filter((c: string) => c);
+          }
+          
+          // Add weight to each category
+          for (const cat of categories) {
+            categoryWeights[cat] = (categoryWeights[cat] || 0) + weight;
+          }
         }
 
         // Price preference learning
@@ -241,18 +253,33 @@ export class PersonalizationEngine {
       for (const [category, weight] of Object.entries(categoryWeights)) {
         profile.categoryScores[category] = weight / totalWeight;
       }
+      
+      console.log(`[ML] User Profile Update - Total events: ${events.length}, Total weight: ${totalWeight}`);
+      console.log(`[ML] Category scores:`, profile.categoryScores);
 
-      // Calculate price preferences
+      // Calculate price preferences with improved flexibility
       if (pricePoints.length > 0) {
         pricePoints.sort((a, b) => a - b);
         profile.pricePreference.min = pricePoints[0];
         profile.pricePreference.max = pricePoints[pricePoints.length - 1];
         profile.pricePreference.sweetSpot = this.calculateMedian(pricePoints);
-        profile.pricePreference.flexibility = this.calculatePriceFlexibility(pricePoints);
+        
+        // Calculate flexibility based on standard deviation
+        // If user only selects similar prices, flexibility is low
+        // If user selects diverse prices, flexibility is high
+        const stdDev = this.calculateStandardDeviation(pricePoints);
+        const mean = pricePoints.reduce((a, b) => a + b) / pricePoints.length;
+        
+        // Coefficient of variation (CV) gives us normalized flexibility
+        // Add minimum flexibility of 0.2 to prevent zero flexibility
+        profile.pricePreference.flexibility = Math.min(1.0, Math.max(0.2, stdDev / mean));
+        
+        console.log(`[ML] Price preference: min=${profile.pricePreference.min}, max=${profile.pricePreference.max}, sweetSpot=${profile.pricePreference.sweetSpot}, flexibility=${profile.pricePreference.flexibility}`);
       }
 
       // Calculate confidence level based on data points
-      profile.confidenceLevel = Math.min(1.0, events.length / 50); // 50 interactions = full confidence
+      // Lower threshold for testing - 10 interactions = full confidence
+      profile.confidenceLevel = Math.min(1.0, events.length / 10);
 
       return profile;
 
@@ -294,20 +321,37 @@ export class PersonalizationEngine {
 
       // Historical interactions with this specific product
       const interactions = this.db.prepare(`
-        SELECT SUM(weight) as total_weight
+        SELECT SUM(weight) as total_weight, COUNT(*) as count
         FROM ml_training_events
         WHERE product_id = ? AND source = 'standalone-app'
       `).get(product.id);
 
       let interactionScore = 0;
       if (interactions && (interactions as any).total_weight) {
-        interactionScore = Math.min(0.3, (interactions as any).total_weight * 0.1);
+        const weight = (interactions as any).total_weight;
+        const count = (interactions as any).count;
+        
+        // Increase cap to 0.5 and use logarithmic scaling for better differentiation
+        // This gives more spread between products with different interaction levels
+        interactionScore = Math.min(0.5, Math.log10(1 + weight) * 0.3);
+        
+        // Bonus for multiple interactions (not just high weight from single save)
+        if (count > 1) {
+          interactionScore += Math.min(0.1, count * 0.02);
+        }
+        
         score += interactionScore;
       }
-      console.log(`[ML] - Interaction score: ${interactionScore} (weight: ${(interactions as any)?.total_weight || 0})`);
+      console.log(`[ML] - Interaction score: ${interactionScore} (weight: ${(interactions as any)?.total_weight || 0}, count: ${(interactions as any)?.count || 0})`);
 
-      const finalScore = Math.max(0, Math.min(1, score));
-      console.log(`[ML] - Final score: ${finalScore}`);
+      // Apply confidence level to score adjustments
+      // This makes ML effects more visible with less data
+      const confidenceMultiplier = Math.max(0.5, userProfile.confidenceLevel);
+      const adjustedScore = 0.5 + (score - 0.5) * confidenceMultiplier;
+      
+      const finalScore = Math.max(0, Math.min(1, adjustedScore));
+      console.log(`[ML] - Final score: ${finalScore} (confidence: ${userProfile.confidenceLevel})`);
+      console.log(`[ML] --------------------------------`);
 
       return finalScore;
 
@@ -434,9 +478,29 @@ export class PersonalizationEngine {
   }
 
   private calculatePriceScore(price: number, pricePreference: any): number {
-    const { sweetSpot, flexibility } = pricePreference;
-    const distance = Math.abs(price - sweetSpot) / sweetSpot;
-    return Math.max(0, 1 - (distance / flexibility));
+    const { sweetSpot, flexibility, min, max } = pricePreference;
+    
+    // If price is within the user's historical range, give it a good base score
+    if (price >= min && price <= max) {
+      // Calculate distance from sweet spot as a percentage
+      const distance = Math.abs(price - sweetSpot) / sweetSpot;
+      // Use flexibility to determine how much the distance affects the score
+      // Higher flexibility = less penalty for distance
+      const score = Math.max(0, 1 - (distance / (1 + flexibility)));
+      return score;
+    }
+    
+    // If price is outside range, apply penalty based on how far it is
+    const rangeSize = max - min;
+    let distanceFromRange = 0;
+    if (price < min) {
+      distanceFromRange = (min - price) / rangeSize;
+    } else {
+      distanceFromRange = (price - max) / rangeSize;
+    }
+    
+    // Apply flexibility to out-of-range penalty
+    return Math.max(0, 0.5 - (distanceFromRange / (1 + flexibility)));
   }
 
   private extractCommonKeywords(): string[] {
