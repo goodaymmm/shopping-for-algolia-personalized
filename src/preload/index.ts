@@ -97,6 +97,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getLogs: () =>
     ipcRenderer.invoke('get-logs'),
   
+  openLogFolder: () =>
+    ipcRenderer.invoke('open-log-folder'),
+  
   // 一時的なデバッグ用
   debugAPIKeys: () =>
     ipcRenderer.invoke('debug-api-keys'),

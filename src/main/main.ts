@@ -1385,8 +1385,7 @@ class MainApplication {
       }
     })
 
-    // PRODUCTION: Developer tools disabled - uncomment for debugging
-    /*
+    // Log management handlers
     ipcMain.handle('clear-logs', async () => {
       try {
         this.logger.clearLogs()
@@ -1405,6 +1404,20 @@ class MainApplication {
       } catch (error) {
         console.error('Get logs error:', error)
         return { success: false, error: (error as Error).message, logs: '' }
+      }
+    })
+    
+    // Open log folder in file explorer
+    ipcMain.handle('open-log-folder', async () => {
+      try {
+        const path = require('path')
+        const logFilePath = this.logger.getLogFilePath()
+        const logFolder = path.dirname(logFilePath)
+        await shell.openPath(logFolder)
+        return { success: true, message: 'Log folder opened' }
+      } catch (error) {
+        console.error('Open log folder error:', error)
+        return { success: false, error: (error as Error).message }
       }
     })
 
@@ -1714,22 +1727,43 @@ class MainApplication {
     }
     
     // Filter out duplicates and invalid products
-    const uniqueProducts = discoveryResults.filter(dp => {
+    console.log(`[Discovery] Filtering ${discoveryResults.length} discovery results...`);
+    
+    const uniqueProducts = discoveryResults.filter((dp, index) => {
+      // Debug log first few products
+      if (index < 3) {
+        console.log(`[Discovery] Product ${index}:`, {
+          name: dp.name,
+          price: dp.price,
+          image: dp.image?.substring(0, 50) + '...',
+          objectID: dp.objectID,
+          id: dp.id
+        });
+      }
+      
       // Check if product already exists in original results
       const isDuplicate = excludeProducts.some(ep => 
         ep.objectID === dp.objectID || ep.id === dp.id || ep.name === dp.name
       );
       
-      // Check if product has valid data (more lenient filtering)
-      const hasValidImage = dp.image && dp.image !== '';
-      const hasValidName = dp.name && dp.name !== '';
-      const hasValidPrice = typeof dp.price === 'number' && dp.price > 0;
-      
-      if (!hasValidImage || !hasValidName || !hasValidPrice) {
-        console.log(`[Discovery] Filtering out invalid product: ${dp.name || 'unnamed'}, image: ${!!dp.image}, price: ${dp.price}`);
+      if (isDuplicate) {
+        console.log(`[Discovery] Duplicate found: ${dp.name}`);
+        return false;
       }
       
-      return !isDuplicate && hasValidImage && hasValidName && hasValidPrice;
+      // Very lenient validation - just need basic fields
+      const hasName = dp.name && typeof dp.name === 'string' && dp.name.trim() !== '';
+      const hasPrice = typeof dp.price === 'number' && dp.price >= 0;
+      
+      // Log validation failures
+      if (!hasName) {
+        console.log(`[Discovery] Invalid name: "${dp.name}"`);
+      }
+      if (!hasPrice) {
+        console.log(`[Discovery] Invalid price: ${dp.price} (type: ${typeof dp.price})`);
+      }
+      
+      return !isDuplicate && hasName && hasPrice;
     });
     
     console.log(`[Discovery] Filtered to ${uniqueProducts.length} unique valid products from ${discoveryResults.length} results`);

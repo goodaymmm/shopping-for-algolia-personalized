@@ -997,6 +997,20 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
                     <RotateCcw className="w-4 h-4" />
                     Clear Logs
                   </button>
+                  <button
+                    onClick={async () => {
+                      if (window.electronAPI?.openLogFolder) {
+                        const result = await window.electronAPI.openLogFolder();
+                        if (!result.success) {
+                          alert('Failed to open log folder: ' + (result.error || 'Unknown error'));
+                        }
+                      }
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-500 hover:bg-gray-600 text-white transition-colors"
+                  >
+                    <FolderOpen className="w-4 h-4" />
+                    Open Log Folder
+                  </button>
                 </div>
               </div>
               

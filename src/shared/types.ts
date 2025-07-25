@@ -45,6 +45,7 @@ export interface ElectronAPI {
   getLogFilePath: () => Promise<{ success: boolean; path?: string }>
   clearLogs: () => Promise<{ success: boolean; message?: string }>
   getLogs: () => Promise<{ success: boolean; logs?: string }>
+  openLogFolder: () => Promise<{ success: boolean; message?: string; error?: string }>
   
   // 一時的なデバッグ用
   debugAPIKeys: () => Promise<{ success: boolean; debugInfo?: any }>
