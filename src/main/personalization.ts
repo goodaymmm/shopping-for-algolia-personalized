@@ -269,20 +269,28 @@ export class PersonalizationEngine {
       }
 
       let score = 0.5; // Base score
+      console.log(`[ML] Scoring product: ${product.name} (ID: ${product.id})`);
+      console.log(`[ML] - Categories: ${JSON.stringify(product.categories)}`);
 
       // Category affinity
+      let categoryScore = 0;
       if (product.categories && product.categories.length > 0) {
-        const categoryScore = product.categories.reduce((sum, cat) => {
-          return sum + (userProfile!.categoryScores[cat] || 0);
+        categoryScore = product.categories.reduce((sum, cat) => {
+          const catScore = userProfile!.categoryScores[cat] || 0;
+          console.log(`[ML]   - Category "${cat}" score: ${catScore}`);
+          return sum + catScore;
         }, 0) / product.categories.length;
         score += categoryScore * 0.4;
       }
+      console.log(`[ML] - Category score component: ${categoryScore * 0.4}`);
 
       // Price preference
+      let priceScore = 0;
       if (product.price) {
-        const priceScore = this.calculatePriceScore(product.price, userProfile.pricePreference);
+        priceScore = this.calculatePriceScore(product.price, userProfile.pricePreference);
         score += priceScore * 0.3;
       }
+      console.log(`[ML] - Price score component: ${priceScore * 0.3} (price: $${product.price})`);
 
       // Historical interactions with this specific product
       const interactions = this.db.prepare(`
@@ -291,11 +299,17 @@ export class PersonalizationEngine {
         WHERE product_id = ? AND source = 'standalone-app'
       `).get(product.id);
 
+      let interactionScore = 0;
       if (interactions && (interactions as any).total_weight) {
-        score += Math.min(0.3, (interactions as any).total_weight * 0.1);
+        interactionScore = Math.min(0.3, (interactions as any).total_weight * 0.1);
+        score += interactionScore;
       }
+      console.log(`[ML] - Interaction score: ${interactionScore} (weight: ${(interactions as any)?.total_weight || 0})`);
 
-      return Math.max(0, Math.min(1, score));
+      const finalScore = Math.max(0, Math.min(1, score));
+      console.log(`[ML] - Final score: ${finalScore}`);
+
+      return finalScore;
 
     } catch (error) {
       console.error('Failed to calculate product score:', error);

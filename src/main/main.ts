@@ -693,6 +693,11 @@ class MainApplication {
           }
         }
 
+        // Debug: Log first product structure
+        if (products && products.length > 0) {
+          console.log('[Search] First product data structure:', JSON.stringify(products[0], null, 2));
+        }
+
         // Filter out products with broken or invalid image URLs and invalid product URLs
         console.log('[Search] Filtering products with invalid images and URLs...');
         const validProducts = products.filter((product: any) => {
@@ -823,6 +828,8 @@ class MainApplication {
         console.log('[Search] Checking user profile for personalization...');
         const userProfile = await this.personalization.getUserProfile();
         console.log('[Search] User profile confidence level:', userProfile.confidenceLevel);
+        console.log('[Search] User profile category scores:', JSON.stringify(userProfile.categoryScores));
+        console.log('[Search] User profile price preference:', JSON.stringify(userProfile.pricePreference));
         
         if (userProfile.confidenceLevel > 0.1) {
           console.log('[Search] Applying personalization scoring...');
@@ -837,6 +844,12 @@ class MainApplication {
           // Sort by personalized score
           products = scoredProducts.sort((a, b) => b.personalizedScore - a.personalizedScore);
           console.log('[Search] Applied personalization scoring to', products.length, 'products');
+        
+        // Log top 5 products after scoring
+        console.log('[Search] Top 5 products after ML scoring:');
+        products.slice(0, 5).forEach((p, i) => {
+          console.log(`  ${i+1}. ${p.name} - Score: ${(p as any).personalizedScore?.toFixed(3) || 'N/A'}, Price: $${p.price}`);
+        });
         } else {
           console.log('[Search] Skipping personalization (insufficient confidence)');
         }
@@ -1301,6 +1314,7 @@ class MainApplication {
     // Track product view interaction
     ipcMain.handle('track-product-view', async (event, productId: string, timeSpent: number) => {
       try {
+        console.log(`[ML] Track product view: productId=${productId}, timeSpent=${timeSpent}s`);
         await this.personalization.trackUserInteraction({
           eventType: 'view',
           productId,
@@ -1309,6 +1323,7 @@ class MainApplication {
           weight: 0.3 + (timeSpent / 10) * 0.1,
           source: 'standalone-app'
         })
+        console.log(`[ML] Product view tracked successfully`);
         return { success: true }
       } catch (error) {
         console.error('Track product view error:', error)
@@ -1319,6 +1334,7 @@ class MainApplication {
     // Track product click interaction
     ipcMain.handle('track-product-click', async (event, productId: string, url: string) => {
       try {
+        console.log(`[ML] Track product click: productId=${productId}, url=${url}`);
         await this.personalization.trackUserInteraction({
           eventType: 'click',
           productId,
@@ -1327,6 +1343,7 @@ class MainApplication {
           weight: 0.5,
           source: 'standalone-app'
         })
+        console.log(`[ML] Product click tracked successfully`);
         return { success: true }
       } catch (error) {
         console.error('Track product click error:', error)
@@ -1337,6 +1354,7 @@ class MainApplication {
     // Enhanced save-product handler with ML tracking
     ipcMain.handle('save-product-with-tracking', async (event, product: any) => {
       try {
+        console.log(`[ML] Save product with tracking: ${product.name} (ID: ${product.id})`);
         // Save the product
         const saveResult = await this.database.saveProduct(product)
         
