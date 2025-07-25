@@ -200,7 +200,6 @@ export class PersonalizationEngine {
 
       // Calculate category preferences
       const categoryWeights: Record<string, number> = {};
-      const pricePoints: number[] = [];
       let totalWeight = 0;
 
       for (const event of events as any[]) {
@@ -230,10 +229,7 @@ export class PersonalizationEngine {
           }
         }
 
-        // Price preference learning
-        if ((event as any).price && weight > 0) {
-          pricePoints.push((event as any).price);
-        }
+        // Price learning removed for MVP - will use real-time API pricing in future
 
         // Extract style preferences from context
         if ((event as any).context) {
@@ -257,25 +253,8 @@ export class PersonalizationEngine {
       console.log(`[ML] User Profile Update - Total events: ${events.length}, Total weight: ${totalWeight}`);
       console.log(`[ML] Category scores:`, profile.categoryScores);
 
-      // Calculate price preferences with improved flexibility
-      if (pricePoints.length > 0) {
-        pricePoints.sort((a, b) => a - b);
-        profile.pricePreference.min = pricePoints[0];
-        profile.pricePreference.max = pricePoints[pricePoints.length - 1];
-        profile.pricePreference.sweetSpot = this.calculateMedian(pricePoints);
-        
-        // Calculate flexibility based on standard deviation
-        // If user only selects similar prices, flexibility is low
-        // If user selects diverse prices, flexibility is high
-        const stdDev = this.calculateStandardDeviation(pricePoints);
-        const mean = pricePoints.reduce((a, b) => a + b) / pricePoints.length;
-        
-        // Coefficient of variation (CV) gives us normalized flexibility
-        // Add minimum flexibility of 0.2 to prevent zero flexibility
-        profile.pricePreference.flexibility = Math.min(1.0, Math.max(0.2, stdDev / mean));
-        
-        console.log(`[ML] Price preference: min=${profile.pricePreference.min}, max=${profile.pricePreference.max}, sweetSpot=${profile.pricePreference.sweetSpot}, flexibility=${profile.pricePreference.flexibility}`);
-      }
+      // Price preferences removed for MVP
+      // Keep default values for compatibility
 
       // Calculate confidence level based on data points
       // Lower threshold for testing - 10 interactions = full confidence
@@ -299,7 +278,7 @@ export class PersonalizationEngine {
       console.log(`[ML] Scoring product: ${product.name} (ID: ${product.id})`);
       console.log(`[ML] - Categories: ${JSON.stringify(product.categories)}`);
 
-      // Category affinity
+      // Category affinity (increased weight from 0.4 to 0.5)
       let categoryScore = 0;
       if (product.categories && product.categories.length > 0) {
         categoryScore = product.categories.reduce((sum, cat) => {
@@ -307,17 +286,12 @@ export class PersonalizationEngine {
           console.log(`[ML]   - Category "${cat}" score: ${catScore}`);
           return sum + catScore;
         }, 0) / product.categories.length;
-        score += categoryScore * 0.4;
+        score += categoryScore * 0.5;
       }
-      console.log(`[ML] - Category score component: ${categoryScore * 0.4}`);
+      console.log(`[ML] - Category score component: ${categoryScore * 0.5}`);
 
-      // Price preference
-      let priceScore = 0;
-      if (product.price) {
-        priceScore = this.calculatePriceScore(product.price, userProfile.pricePreference);
-        score += priceScore * 0.3;
-      }
-      console.log(`[ML] - Price score component: ${priceScore * 0.3} (price: $${product.price})`);
+      // Price learning removed - MVP focuses on stable attributes
+      // Future API integration will provide real-time pricing
 
       // Historical interactions with this specific product
       const interactions = this.db.prepare(`
@@ -331,9 +305,9 @@ export class PersonalizationEngine {
         const weight = (interactions as any).total_weight;
         const count = (interactions as any).count;
         
-        // Increase cap to 0.5 and use logarithmic scaling for better differentiation
+        // Increase cap to 0.6 and use logarithmic scaling for better differentiation
         // This gives more spread between products with different interaction levels
-        interactionScore = Math.min(0.5, Math.log10(1 + weight) * 0.3);
+        interactionScore = Math.min(0.6, Math.log10(1 + weight) * 0.4);
         
         // Bonus for multiple interactions (not just high weight from single save)
         if (count > 1) {
@@ -396,27 +370,25 @@ export class PersonalizationEngine {
         stylePreferences: Object.keys(profile.stylePreference.colors).slice(0, 5),
         colorPreferences: Object.keys(profile.stylePreference.colors).slice(0, 3),
         occasionHistory: profile.stylePreference.occasions,
-        budgetRanges: {
-          min: profile.pricePreference.min,
-          max: profile.pricePreference.max,
-          sweetSpot: profile.pricePreference.sweetSpot
-        },
+        categoryPreferences: Object.entries(profile.categoryScores)
+          .sort(([, a], [, b]) => (b as number) - (a as number))
+          .slice(0, 5)
+          .map(([cat, score]) => ({ category: cat, affinity: score })),
         brandAffinities: profile.brandAffinity
       },
       searchOptimization: {
         commonKeywords: this.extractCommonKeywords(),
-        preferredAttributes: Object.keys(profile.categoryScores).slice(0, 5),
-        priceOptimization: {
-          sweetSpot: profile.pricePreference.sweetSpot,
-          flexibility: profile.pricePreference.flexibility
-        }
+        preferredCategories: Object.keys(profile.categoryScores)
+          .filter(cat => profile.categoryScores[cat] > 0.1)
+          .slice(0, 5)
       },
       metadata: {
-        appSource: 'Shopping for AIgolia personalized',
-        dataVersion: '1.0.0',
+        appSource: 'Shopping for AIgolia personalized (MVP)',
+        dataVersion: '2.0.0',
         lastSync: new Date(),
         confidenceLevel: profile.confidenceLevel,
-        dataPoints: this.getInteractionCount()
+        dataPoints: this.getInteractionCount(),
+        note: 'Price learning disabled in MVP - future versions will use real-time API pricing'
       }
     };
   }
@@ -455,53 +427,8 @@ export class PersonalizationEngine {
     }
   }
 
-  private calculateMedian(numbers: number[]): number {
-    const mid = Math.floor(numbers.length / 2);
-    return numbers.length % 2 === 0 
-      ? (numbers[mid - 1] + numbers[mid]) / 2 
-      : numbers[mid];
-  }
-
-  private calculatePriceFlexibility(pricePoints: number[]): number {
-    if (pricePoints.length < 2) return 0.3;
-    
-    const std = this.calculateStandardDeviation(pricePoints);
-    const mean = pricePoints.reduce((a, b) => a + b) / pricePoints.length;
-    
-    return Math.min(1.0, std / mean); // Coefficient of variation
-  }
-
-  private calculateStandardDeviation(numbers: number[]): number {
-    const mean = numbers.reduce((a, b) => a + b) / numbers.length;
-    const variance = numbers.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / numbers.length;
-    return Math.sqrt(variance);
-  }
-
-  private calculatePriceScore(price: number, pricePreference: any): number {
-    const { sweetSpot, flexibility, min, max } = pricePreference;
-    
-    // If price is within the user's historical range, give it a good base score
-    if (price >= min && price <= max) {
-      // Calculate distance from sweet spot as a percentage
-      const distance = Math.abs(price - sweetSpot) / sweetSpot;
-      // Use flexibility to determine how much the distance affects the score
-      // Higher flexibility = less penalty for distance
-      const score = Math.max(0, 1 - (distance / (1 + flexibility)));
-      return score;
-    }
-    
-    // If price is outside range, apply penalty based on how far it is
-    const rangeSize = max - min;
-    let distanceFromRange = 0;
-    if (price < min) {
-      distanceFromRange = (min - price) / rangeSize;
-    } else {
-      distanceFromRange = (price - max) / rangeSize;
-    }
-    
-    // Apply flexibility to out-of-range penalty
-    return Math.max(0, 0.5 - (distanceFromRange / (1 + flexibility)));
-  }
+  // Price-related calculation methods removed for MVP
+  // Future versions will use real-time API pricing without ML learning
 
   private extractCommonKeywords(): string[] {
     const result = this.db.prepare(`
