@@ -19,6 +19,7 @@ jobs:
             artifact-path: |
               release/**/*.exe
               release/**/win-unpacked/**
+              release/**/*.dxt
           - os: macos-latest
             platform: mac
             artifact-name: macos
@@ -114,6 +115,23 @@ jobs:
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
           USE_HARD_LINKS: false
 
+      - name: Build Desktop Extension (.dxt)
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          echo "Building Desktop Extension..."
+          npm run build:extension
+          echo "Desktop Extension build completed"
+          
+          # Verify .dxt file was created
+          if [ -f "release/shopping-for-algolia-personalized.dxt" ]; then
+            echo "✓ Desktop Extension created successfully"
+            ls -la release/shopping-for-algolia-personalized.dxt
+          else
+            echo "✗ Desktop Extension not found"
+            exit 1
+          fi
+
       - name: List build artifacts
         shell: bash
         run: |
@@ -142,6 +160,7 @@ jobs:
         with:
           files: |
             windows-build/**/*.exe
+            windows-build/**/*.dxt
             macos-build/**/*.dmg
             macos-build/**/*.zip
           draft: false

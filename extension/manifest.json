@@ -1,0 +1,39 @@
+{
+  "dxt_version": "0.1",
+  "name": "shopping-for-algolia-personalized",
+  "version": "1.0.0",
+  "description": "AI-powered personalized shopping assistant with Gemini API image analysis and Algolia MCP integration",
+  "author": {
+    "name": "Shopping for Algolia personalized",
+    "url": "https://github.com/goodaymmm/shopping-for-algolia-personalized"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/goodaymmm/shopping-for-algolia-personalized"
+  },
+  "homepage": "https://github.com/goodaymmm/shopping-for-algolia-personalized",
+  "documentation": "https://github.com/goodaymmm/shopping-for-algolia-personalized/blob/main/README.md",
+  "support": "https://github.com/goodaymmm/shopping-for-algolia-personalized/issues",
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "dist/main/mcp-standalone.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/main/mcp-standalone.js"],
+      "env": {}
+    }
+  },
+  "tools": [
+    {
+      "name": "personalized_product_search",
+      "description": "Search for products using personalized data from Shopping for Algolia (Read-only, no ML accumulation)"
+    },
+    {
+      "name": "get_user_profile",
+      "description": "Get user's personalization profile with shopping preferences and interests (Read-only)"
+    }
+  ],
+  "prompts": [],
+  "user_config": {}
+}

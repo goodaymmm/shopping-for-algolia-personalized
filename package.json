@@ -19,7 +19,8 @@
     "type-check": "tsc --noEmit",
     "preprocess-amazon-data": "tsc scripts/preprocess-amazon-data.ts --outDir dist/scripts --target es2020 --module commonjs && node dist/scripts/preprocess-amazon-data.js",
     "mcp:build": "tsc src/main/mcp-standalone.js src/main/database.ts src/main/personalization.ts src/main/mcp-server.ts --outDir dist/main --target es2020 --module commonjs --esModuleInterop --resolveJsonModule --skipLibCheck --allowJs",
-    "mcp:start": "node dist/main/mcp-standalone.js"
+    "mcp:start": "node dist/main/mcp-standalone.js",
+    "build:extension": "node scripts/build-extension.js"
   },
   "keywords": [
     "electron",
@@ -56,6 +57,7 @@
     "@typescript-eslint/eslint-plugin": "^8.36.0",
     "@typescript-eslint/parser": "^8.36.0",
     "@vitejs/plugin-react": "^4.6.0",
+    "archiver": "^7.0.1",
     "autoprefixer": "^10.4.21",
     "electron": "^37.2.1",
     "electron-builder": "^25.1.8",

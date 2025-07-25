@@ -45,7 +45,14 @@ function App() {
     
     console.log('[Category Detection] First product source index:', sourceIndex);
     
-    // Map Algolia index names to categories
+    // Check if sourceIndex is already a direct category name
+    const directCategories = ['fashion', 'electronics', 'home', 'sports', 'beauty', 'books', 'food', 'general'];
+    if (sourceIndex && directCategories.includes(sourceIndex)) {
+      console.log('[Category Detection] Detected direct category:', sourceIndex);
+      return sourceIndex;
+    }
+    
+    // Map Algolia index names with products_ prefix to categories
     const indexToCategoryMap: Record<string, string> = {
       'products_fashion': 'fashion',
       'products_electronics': 'electronics',
@@ -59,7 +66,7 @@ function App() {
     
     if (sourceIndex && indexToCategoryMap[sourceIndex]) {
       const category = indexToCategoryMap[sourceIndex];
-      console.log('[Category Detection] Detected category:', category, 'from index:', sourceIndex);
+      console.log('[Category Detection] Detected category:', category, 'from prefixed index:', sourceIndex);
       return category;
     }
     
