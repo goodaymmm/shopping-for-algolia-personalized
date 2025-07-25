@@ -85,7 +85,7 @@ class MainApplication {
 
   private setupIPC() {
     // Search products using Algolia
-    ipcMain.handle('search-products', async (event, query: string, imageData?: string, discoveryPercentage?: number) => {
+    ipcMain.handle('search-products', async (event, query: string, imageData?: string, discoveryPercentage?: number): Promise<IPCSearchResult> => {
       const searchStartTime = Date.now();
       console.log('[Search] Starting product search...');
       console.log('[Search] Query:', query);
@@ -139,13 +139,21 @@ class MainApplication {
             // Apply price filter
             if (followUpConstraints?.priceRange) {
               const { min, max } = followUpConstraints.priceRange;
+              console.log(`[Search] Applying price filter: $${min || 0} - $${max || '∞'} to ${filteredProducts.length} products`);
+              
+              const beforeFilter = filteredProducts.length;
               filteredProducts = filteredProducts.filter(product => {
-                const price = product.price;
-                if (min !== undefined && price < min) return false;
-                if (max !== undefined && price > max) return false;
-                return true;
+                const price = (product as any).salePrice || product.price;
+                const passFilter = (min === undefined || price >= min) && (max === undefined || price <= max);
+                
+                if (!passFilter && filteredProducts.length <= 10) {
+                  // Log why products are being filtered out (for first 10)
+                  console.log(`[Search] Product filtered out: "${product.name}" - price: $${price} (range: $${min || 0}-$${max || '∞'})`);
+                }
+                
+                return passFilter;
               });
-              console.log(`[Search] Applied price filter: ${min || 0} - ${max || '∞'}, remaining: ${filteredProducts.length}`);
+              console.log(`[Search] Price filter result: ${beforeFilter} → ${filteredProducts.length} products (${beforeFilter - filteredProducts.length} filtered out)`);
             }
             
             // Apply color filter
@@ -181,7 +189,7 @@ class MainApplication {
         }
 
         let searchQuery = query;
-        let imageAnalysis: ImageAnalysis | null = null;
+        let imageAnalysis: ImageAnalysis | undefined = undefined;
         let searchConstraints: ParsedConstraints | undefined;
 
         // Parse natural language constraints from query (for both image and text searches)
@@ -290,12 +298,7 @@ class MainApplication {
           const error = 'Algolia API keys are not configured. Please go to Settings and add your Algolia Application ID, Search API Key, and Write API Key.';
           return {
             products: [],
-            totalResults: 0,
-            searchTime: Date.now() - searchStartTime,
-            query: query,
-            imageAnalysis: null,
-            searchConstraints: undefined,
-            error: error
+            imageAnalysis: undefined
           };
         } else {
           console.log('[Search] Using user-configured Algolia API keys.');
@@ -677,7 +680,14 @@ class MainApplication {
               console.log('[Search] No products found after all fallback attempts, returning empty array');
               sendFeedback('Sorry, no products found matching your search.');
             }
-            return [];
+            return { 
+              products: [], 
+              imageAnalysis: imageAnalysis ? {
+                keywords: imageAnalysis.searchKeywords,
+                category: imageAnalysis.category,
+                searchQuery: imageAnalysis.searchKeywords.join(' ')
+              } : undefined
+            };
           } else {
             sendFeedback(`Found ${products.length} products.`);
           }
@@ -831,17 +841,7 @@ class MainApplication {
           console.log('[Search] Skipping personalization (insufficient confidence)');
         }
 
-        // Apply Discovery Mode if enabled
-        if (discoveryPercentage && discoveryPercentage > 0 && products.length > 0) {
-          console.log(`[Search] Applying Discovery Mode with ${discoveryPercentage}% discovery products`);
-          products = await this.applyDiscoveryMode(
-            products, 
-            searchQuery, 
-            inferredCategories, 
-            discoveryPercentage
-          );
-          console.log(`[Search] After Discovery Mode: ${products.length} total products`);
-        }
+        // Note: Discovery Mode is now applied after creating the search result
 
         // Track search interaction for ML learning
         if (imageAnalysis) {
@@ -893,8 +893,8 @@ class MainApplication {
           searchSession
         }));
 
-        // Create search result with analysis metadata and filtering info
-        const searchResult: IPCSearchResult = {
+        // Create initial search result
+        let searchResult: IPCSearchResult = {
           products: productsWithSession,
           totalResultsBeforeFilter: preFilterCount,
           totalResultsAfterFilter: productsWithSession.length,
@@ -913,9 +913,25 @@ class MainApplication {
           filteringDetails: filteringDetails
         };
 
-        console.log('[Search] Returning', productsWithSession.length, 'products with analysis metadata');
+        console.log('[Search] Initial result:', productsWithSession.length, 'products');
         
-        // Cache the search result for follow-up queries
+        // Apply Discovery Mode if enabled
+        if (discoveryPercentage && discoveryPercentage > 0 && productsWithSession.length > 0) {
+          console.log(`[Search] Applying Discovery Mode with ${discoveryPercentage}% discovery products`);
+          const productsAfterDiscovery = await this.applyDiscoveryMode(
+            productsWithSession, 
+            searchQuery, 
+            inferredCategories, 
+            discoveryPercentage
+          );
+          console.log(`[Search] After Discovery Mode: ${productsAfterDiscovery.length} total products`);
+          
+          // Update search result with Discovery products
+          searchResult.products = productsAfterDiscovery;
+          searchResult.totalResultsAfterFilter = productsAfterDiscovery.length;
+        }
+        
+        // Cache the final search result (including Discovery products) for follow-up queries
         const cacheKey = `search_${Date.now()}`;
         this.searchResultCache.set(cacheKey, {
           timestamp: Date.now(),
@@ -923,7 +939,7 @@ class MainApplication {
           originalQuery: query,
           imageAnalysis: imageAnalysis || undefined
         });
-        console.log('[Search] Cached search result with key:', cacheKey);
+        console.log('[Search] Cached search result with key:', cacheKey, 'with', searchResult.products.length, 'products');
         
         return searchResult;
 
