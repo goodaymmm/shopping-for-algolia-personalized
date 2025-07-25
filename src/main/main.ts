@@ -1312,25 +1312,7 @@ class MainApplication {
       }
     })
 
-    // Track product view interaction
-    ipcMain.handle('track-product-view', async (event, productId: string, timeSpent: number) => {
-      try {
-        console.log(`[ML] Track product view: productId=${productId}, timeSpent=${timeSpent}s`);
-        await this.personalization.trackUserInteraction({
-          eventType: 'view',
-          productId,
-          timestamp: Date.now(),
-          context: { timeSpent },
-          weight: 0.3 + (timeSpent / 10) * 0.1,
-          source: 'standalone-app'
-        })
-        console.log(`[ML] Product view tracked successfully`);
-        return { success: true }
-      } catch (error) {
-        console.error('Track product view error:', error)
-        return { success: false, error: (error as Error).message }
-      }
-    })
+    // View tracking removed for MVP - only track clicks and saves
 
     // Track product click interaction
     ipcMain.handle('track-product-click', async (event, productId: string, url: string) => {

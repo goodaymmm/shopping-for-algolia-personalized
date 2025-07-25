@@ -236,8 +236,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     setIsResetting(true);
     try {
       if (window.electronAPI?.resetDatabase) {
-        await window.electronAPI.resetDatabase();
-        console.log('Database reset successfully');
+        const result = await window.electronAPI.resetDatabase();
+        if (result.success) {
+          console.log('Database reset successfully');
+          // Reload the app to reflect the changes
+          window.location.reload();
+        }
       }
     } catch (error) {
       console.error('Failed to reset database:', error);
@@ -253,8 +257,12 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
     
     try {
       if (window.electronAPI?.resetMLData) {
-        await window.electronAPI.resetMLData();
-        console.log('ML data reset successfully');
+        const result = await window.electronAPI.resetMLData();
+        if (result.success) {
+          console.log('ML data reset successfully');
+          // Reload the app to reflect the changes
+          window.location.reload();
+        }
       }
     } catch (error) {
       console.error('Failed to reset ML data:', error);

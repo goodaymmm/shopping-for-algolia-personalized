@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { Heart, ExternalLink, ShoppingCart, Star, Tag, Sparkles } from 'lucide-react';
 import { Product, ProductWithContext, ProductDisplayType } from '../types';
 
@@ -25,8 +25,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
-  const viewStartTime = useRef<number>(Date.now());
-  const hasTrackedView = useRef<boolean>(false);
   
   // Debug logging
   console.log('[ProductCard] Rendering product:', {
@@ -135,33 +133,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     }).format(price);
   };
   
-  // Track view time for ML learning
-  useEffect(() => {
-    if (!enableMLTracking || hasTrackedView.current) return;
-    
-    const trackView = async () => {
-      const timeSpent = Date.now() - viewStartTime.current;
-      
-      if (timeSpent > 1000 && window.electronAPI?.trackProductView) { // Only track if viewed for >1s
-        try {
-          await window.electronAPI.trackProductView(productData.id, Math.floor(timeSpent / 1000));
-          hasTrackedView.current = true;
-        } catch (error) {
-          console.error('Failed to track product view:', error);
-        }
-      }
-    };
-    
-    // Track view after component unmounts or after 10 seconds
-    const timer = setTimeout(trackView, 10000);
-    
-    return () => {
-      clearTimeout(timer);
-      if (!hasTrackedView.current) {
-        trackView();
-      }
-    };
-  }, [productData.id, enableMLTracking]);
+  // ML tracking removed for MVP - only track clicks and saves
 
   return (
     <div 

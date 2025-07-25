@@ -34,8 +34,7 @@ export interface ElectronAPI {
   deleteAPIKey: (provider: string) => Promise<{ success: boolean; message?: string; error?: string }>
   deleteAllAPIKeys: () => Promise<{ success: boolean; message?: string; error?: string }>
   
-  // ML interaction tracking
-  trackProductView: (productId: string, timeSpent: number) => Promise<{ success: boolean }>
+  // ML interaction tracking (view tracking removed for MVP)
   trackProductClick: (productId: string, url: string) => Promise<{ success: boolean }>
   saveProductWithTracking: (product: Product) => Promise<{ success: boolean; id?: number }>
   trackProductRemove: (productId: string) => Promise<{ success: boolean }>

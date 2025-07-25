@@ -71,10 +71,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteAllAPIKeys: () =>
     ipcRenderer.invoke('delete-all-api-keys'),
 
-  // ML interaction tracking
-  trackProductView: (productId: string, timeSpent: number) =>
-    ipcRenderer.invoke('track-product-view', productId, timeSpent),
-  
+  // ML interaction tracking (view tracking removed for MVP)
   trackProductClick: (productId: string, url: string) =>
     ipcRenderer.invoke('track-product-click', productId, url),
   

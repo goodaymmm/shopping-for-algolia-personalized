@@ -409,15 +409,7 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
                                         console.error('Failed to save product:', error);
                                       }
                                     }}
-                                    onRemove={async (productId) => {
-                                      try {
-                                        if (onProductRemove) {
-                                          await onProductRemove(productId);
-                                        }
-                                      } catch (error) {
-                                        console.error('Failed to remove product:', error);
-                                      }
-                                    }}
+                                    onRemove={undefined}
                                     showSaveButton={true}
                                     showRemoveButton={false}
                                     isDark={isDark}
@@ -460,15 +452,7 @@ export const ProductSidebar: React.FC<ProductSidebarProps> = ({
                                         console.error('Failed to save product:', error);
                                       }
                                     }}
-                                    onRemove={async (productId) => {
-                                      try {
-                                        if (onProductRemove) {
-                                          await onProductRemove(productId);
-                                        }
-                                      } catch (error) {
-                                        console.error('Failed to remove product:', error);
-                                      }
-                                    }}
+                                    onRemove={undefined}
                                     showSaveButton={true}
                                     showRemoveButton={false}
                                     isDark={isDark}

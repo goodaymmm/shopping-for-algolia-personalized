@@ -143,7 +143,7 @@ function App() {
       setSidebarProducts(currentSession.searchResults);
       setIsProductSidebarOpen(currentSession.searchResults.length > 0);
     }
-  }, [currentSessionId, currentView]);
+  }, [currentSessionId, currentView, currentSession]);
 
   const handleSendMessage = async (content: string, imageDataUrl?: string) => {
     let sessionId = currentSessionId;
