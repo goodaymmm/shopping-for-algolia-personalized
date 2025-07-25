@@ -276,10 +276,13 @@ export class DatabaseService {
 
     if (existingSession) {
       sessionId = (existingSession as any).id
-      // Update session timestamp
+      // Update session timestamp and category
       this.db.prepare(`
-        UPDATE chat_sessions SET updated_at = CURRENT_TIMESTAMP WHERE id = ?
-      `).run(sessionId)
+        UPDATE chat_sessions 
+        SET updated_at = CURRENT_TIMESTAMP, 
+            category = COALESCE(?, category)
+        WHERE id = ?
+      `).run(sessionData.category, sessionId)
     } else {
       const sessionResult = this.db.prepare(`
         INSERT INTO chat_sessions (session_name, category)

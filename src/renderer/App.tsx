@@ -386,12 +386,13 @@ function App() {
 
       addMessageToSession(sessionId, assistantMessage);
 
-      // Save chat to database (only if Electron API is available)
+      // Save chat to database with correct category (only if Electron API is available)
       if (window.electronAPI && window.electronAPI.saveChat) {
         // Detect category from search results
         const category = detectCategoryFromSearchResults(finalResults);
         console.log('[Chat Save] Detected Category:', category, 'from', finalResults.length, 'results');
         
+        // Save both user message and the detected category
         await window.electronAPI.saveChat(
           { 
             name: content.substring(0, 50) + '...', 

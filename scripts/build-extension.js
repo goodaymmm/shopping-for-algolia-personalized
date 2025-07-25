@@ -51,8 +51,6 @@ async function buildExtension() {
     const requiredModules = [
       '@modelcontextprotocol',
       'better-sqlite3',
-      'keytar',
-      'ajv',
       'zod'
     ];
     
@@ -60,14 +58,36 @@ async function buildExtension() {
     const nodeModulesDest = path.join(buildDir, 'node_modules');
     fs.ensureDirSync(nodeModulesDest);
     
-    for (const moduleName of requiredModules) {
-      const moduleSrc = path.join(nodeModulesSrc, moduleName);
+    // Copy required modules and their dependencies
+    const copiedModules = new Set();
+    
+    function copyModuleWithDeps(moduleName, baseDir = nodeModulesSrc) {
+      if (copiedModules.has(moduleName)) return;
+      copiedModules.add(moduleName);
+      
+      const moduleSrc = path.join(baseDir, moduleName);
       const moduleDest = path.join(nodeModulesDest, moduleName);
       
       if (fs.existsSync(moduleSrc)) {
         fs.copySync(moduleSrc, moduleDest);
         console.log(`Copied node_modules/${moduleName}`);
+        
+        // Check for dependencies
+        const packageJsonPath = path.join(moduleSrc, 'package.json');
+        if (fs.existsSync(packageJsonPath)) {
+          try {
+            const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+            const deps = Object.keys(packageJson.dependencies || {});
+            deps.forEach(dep => copyModuleWithDeps(dep));
+          } catch (e) {
+            // Ignore errors reading package.json
+          }
+        }
       }
+    }
+    
+    for (const moduleName of requiredModules) {
+      copyModuleWithDeps(moduleName);
     }
     
     // Copy better-sqlite3 bindings
@@ -79,14 +99,6 @@ async function buildExtension() {
       console.log('Copied better-sqlite3 native bindings');
     }
     
-    // Copy keytar bindings
-    const keytarSrc = path.join(nodeModulesSrc, 'keytar/build/Release/keytar.node');
-    const keytarDest = path.join(nodeModulesDest, 'keytar/build/Release/keytar.node');
-    if (fs.existsSync(keytarSrc)) {
-      fs.ensureDirSync(path.dirname(keytarDest));
-      fs.copyFileSync(keytarSrc, keytarDest);
-      console.log('Copied keytar native bindings');
-    }
     
     // Create .dxt file (ZIP archive)
     const outputPath = path.join(releaseDir, 'shopping-for-algolia-personalized.dxt');
