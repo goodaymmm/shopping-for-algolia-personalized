@@ -104,6 +104,7 @@ export interface Product {
   image: string
   categories?: string[]
   url?: string
+  brand?: string // Product brand for ML affinity tracking
   sourceIndex?: string // 検索元インデックス（統合検索用）
   searchSession?: SearchSession // メタデータ（セッション情報）
   isDiscovery?: boolean // Discovery Mode product flag

@@ -44,23 +44,14 @@ jobs:
         with:
           node-version: '20.x'
 
-      - name: Clean workspace and npm cache
+      - name: Install dependencies
         shell: bash
         run: |
-          # Clean up any existing node_modules to avoid permission issues
+          # Remove existing node_modules to avoid permission issues
           rm -rf node_modules || true
-          rm -rf ~/.npm || true
-          npm cache clean --force || true
           
-      - name: Install dependencies with retry
-        shell: bash
-        run: |
-          # First attempt with npm ci
-          if ! npm ci; then
-            echo "npm ci failed, cleaning and retrying with npm install..."
-            rm -rf node_modules package-lock.json
-            npm install
-          fi
+          # Use npm install instead of npm ci for better compatibility
+          npm install --no-audit --no-fund
 
       - name: Ensure Tailwind CSS v3 compatibility
         shell: bash
@@ -71,11 +62,7 @@ jobs:
           # Verify Tailwind v3 is installed (should already be from npm ci/install)
           npm list tailwindcss || echo "Tailwind CSS not found in dependencies"
 
-      - name: Pre-install electron-builder dependencies
-        shell: bash
-        run: |
-          # Pre-install electron-builder dependencies to avoid download issues during build
-          npx electron-builder install-app-deps --arch=x64 || true
+      # Removed pre-install electron-builder dependencies step as it may cause issues
       
       - name: Generate Amazon product data
         shell: bash
@@ -101,26 +88,18 @@ jobs:
         shell: bash
         run: npm run build:all
 
-      - name: Build Electron app (with retry on NSIS failure)
+      - name: Build Electron app
         shell: bash
         run: |
-          # First attempt
-          if ! npx electron-builder --${{ matrix.platform }}; then
-            echo "First build attempt failed, retrying after clearing cache..."
-            
-            # Clear electron-builder cache
-            npx electron-builder install-app-deps --arch=x64 --force || true
-            rm -rf node_modules/.cache/electron-builder || true
-            
-            # Wait and retry
-            sleep 10
-            echo "Retrying build..."
-            npx electron-builder --${{ matrix.platform }}
-          fi
+          # Build for the appropriate platform
+          npx electron-builder --${{ matrix.platform }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Disable code signing for macOS in CI
           CSC_IDENTITY_AUTO_DISCOVERY: false
+          # Electron Builder configuration
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
+          USE_HARD_LINKS: false
 
       - name: List build artifacts
         shell: bash
