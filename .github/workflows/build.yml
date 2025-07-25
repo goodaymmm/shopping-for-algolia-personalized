@@ -88,6 +88,19 @@ jobs:
         shell: bash
         run: npm run build:all
 
+      - name: Copy MCP server files
+        shell: bash
+        run: |
+          echo "Ensuring MCP server files are in dist..."
+          # Copy MCP server scripts to dist
+          cp mcp-server.bat dist/ || echo "mcp-server.bat not found"
+          cp mcp-server.sh dist/ || echo "mcp-server.sh not found"
+          
+          # Verify MCP files exist
+          echo "MCP files in dist:"
+          ls -la dist/mcp-server.* || echo "No MCP server files found"
+          ls -la dist/main/mcp-standalone.js || echo "No mcp-standalone.js found"
+
       - name: Build Electron app
         shell: bash
         run: |

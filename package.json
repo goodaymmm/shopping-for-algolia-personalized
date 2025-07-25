@@ -9,7 +9,7 @@
     "clean": "rimraf dist release",
     "build": "npm run clean && npm run build:all && electron-builder",
     "build:win": "npm run clean && npm run build:all && electron-builder --win",
-    "build:all": "npm run build:main && npm run build:renderer && node scripts/copy-data.js",
+    "build:all": "npm run build:main && npm run build:renderer && node scripts/copy-data.js && node scripts/copy-mcp.js",
     "build:main": "tsc -p tsconfig.main.json",
     "build:renderer": "vite build && node scripts/postbuild.js",
     "build:dev": "npm run clean && npm run build:all",
@@ -94,7 +94,13 @@
     "asarUnpack": [
       "node_modules/better-sqlite3/**/*",
       "node_modules/keytar/**/*",
-      "src/data/**/*"
+      "src/data/**/*",
+      "mcp-server.bat",
+      "mcp-server.sh",
+      "dist/main/mcp-standalone.js",
+      "dist/main/database.js",
+      "dist/main/personalization.js",
+      "dist/main/mcp-server.js"
     ],
     "extraMetadata": {
       "main": "dist/main/main.js"

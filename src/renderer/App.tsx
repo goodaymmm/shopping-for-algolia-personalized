@@ -32,111 +32,38 @@ function App() {
     clearSessionSearchResults,
   } = useChatSessions();
 
-  // Auto-detect category from search query - matches Algolia indices
-  const detectCategoryFromQuery = (query: string): string => {
-    const lowerQuery = query.toLowerCase().trim();
-    console.log('[Category Detection] Analyzing query:', query, '(lowercase:', lowerQuery, ')');
-    
-    // Fashion keywords
-    const fashionKeywords = ['shoe', 'shirt', 'dress', 'pant', 'jacket', 'coat', 'jean', 
-                            'sweater', 'hoodie', 'cloth', 'fashion', 'wear', 'outfit',
-                            'adidas', 'nike', 'puma', 'reebok', 'converse', 'bag', 'belt',
-                            'hat', 'cap', 'scarf', 'glove', 'sock', 'underwear', 'suit',
-                            'tie', 'watch', 'jewelry', 'accessory', 'sandal', 'boot',
-                            'sneaker', 'heel', 'apparel', 'garment', 'style'];
-    
-    // Electronics keywords
-    const electronicsKeywords = ['laptop', 'computer', 'phone', 'tv', 'television', 'tablet',
-                                'camera', 'headphone', 'speaker', 'monitor', 'keyboard',
-                                'mouse', 'electronic', 'gadget', 'device', 'iphone', 'ipad',
-                                'samsung', 'sony', 'apple', 'gaming', 'console', 'playstation',
-                                'xbox', 'nintendo', 'earbud', 'smartwatch', 'printer', 'router',
-                                'cable', 'charger', 'battery', 'screen', 'display', 'audio',
-                                'video', 'tech', 'smart', 'wireless', 'bluetooth'];
-    
-    // Home keywords
-    const homeKeywords = ['furniture', 'table', 'chair', 'sofa', 'bed', 'lamp', 'decor',
-                         'kitchen', 'bathroom', 'garden', 'tool', 'appliance', 'mattress',
-                         'pillow', 'blanket', 'curtain', 'rug', 'carpet', 'shelf', 'desk',
-                         'couch', 'dining', 'bedroom', 'living', 'office', 'drawer',
-                         'cabinet', 'mirror', 'frame', 'vase', 'candle', 'towel',
-                         'sheet', 'comforter', 'cookware', 'utensil', 'plate', 'bowl'];
-    
-    // Sports keywords
-    const sportsKeywords = ['sport', 'fitness', 'gym', 'exercise', 'bike', 'bicycle',
-                           'camping', 'hiking', 'outdoor', 'tennis', 'golf', 'soccer',
-                           'basketball', 'football', 'baseball', 'running', 'yoga',
-                           'weight', 'dumbbell', 'treadmill', 'athletic', 'workout',
-                           'training', 'equipment', 'gear', 'ball', 'racket', 'club',
-                           'helmet', 'pad', 'glove', 'uniform', 'jersey'];
-    
-    // Beauty keywords
-    const beautyKeywords = ['makeup', 'cosmetic', 'skincare', 'perfume', 'cologne',
-                           'shampoo', 'soap', 'lotion', 'cream', 'beauty', 'health',
-                           'vitamin', 'supplement', 'medicine', 'wellness', 'facial',
-                           'hair', 'nail', 'spa', 'treatment', 'serum', 'mask'];
-    
-    // Books keywords
-    const booksKeywords = ['book', 'novel', 'textbook', 'magazine', 'comic', 'manga',
-                          'kindle', 'ebook', 'paperback', 'hardcover', 'author',
-                          'isbn', 'publisher', 'reading', 'literature'];
-    
-    // Food keywords
-    const foodKeywords = ['food', 'snack', 'drink', 'beverage', 'coffee', 'tea',
-                         'chocolate', 'candy', 'gourmet', 'organic', 'protein',
-                         'vitamin', 'nutrition', 'diet', 'meal'];
-    
-    // Check for category matches - return Algolia index names
-    for (const keyword of fashionKeywords) {
-      if (lowerQuery.includes(keyword)) {
-        console.log('[Category Detection] Matched fashion with keyword:', keyword);
-        return 'fashion';
-      }
+  // Detect category from search results based on the index of the first result
+  const detectCategoryFromSearchResults = (products: (Product | ProductWithContext)[]): string => {
+    if (!products || products.length === 0) {
+      console.log('[Category Detection] No products found, defaulting to general');
+      return 'general';
     }
     
-    for (const keyword of electronicsKeywords) {
-      if (lowerQuery.includes(keyword)) {
-        console.log('[Category Detection] Matched electronics with keyword:', keyword);
-        return 'electronics';
-      }
+    // Get the source index from the first product
+    const firstProduct = products[0];
+    const sourceIndex = 'product' in firstProduct ? firstProduct.product.sourceIndex : firstProduct.sourceIndex;
+    
+    console.log('[Category Detection] First product source index:', sourceIndex);
+    
+    // Map Algolia index names to categories
+    const indexToCategoryMap: Record<string, string> = {
+      'products_fashion': 'fashion',
+      'products_electronics': 'electronics',
+      'products_home': 'home',
+      'products_sports': 'sports',
+      'products_beauty': 'beauty',
+      'products_books': 'books',
+      'products_food': 'food',
+      'products': 'general'
+    };
+    
+    if (sourceIndex && indexToCategoryMap[sourceIndex]) {
+      const category = indexToCategoryMap[sourceIndex];
+      console.log('[Category Detection] Detected category:', category, 'from index:', sourceIndex);
+      return category;
     }
     
-    for (const keyword of homeKeywords) {
-      if (lowerQuery.includes(keyword)) {
-        console.log('[Category Detection] Matched home with keyword:', keyword);
-        return 'home';
-      }
-    }
-    
-    for (const keyword of sportsKeywords) {
-      if (lowerQuery.includes(keyword)) {
-        console.log('[Category Detection] Matched sports with keyword:', keyword);
-        return 'sports';
-      }
-    }
-    
-    for (const keyword of beautyKeywords) {
-      if (lowerQuery.includes(keyword)) {
-        console.log('[Category Detection] Matched beauty with keyword:', keyword);
-        return 'beauty';
-      }
-    }
-    
-    for (const keyword of booksKeywords) {
-      if (lowerQuery.includes(keyword)) {
-        console.log('[Category Detection] Matched books with keyword:', keyword);
-        return 'books';
-      }
-    }
-    
-    for (const keyword of foodKeywords) {
-      if (lowerQuery.includes(keyword)) {
-        console.log('[Category Detection] Matched food with keyword:', keyword);
-        return 'food';
-      }
-    }
-    
-    console.log('[Category Detection] No category match found for query:', lowerQuery);
+    console.log('[Category Detection] Unknown index or no index, defaulting to general');
     return 'general';
   };
 
@@ -454,9 +381,9 @@ function App() {
 
       // Save chat to database (only if Electron API is available)
       if (window.electronAPI && window.electronAPI.saveChat) {
-        // Auto-detect category from search query
-        const category = detectCategoryFromQuery(content);
-        console.log('[Chat Save] Query:', content, 'Detected Category:', category);
+        // Detect category from search results
+        const category = detectCategoryFromSearchResults(finalResults);
+        console.log('[Chat Save] Detected Category:', category, 'from', finalResults.length, 'results');
         
         await window.electronAPI.saveChat(
           { 
