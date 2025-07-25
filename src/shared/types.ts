@@ -16,7 +16,7 @@ export interface ElectronAPI {
   getDiscoverySetting: () => Promise<DiscoveryPercentage>
   
   // Search
-  searchProducts: (query: string, imageData?: string) => Promise<IPCSearchResult>
+  searchProducts: (query: string, imageData?: string, discoveryPercentage?: number) => Promise<IPCSearchResult>
   
   // External links
   openExternal: (url: string) => Promise<void>
@@ -104,6 +104,8 @@ export interface Product {
   url?: string
   sourceIndex?: string // 検索元インデックス（統合検索用）
   searchSession?: SearchSession // メタデータ（セッション情報）
+  isDiscovery?: boolean // Discovery Mode product flag
+  discoveryReason?: 'different_category' | 'price_range' | 'trending_brand' // Reason for discovery
 }
 
 // Chat types (following project base structure)

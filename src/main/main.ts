@@ -78,7 +78,7 @@ class MainApplication {
 
   private setupIPC() {
     // Search products using Algolia
-    ipcMain.handle('search-products', async (event, query: string, imageData?: string) => {
+    ipcMain.handle('search-products', async (event, query: string, imageData?: string, discoveryPercentage?: number) => {
       const searchStartTime = Date.now();
       console.log('[Search] Starting product search...');
       console.log('[Search] Query:', query);
@@ -734,6 +734,18 @@ class MainApplication {
           console.log('[Search] Applied personalization scoring to', products.length, 'products');
         } else {
           console.log('[Search] Skipping personalization (insufficient confidence)');
+        }
+
+        // Apply Discovery Mode if enabled
+        if (discoveryPercentage && discoveryPercentage > 0 && products.length > 0) {
+          console.log(`[Search] Applying Discovery Mode with ${discoveryPercentage}% discovery products`);
+          products = await this.applyDiscoveryMode(
+            products, 
+            searchQuery, 
+            inferredCategories, 
+            discoveryPercentage
+          );
+          console.log(`[Search] After Discovery Mode: ${products.length} total products`);
         }
 
         // Track search interaction for ML learning
@@ -1431,6 +1443,191 @@ class MainApplication {
       console.error('[Main] Failed to initialize Algolia and upload data:', error);
       throw error;
     }
+  }
+
+  // Discovery Mode implementation
+  private async applyDiscoveryMode(
+    originalProducts: any[],
+    searchQuery: string,
+    inferredCategories: string[],
+    discoveryPercentage: number
+  ): Promise<any[]> {
+    const totalCount = originalProducts.length;
+    const discoveryCount = Math.ceil(totalCount * (discoveryPercentage / 100));
+    const regularCount = totalCount - discoveryCount;
+    
+    console.log(`[Discovery] Total: ${totalCount}, Regular: ${regularCount}, Discovery: ${discoveryCount}`);
+    
+    // Keep the top-scored regular products
+    const regularProducts = originalProducts.slice(0, regularCount);
+    
+    // Get discovery products
+    const discoveryProducts = await this.getDiscoveryProducts(
+      searchQuery,
+      inferredCategories,
+      discoveryCount,
+      originalProducts
+    );
+    
+    // Mark discovery products
+    const markedDiscoveryProducts = discoveryProducts.map(product => ({
+      ...product,
+      isDiscovery: true,
+      discoveryReason: this.determineDiscoveryReason(product, originalProducts)
+    }));
+    
+    console.log(`[Discovery] Found ${markedDiscoveryProducts.length} discovery products`);
+    
+    // Interleave products
+    return this.interleaveProducts(regularProducts, markedDiscoveryProducts);
+  }
+
+  private async getDiscoveryProducts(
+    originalQuery: string,
+    categories: string[],
+    count: number,
+    excludeProducts: any[]
+  ): Promise<any[]> {
+    const discoveryStrategies = [
+      // Strategy 1: Different category
+      async () => {
+        const otherCategories = ['electronics', 'fashion', 'home', 'sports', 'beauty', 'books']
+          .filter(cat => !categories.includes(cat));
+        if (otherCategories.length > 0) {
+          const randomCategory = otherCategories[Math.floor(Math.random() * otherCategories.length)];
+          console.log(`[Discovery] Strategy 1: Searching in different category: ${randomCategory}`);
+          const results = await this.algoliaMCPService.searchProductsMultiIndex(
+            originalQuery.split(' ')[0], // Use first keyword only
+            [randomCategory],
+            { hitsPerPage: count * 3 }
+          );
+          return results || [];
+        }
+        return [];
+      },
+      
+      // Strategy 2: Different price range
+      async () => {
+        const avgPrice = excludeProducts.reduce((sum, p) => sum + (p.price || 0), 0) / excludeProducts.length;
+        const priceFilter = avgPrice > 100 ? 'price < 50' : 'price > 200';
+        console.log(`[Discovery] Strategy 2: Searching with price filter: ${priceFilter}`);
+        const results = await this.algoliaMCPService.searchProductsMultiIndex(
+          originalQuery,
+          categories.length > 0 ? categories : undefined,
+          { hitsPerPage: count * 3, filters: priceFilter }
+        );
+        return results || [];
+      },
+      
+      // Strategy 3: Popular brands
+      async () => {
+        const popularBrands = ['Nike', 'Adidas', 'Apple', 'Samsung', 'Sony', 'Canon', 'Dell', 'HP'];
+        const randomBrand = popularBrands[Math.floor(Math.random() * popularBrands.length)];
+        console.log(`[Discovery] Strategy 3: Searching for brand: ${randomBrand}`);
+        const results = await this.algoliaMCPService.searchProductsMultiIndex(
+          randomBrand,
+          categories.length > 0 ? categories : undefined,
+          { hitsPerPage: count * 3 }
+        );
+        return results || [];
+      }
+    ];
+    
+    // Try strategies in random order until we get enough products
+    const shuffledStrategies = this.shuffleArray(discoveryStrategies);
+    let discoveryResults: any[] = [];
+    
+    for (const strategy of shuffledStrategies) {
+      try {
+        const results = await strategy();
+        if (results && results.length > 0) {
+          discoveryResults = results;
+          break;
+        }
+      } catch (error) {
+        console.warn('[Discovery] Strategy failed:', error);
+      }
+    }
+    
+    // Filter out duplicates and invalid products
+    const uniqueProducts = discoveryResults.filter(dp => {
+      // Check if product already exists in original results
+      const isDuplicate = excludeProducts.some(ep => ep.objectID === dp.objectID);
+      
+      // Check if product has valid image and URL
+      const hasValidImage = dp.image && dp.image !== '' && dp.image !== '#' && 
+                           !dp.image.includes('placeholder') && !dp.image.includes('default');
+      const hasValidUrl = dp.url && dp.url !== '' && dp.url !== '#';
+      
+      return !isDuplicate && hasValidImage && hasValidUrl;
+    });
+    
+    // Shuffle and return requested count
+    return this.shuffleArray(uniqueProducts).slice(0, count);
+  }
+
+  private determineDiscoveryReason(
+    product: any,
+    originalProducts: any[]
+  ): 'different_category' | 'price_range' | 'trending_brand' {
+    // Check if it's a different category
+    const originalCategories = new Set(
+      originalProducts.flatMap(p => p.categories || []).filter(Boolean)
+    );
+    const productCategories = product.categories || [];
+    const isDifferentCategory = productCategories.some((cat: string) => !originalCategories.has(cat));
+    
+    if (isDifferentCategory) {
+      return 'different_category';
+    }
+    
+    // Check if it's a different price range
+    const avgPrice = originalProducts.reduce((sum, p) => sum + (p.price || 0), 0) / originalProducts.length;
+    const priceDiff = Math.abs((product.price || 0) - avgPrice);
+    
+    if (priceDiff > avgPrice * 0.5) {
+      return 'price_range';
+    }
+    
+    // Default to trending brand
+    return 'trending_brand';
+  }
+
+  private interleaveProducts(
+    regularProducts: any[],
+    discoveryProducts: any[]
+  ): any[] {
+    const result: any[] = [];
+    const totalCount = regularProducts.length + discoveryProducts.length;
+    
+    let regularIndex = 0;
+    let discoveryIndex = 0;
+    
+    // Distribute discovery products evenly
+    for (let i = 0; i < totalCount; i++) {
+      const discoveryPosition = discoveryProducts.length > 0 
+        ? Math.floor((i * discoveryProducts.length) / totalCount)
+        : -1;
+      
+      if (discoveryIndex <= discoveryPosition && discoveryIndex < discoveryProducts.length) {
+        result.push(discoveryProducts[discoveryIndex]);
+        discoveryIndex++;
+      } else if (regularIndex < regularProducts.length) {
+        result.push(regularProducts[regularIndex]);
+        regularIndex++;
+      }
+    }
+    
+    return result;
+  }
+
+  private shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
   }
 }
 

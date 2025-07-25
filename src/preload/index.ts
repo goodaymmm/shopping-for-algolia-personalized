@@ -4,8 +4,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
   // Product search
-  searchProducts: (query: string, imageData?: string) => 
-    ipcRenderer.invoke('search-products', query, imageData),
+  searchProducts: (query: string, imageData?: string, discoveryPercentage?: number) => 
+    ipcRenderer.invoke('search-products', query, imageData, discoveryPercentage),
   
   // Database operations
   saveProduct: (product: any) => 
