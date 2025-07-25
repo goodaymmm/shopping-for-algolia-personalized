@@ -136,6 +136,15 @@ function App() {
     }
   }, []);
 
+  // Keep sidebar products in sync with current session
+  useEffect(() => {
+    if (currentView === 'chat' && currentSession?.searchResults) {
+      // Only update if we're in chat view to avoid clearing when in other views
+      setSidebarProducts(currentSession.searchResults);
+      setIsProductSidebarOpen(currentSession.searchResults.length > 0);
+    }
+  }, [currentSessionId, currentView]);
+
   const handleSendMessage = async (content: string, imageDataUrl?: string) => {
     let sessionId = currentSessionId;
     
@@ -417,6 +426,26 @@ function App() {
   const handleProductSave = async (product: Product) => {
     console.log('handleProductSave called with product:', product);
     
+    // Try ML-enabled save first for personalization learning
+    if (window.electronAPI?.saveProductWithTracking) {
+      try {
+        console.log('Calling electronAPI.saveProductWithTracking for ML learning...');
+        const result = await window.electronAPI.saveProductWithTracking(product);
+        console.log('Save with tracking result:', result);
+        
+        if (result.success) {
+          setSavedProductIds(prev => new Set([...prev, product.id]));
+          setSaveMessage({ type: 'success', text: 'Product saved successfully!' });
+          console.log('Product saved with ML tracking:', product.id);
+          setTimeout(() => setSaveMessage(null), 3000);
+          return result;
+        }
+      } catch (error) {
+        console.warn('saveProductWithTracking failed, falling back to regular save:', error);
+      }
+    }
+    
+    // Fallback to regular save if ML save is not available or failed
     if (!window.electronAPI?.saveProduct) {
       console.error('electronAPI.saveProduct is not available');
       setSaveMessage({ type: 'error', text: 'Save functionality not available' });
@@ -484,6 +513,12 @@ function App() {
 
   const handleSettingsBack = () => {
     setCurrentView('chat');
+    
+    // Restore search results from current session when returning from settings
+    if (currentSession?.searchResults && currentSession.searchResults.length > 0) {
+      setSidebarProducts(currentSession.searchResults);
+      setIsProductSidebarOpen(true);
+    }
   };
 
   const handleSettingsChange = (updates: any) => {
