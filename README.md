@@ -133,16 +133,42 @@ Our Algolia implementation uses specialized indices for optimal search performan
 - Dynamic search result ranking based on user behavior
 
 ### 5. **Claude Desktop Integration**
-```json
-{
-  "mcpServers": {
-    "shopping-ai": {
-      "command": "path/to/app",
-      "args": ["--mcp-server"]
-    }
-  }
-}
-```
+
+To use this app as an MCP server with Claude Desktop:
+
+1. Build the MCP server:
+   ```bash
+   npm install
+   npm run mcp:build
+   ```
+
+2. Add to your Claude Desktop configuration:
+
+   **Windows** (`%APPDATA%\Claude\claude_desktop_config.json`):
+   ```json
+   {
+     "mcpServers": {
+       "shopping-ai": {
+         "command": "C:\\path\\to\\shopping-for-algolia-personalized\\mcp-server.bat"
+       }
+     }
+   }
+   ```
+
+   **macOS/Linux** (`~/.config/Claude/claude_desktop_config.json`):
+   ```json
+   {
+     "mcpServers": {
+       "shopping-ai": {
+         "command": "/path/to/shopping-for-algolia-personalized/mcp-server.sh"
+       }
+     }
+   }
+   ```
+
+3. Restart Claude Desktop to load the MCP server
+
+The MCP server provides access to your personalization profile and search capabilities directly within Claude.
 
 ## Technical Implementation Details
 

@@ -32,12 +32,12 @@ function App() {
     clearSessionSearchResults,
   } = useChatSessions();
 
-  // Auto-detect category from search query
+  // Auto-detect category from search query - matches Algolia indices
   const detectCategoryFromQuery = (query: string): string => {
     const lowerQuery = query.toLowerCase().trim();
     console.log('[Category Detection] Analyzing query:', query, '(lowercase:', lowerQuery, ')');
     
-    // Fashion keywords - expanded list
+    // Fashion keywords
     const fashionKeywords = ['shoe', 'shirt', 'dress', 'pant', 'jacket', 'coat', 'jean', 
                             'sweater', 'hoodie', 'cloth', 'fashion', 'wear', 'outfit',
                             'adidas', 'nike', 'puma', 'reebok', 'converse', 'bag', 'belt',
@@ -45,7 +45,7 @@ function App() {
                             'tie', 'watch', 'jewelry', 'accessory', 'sandal', 'boot',
                             'sneaker', 'heel', 'apparel', 'garment', 'style'];
     
-    // Electronics keywords - expanded list
+    // Electronics keywords
     const electronicsKeywords = ['laptop', 'computer', 'phone', 'tv', 'television', 'tablet',
                                 'camera', 'headphone', 'speaker', 'monitor', 'keyboard',
                                 'mouse', 'electronic', 'gadget', 'device', 'iphone', 'ipad',
@@ -54,7 +54,7 @@ function App() {
                                 'cable', 'charger', 'battery', 'screen', 'display', 'audio',
                                 'video', 'tech', 'smart', 'wireless', 'bluetooth'];
     
-    // Home & Garden keywords - expanded list
+    // Home keywords
     const homeKeywords = ['furniture', 'table', 'chair', 'sofa', 'bed', 'lamp', 'decor',
                          'kitchen', 'bathroom', 'garden', 'tool', 'appliance', 'mattress',
                          'pillow', 'blanket', 'curtain', 'rug', 'carpet', 'shelf', 'desk',
@@ -62,7 +62,7 @@ function App() {
                          'cabinet', 'mirror', 'frame', 'vase', 'candle', 'towel',
                          'sheet', 'comforter', 'cookware', 'utensil', 'plate', 'bowl'];
     
-    // Sports & Outdoors keywords - expanded list
+    // Sports keywords
     const sportsKeywords = ['sport', 'fitness', 'gym', 'exercise', 'bike', 'bicycle',
                            'camping', 'hiking', 'outdoor', 'tennis', 'golf', 'soccer',
                            'basketball', 'football', 'baseball', 'running', 'yoga',
@@ -70,18 +70,23 @@ function App() {
                            'training', 'equipment', 'gear', 'ball', 'racket', 'club',
                            'helmet', 'pad', 'glove', 'uniform', 'jersey'];
     
-    // Toys & Games keywords
-    const toysKeywords = ['toy', 'game', 'puzzle', 'lego', 'doll', 'figure',
-                         'board', 'playset', 'kid', 'child', 'baby', 'stuffed',
-                         'educational', 'building', 'blocks', 'nerf', 'barbie'];
-    
-    // Beauty & Health keywords
+    // Beauty keywords
     const beautyKeywords = ['makeup', 'cosmetic', 'skincare', 'perfume', 'cologne',
                            'shampoo', 'soap', 'lotion', 'cream', 'beauty', 'health',
                            'vitamin', 'supplement', 'medicine', 'wellness', 'facial',
                            'hair', 'nail', 'spa', 'treatment', 'serum', 'mask'];
     
-    // Check for category matches - check for partial matches
+    // Books keywords
+    const booksKeywords = ['book', 'novel', 'textbook', 'magazine', 'comic', 'manga',
+                          'kindle', 'ebook', 'paperback', 'hardcover', 'author',
+                          'isbn', 'publisher', 'reading', 'literature'];
+    
+    // Food keywords
+    const foodKeywords = ['food', 'snack', 'drink', 'beverage', 'coffee', 'tea',
+                         'chocolate', 'candy', 'gourmet', 'organic', 'protein',
+                         'vitamin', 'nutrition', 'diet', 'meal'];
+    
+    // Check for category matches - return Algolia index names
     for (const keyword of fashionKeywords) {
       if (lowerQuery.includes(keyword)) {
         console.log('[Category Detection] Matched fashion with keyword:', keyword);
@@ -110,17 +115,24 @@ function App() {
       }
     }
     
-    for (const keyword of toysKeywords) {
-      if (lowerQuery.includes(keyword)) {
-        console.log('[Category Detection] Matched toys with keyword:', keyword);
-        return 'toys';
-      }
-    }
-    
     for (const keyword of beautyKeywords) {
       if (lowerQuery.includes(keyword)) {
         console.log('[Category Detection] Matched beauty with keyword:', keyword);
         return 'beauty';
+      }
+    }
+    
+    for (const keyword of booksKeywords) {
+      if (lowerQuery.includes(keyword)) {
+        console.log('[Category Detection] Matched books with keyword:', keyword);
+        return 'books';
+      }
+    }
+    
+    for (const keyword of foodKeywords) {
+      if (lowerQuery.includes(keyword)) {
+        console.log('[Category Detection] Matched food with keyword:', keyword);
+        return 'food';
       }
     }
     

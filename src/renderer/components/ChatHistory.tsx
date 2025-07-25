@@ -89,7 +89,7 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
     setEditingCategory('');
   };
 
-  const availableCategories = ['general', 'fashion', 'electronics', 'home', 'toys', 'sports', 'beauty', 'health'];
+  const availableCategories = ['general', 'fashion', 'electronics', 'home', 'sports', 'beauty', 'books', 'food', 'products'];
 
   return (
     <div className={`h-full flex flex-col ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -223,7 +223,7 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
                             </button>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1 group/category">
+                          <div className="flex items-center gap-1">
                             <span className={`px-2 py-1 text-xs rounded-full ${
                               isDark 
                                 ? 'bg-purple-900 text-purple-200' 
@@ -236,9 +236,10 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
                                 e.stopPropagation();
                                 handleEditCategory(session.id, session.category || 'general');
                               }}
-                              className={`p-1 rounded opacity-0 group-hover/category:opacity-100 transition-opacity ${
+                              className={`p-1 rounded transition-all opacity-40 hover:opacity-100 ${
                                 isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'
                               }`}
+                              title="Edit category"
                             >
                               <Edit2 size={12} />
                             </button>

@@ -1,3 +1,4 @@
 @echo off
 cd /d "%~dp0"
-node dist\main\mcp-entry.js
+echo Starting MCP Server...
+node dist\main\mcp-standalone.js
