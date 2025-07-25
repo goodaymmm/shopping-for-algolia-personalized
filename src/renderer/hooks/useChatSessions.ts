@@ -42,6 +42,7 @@ export const useChatSessions = () => {
     const newSession: ChatSession = {
       id: Date.now().toString(),
       title: 'New Chat',
+      category: 'general',
       messages: [],
       searchResults: [],
       createdAt: new Date(),

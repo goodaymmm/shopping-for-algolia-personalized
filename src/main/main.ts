@@ -2009,4 +2009,24 @@ class MainApplication {
   }
 }
 
-new MainApplication()
+// Check if running as MCP server
+if (process.argv.includes('--mcp-server')) {
+  // Run as MCP server
+  import('./mcp-server').then(({ ShoppingMCPServer }) => {
+    console.log('[MCP] Starting Shopping for Algolia MCP Server...');
+    const database = new DatabaseService();
+    database.initialize();
+    const personalization = new PersonalizationEngine(database.database);
+    const mcpServer = new ShoppingMCPServer(personalization);
+    mcpServer.start().catch(error => {
+      console.error('[MCP] Failed to start MCP server:', error);
+      process.exit(1);
+    });
+  }).catch(error => {
+    console.error('[MCP] Failed to load MCP server module:', error);
+    process.exit(1);
+  });
+} else {
+  // Run as normal Electron application
+  new MainApplication()
+}

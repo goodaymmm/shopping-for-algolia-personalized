@@ -32,6 +32,45 @@ function App() {
     clearSessionSearchResults,
   } = useChatSessions();
 
+  // Auto-detect category from search query
+  const detectCategoryFromQuery = (query: string): string => {
+    const lowerQuery = query.toLowerCase();
+    
+    // Fashion keywords
+    const fashionKeywords = ['shoes', 'shirt', 'dress', 'pants', 'jacket', 'coat', 'jeans', 
+                            'sweater', 'hoodie', 'clothes', 'clothing', 'fashion', 'wear',
+                            'adidas', 'nike', 'puma', 'reebok', 'converse'];
+    
+    // Electronics keywords  
+    const electronicsKeywords = ['laptop', 'computer', 'phone', 'tv', 'television', 'tablet',
+                                'camera', 'headphones', 'speaker', 'monitor', 'keyboard',
+                                'mouse', 'electronics', 'gadget', 'device'];
+    
+    // Home & Garden keywords
+    const homeKeywords = ['furniture', 'table', 'chair', 'sofa', 'bed', 'lamp', 'decor',
+                         'kitchen', 'bathroom', 'garden', 'tool', 'appliance'];
+    
+    // Sports & Outdoors keywords
+    const sportsKeywords = ['sport', 'fitness', 'gym', 'exercise', 'bike', 'bicycle',
+                           'camping', 'hiking', 'outdoor', 'tennis', 'golf', 'soccer'];
+    
+    // Check for category matches
+    if (fashionKeywords.some(keyword => lowerQuery.includes(keyword))) {
+      return 'fashion';
+    }
+    if (electronicsKeywords.some(keyword => lowerQuery.includes(keyword))) {
+      return 'electronics';
+    }
+    if (homeKeywords.some(keyword => lowerQuery.includes(keyword))) {
+      return 'home';
+    }
+    if (sportsKeywords.some(keyword => lowerQuery.includes(keyword))) {
+      return 'sports';
+    }
+    
+    return 'general';
+  };
+
   const [currentView, setCurrentView] = useState<AppView>('chat');
   const [isLoading, setIsLoading] = useState(false);
   const [discoveryPercentage, setDiscoveryPercentage] = useState<DiscoveryPercentage>(0);
@@ -346,10 +385,13 @@ function App() {
 
       // Save chat to database (only if Electron API is available)
       if (window.electronAPI && window.electronAPI.saveChat) {
+        // Auto-detect category from search query
+        const category = detectCategoryFromQuery(content);
+        
         await window.electronAPI.saveChat(
           { 
             name: content.substring(0, 50) + '...', 
-            category: 'search' 
+            category: category 
           },
           userMessage
         );
