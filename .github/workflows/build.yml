@@ -29,6 +29,11 @@ jobs:
 
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    
+    env:
+      # Disable interactive prompts in CI
+      CI: true
+      FORCE_COLOR: 0
 
     steps:
       - name: Checkout code
@@ -58,21 +63,16 @@ jobs:
           fi
 
       - name: Ensure Tailwind CSS v3 compatibility
+        shell: bash
         run: |
-          # Remove Tailwind v4 postcss plugin if it exists
-          npm uninstall @tailwindcss/postcss --save-dev --force || true
-          
-          # Ensure Tailwind CSS v3 is installed
-          npm install tailwindcss@3.4.1 --save-dev --force
-          
           # Fix postcss.config.js to use standard Tailwind v3 format
           echo "module.exports = { plugins: { tailwindcss: {}, autoprefixer: {} } };" > postcss.config.js
           
-          # Verify the fix
-          echo "PostCSS config after fix:"
-          cat postcss.config.js
+          # Verify Tailwind v3 is installed (should already be from npm ci/install)
+          npm list tailwindcss || echo "Tailwind CSS not found in dependencies"
 
       - name: Pre-install electron-builder dependencies
+        shell: bash
         run: |
           # Pre-install electron-builder dependencies to avoid download issues during build
           npx electron-builder install-app-deps --arch=x64 || true
@@ -98,6 +98,7 @@ jobs:
           fi
         
       - name: Build TypeScript
+        shell: bash
         run: npm run build:all
 
       - name: Build Electron app (with retry on NSIS failure)
