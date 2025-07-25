@@ -1453,7 +1453,8 @@ class MainApplication {
       }
     })
 
-    // Sample data loader handler
+    // Sample data loader handler - COMMENTED OUT FOR PRODUCTION
+    /*
     ipcMain.handle('load-sample-data', async () => {
       try {
         console.log('[Main] Loading sample data into Algolia indices...');
@@ -1478,11 +1479,6 @@ class MainApplication {
           }
         }
         
-        // Alternative approach: get from the main process response format
-        const keysResult = await this.database.getAPIKeys();
-        const geminiKey = keysResult.find((k: any) => k.provider === 'gemini')?.encrypted_key || '';
-    */
-        /*
         // Get from settings properly
         const stmt = this.database.database.prepare(`
           SELECT service, key, value FROM api_configs WHERE service = 'algolia'
