@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, MessageSquare, Search, Trash2, Calendar, Filter, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Search, Trash2, Calendar, Filter, ShoppingBag, Edit2, Check, X } from 'lucide-react';
 import { ChatSession } from '../types';
 
 interface ChatHistoryProps {
@@ -19,6 +19,8 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editingCategory, setEditingCategory] = useState<string>('');
 
   // Filter sessions based on search and category
   const filteredSessions = sessions.filter(session => {
@@ -55,6 +57,39 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
   const getProductCount = (session: ChatSession) => {
     return session.searchResults?.length || 0;
   };
+
+  const handleEditCategory = (sessionId: string, currentCategory: string) => {
+    setEditingSessionId(sessionId);
+    setEditingCategory(currentCategory || 'general');
+  };
+
+  const handleSaveCategory = async (sessionId: string) => {
+    if (!window.electronAPI.updateChatCategory) return;
+    
+    try {
+      const result = await window.electronAPI.updateChatCategory(sessionId, editingCategory);
+      if (result.success) {
+        // Update local state by refreshing chat history
+        const updatedSessions = await window.electronAPI.getChatHistory();
+        // Parent component should handle updating sessions
+        window.location.reload(); // Simple refresh for now
+      } else {
+        console.error('Failed to update category:', result.error);
+      }
+    } catch (error) {
+      console.error('Error updating category:', error);
+    } finally {
+      setEditingSessionId(null);
+      setEditingCategory('');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingSessionId(null);
+    setEditingCategory('');
+  };
+
+  const availableCategories = ['general', 'fashion', 'electronics', 'home', 'toys', 'sports', 'beauty', 'health'];
 
   return (
     <div className={`h-full flex flex-col ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -152,13 +187,63 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-medium truncate">{session.title}</h3>
                       {session.category && (
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          isDark 
-                            ? 'bg-purple-900 text-purple-200' 
-                            : 'bg-purple-100 text-purple-700'
-                        }`}>
-                          {session.category}
-                        </span>
+                        editingSessionId === session.id ? (
+                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                            <select
+                              value={editingCategory}
+                              onChange={(e) => setEditingCategory(e.target.value)}
+                              className={`px-2 py-1 text-xs rounded-lg border ${
+                                isDark 
+                                  ? 'bg-gray-700 border-gray-600 text-white' 
+                                  : 'bg-white border-gray-300 text-gray-900'
+                              } focus:outline-none`}
+                              autoFocus
+                            >
+                              {availableCategories.map(cat => (
+                                <option key={cat} value={cat}>
+                                  {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              onClick={() => handleSaveCategory(session.id)}
+                              className={`p-1 rounded ${
+                                isDark ? 'hover:bg-gray-600 text-green-400' : 'hover:bg-gray-200 text-green-600'
+                              }`}
+                            >
+                              <Check size={14} />
+                            </button>
+                            <button
+                              onClick={handleCancelEdit}
+                              className={`p-1 rounded ${
+                                isDark ? 'hover:bg-gray-600 text-red-400' : 'hover:bg-gray-200 text-red-600'
+                              }`}
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 group/category">
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              isDark 
+                                ? 'bg-purple-900 text-purple-200' 
+                                : 'bg-purple-100 text-purple-700'
+                            }`}>
+                              {session.category}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditCategory(session.id, session.category || 'general');
+                              }}
+                              className={`p-1 rounded opacity-0 group-hover/category:opacity-100 transition-opacity ${
+                                isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'
+                              }`}
+                            >
+                              <Edit2 size={12} />
+                            </button>
+                          </div>
+                        )
                       )}
                     </div>
                     <p className={`text-sm mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>

@@ -7,6 +7,7 @@ interface ElectronAPI {
   removeProduct?: (productId: string) => Promise<{ success: boolean; error?: string }>;
   getChatHistory: () => Promise<any[]>;
   saveChat: (sessionData: any, message: any) => Promise<{ success: boolean; sessionId?: number; error?: string }>;
+  updateChatCategory?: (sessionId: string, category: string) => Promise<{ success: boolean; error?: string }>;
   saveDiscoverySetting: (percentage: 0 | 5 | 10) => Promise<{ success: boolean }>;
   getDiscoverySetting: () => Promise<0 | 5 | 10>;
   getAppVersion?: () => Promise<string>;

@@ -337,6 +337,23 @@ export class DatabaseService {
     }))
   }
 
+  // Update chat category
+  async updateChatCategory(sessionId: string, category: string): Promise<boolean> {
+    try {
+      const stmt = this.db.prepare(`
+        UPDATE chat_sessions 
+        SET category = ?, updated_at = CURRENT_TIMESTAMP 
+        WHERE id = ?
+      `)
+      const result = stmt.run(category, parseInt(sessionId))
+      console.log('[Database] Updated chat category:', { sessionId, category, changes: result.changes })
+      return result.changes > 0
+    } catch (error) {
+      console.error('[Database] Error updating chat category:', error)
+      return false
+    }
+  }
+
   // Discovery settings
   async saveDiscoverySetting(percentage: DiscoveryPercentage) {
     const stmt = this.db.prepare(`

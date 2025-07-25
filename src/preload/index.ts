@@ -23,6 +23,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveChat: (sessionData: any, message: any) => 
     ipcRenderer.invoke('save-chat', sessionData, message),
   
+  updateChatCategory: (sessionId: string, category: string) =>
+    ipcRenderer.invoke('update-chat-category', sessionId, category),
+  
   // Discovery settings
   saveDiscoverySetting: (percentage: 0 | 5 | 10) => 
     ipcRenderer.invoke('save-discovery-setting', percentage),

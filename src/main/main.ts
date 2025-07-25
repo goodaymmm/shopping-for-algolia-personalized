@@ -1044,6 +1044,17 @@ class MainApplication {
       }
     })
 
+    // Update chat category
+    ipcMain.handle('update-chat-category', async (event, sessionId: string, category: string) => {
+      try {
+        const success = await this.database.updateChatCategory(sessionId, category)
+        return { success }
+      } catch (error) {
+        console.error('Update chat category error:', error)
+        return { success: false, error: (error as Error).message }
+      }
+    })
+
     // Discovery settings
     ipcMain.handle('save-discovery-setting', async (event, percentage: 0 | 5 | 10) => {
       try {
