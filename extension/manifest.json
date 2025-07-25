@@ -1,28 +1,30 @@
 {
   "dxt_version": "0.1",
   "name": "shopping-for-algolia-personalized",
-  "version": "1.0.0",
-  "description": "AI-powered personalized shopping assistant with Gemini API image analysis and Algolia MCP integration",
+  "display_name": "Shopping for Algolia Personalized",
+  "version": "1.0.1",
+  "description": "Read-only access to your shopping personalization data from the Shopping for Algolia app",
+  "long_description": "This extension provides read-only access to your shopping personalization profile created by the Shopping for Algolia Personalized desktop app. View your category preferences, price ranges, and shopping patterns to help AI assistants understand your shopping preferences.",
   "author": {
-    "name": "Shopping for Algolia personalized"
+    "name": "Shopping for Algolia Team"
   },
   "server": {
     "type": "node",
-    "entry_point": "dist/main/mcp-standalone.js",
+    "entry_point": "server/index.js",
     "mcp_config": {
       "command": "node",
-      "args": ["${__dirname}/dist/main/mcp-standalone.js"],
+      "args": ["${__dirname}/server/index.js"],
       "env": {}
     }
   },
   "tools": [
     {
-      "name": "personalized_product_search",
-      "description": "Search for products using personalized data from Shopping for Algolia (Read-only, no ML accumulation)"
+      "name": "get_personalization_summary",
+      "description": "Get a comprehensive summary of your shopping personalization data including categories, styles, and behavior"
     },
     {
-      "name": "get_user_profile",
-      "description": "Get user's personalization profile with shopping preferences and interests (Read-only)"
+      "name": "get_user_preferences",
+      "description": "Get your shopping preferences in a structured format including category interests and price ranges"
     }
   ]
 }

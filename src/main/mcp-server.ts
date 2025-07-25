@@ -392,7 +392,14 @@ ${product.url ? `- [View Product](${product.url})` : ''}
   async start() {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    console.log('Shopping MCP Server started on stdio');
+    console.error('[MCP Server] Shopping MCP Server started on stdio');
+    
+    // Keep the process alive
+    process.stdin.resume();
+    process.stdin.on('data', () => {});
+    
+    // Log that we're ready
+    console.error('[MCP Server] Server is ready and listening for requests');
   }
 }
 

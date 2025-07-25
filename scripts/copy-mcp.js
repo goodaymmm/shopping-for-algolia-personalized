@@ -45,4 +45,19 @@ if (fs.existsSync(mcpStandaloneSrc)) {
   console.warn('mcp-standalone.js not found at', mcpStandaloneSrc);
 }
 
+// Copy mcp-server-simple.js to dist/main
+const mcpSimpleSrc = path.join(rootDir, 'src', 'main', 'mcp-server-simple.js');
+const mcpSimpleDest = path.join(distMainDir, 'mcp-server-simple.js');
+
+if (fs.existsSync(mcpSimpleSrc)) {
+  try {
+    fs.copySync(mcpSimpleSrc, mcpSimpleDest, { overwrite: true });
+    console.log('Copied mcp-server-simple.js to dist/main/');
+  } catch (error) {
+    console.error('Error copying mcp-server-simple.js:', error);
+  }
+} else {
+  console.warn('mcp-server-simple.js not found at', mcpSimpleSrc);
+}
+
 console.log('MCP server files copy completed.');

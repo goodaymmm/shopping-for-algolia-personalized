@@ -39,6 +39,9 @@ async function startStandaloneMCPServer() {
     
     console.error('[MCP Standalone] MCP Server started successfully');
     
+    // Keep process alive - the server is now listening
+    console.error('[MCP Standalone] Server is running and waiting for connections...');
+    
     // Handle graceful shutdown
     process.on('SIGINT', () => {
       console.error('[MCP Standalone] Received SIGINT, shutting down...');

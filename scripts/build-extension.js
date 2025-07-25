@@ -36,12 +36,41 @@ async function buildExtension() {
       console.log('Copied icon.png');
     }
     
-    // Copy dist/main directory
+    // Create server directory and copy the simplified server
+    const serverDir = path.join(buildDir, 'server');
+    fs.ensureDirSync(serverDir);
+    
+    // Copy mcp-server-simple.js as index.js
+    const simpleSrcPath = path.join(rootDir, 'src', 'main', 'mcp-server-simple.js');
+    const serverDestPath = path.join(serverDir, 'index.js');
+    if (fs.existsSync(simpleSrcPath)) {
+      // Read and modify the file to adjust require paths
+      let serverContent = fs.readFileSync(simpleSrcPath, 'utf8');
+      serverContent = serverContent.replace(/require\('\.\/database'\)/g, "require('../lib/database')");
+      serverContent = serverContent.replace(/require\('\.\/personalization'\)/g, "require('../lib/personalization')");
+      fs.writeFileSync(serverDestPath, serverContent);
+      console.log('Created server/index.js from mcp-server-simple.js');
+    } else {
+      console.error('Error: mcp-server-simple.js not found.');
+      process.exit(1);
+    }
+    
+    // Create lib directory and copy dependencies
+    const libDir = path.join(buildDir, 'lib');
+    fs.ensureDirSync(libDir);
+    
+    // Copy database.js and personalization.js from dist/main
     const distMainSrc = path.join(distDir, 'main');
-    const distMainDest = path.join(buildDir, 'dist', 'main');
     if (fs.existsSync(distMainSrc)) {
-      fs.copySync(distMainSrc, distMainDest);
-      console.log('Copied dist/main directory');
+      const deps = ['database.js', 'personalization.js'];
+      for (const dep of deps) {
+        const srcPath = path.join(distMainSrc, dep);
+        const destPath = path.join(libDir, dep);
+        if (fs.existsSync(srcPath)) {
+          fs.copyFileSync(srcPath, destPath);
+          console.log(`Copied ${dep} to lib/`);
+        }
+      }
     } else {
       console.error('Error: dist/main directory not found. Please run build:all first.');
       process.exit(1);

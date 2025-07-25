@@ -35,7 +35,7 @@ function App() {
   // Detect category from search results based on the index of the first result
   const detectCategoryFromSearchResults = (products: (Product | ProductWithContext)[]): string => {
     if (!products || products.length === 0) {
-      console.log('[Category Detection] No products found, defaulting to general');
+      console.error('[Category Detection] No products found, defaulting to general');
       return 'general';
     }
     
@@ -43,12 +43,13 @@ function App() {
     const firstProduct = products[0];
     const sourceIndex = 'product' in firstProduct ? firstProduct.product.sourceIndex : firstProduct.sourceIndex;
     
-    console.log('[Category Detection] First product source index:', sourceIndex);
+    console.error('[Category Detection] First product source index:', sourceIndex);
+    console.error('[Category Detection] First product data:', JSON.stringify(firstProduct, null, 2));
     
     // Check if sourceIndex is already a direct category name
     const directCategories = ['fashion', 'electronics', 'home', 'sports', 'beauty', 'books', 'food', 'general'];
     if (sourceIndex && directCategories.includes(sourceIndex)) {
-      console.log('[Category Detection] Detected direct category:', sourceIndex);
+      console.error('[Category Detection] Detected direct category:', sourceIndex);
       return sourceIndex;
     }
     
@@ -66,11 +67,11 @@ function App() {
     
     if (sourceIndex && indexToCategoryMap[sourceIndex]) {
       const category = indexToCategoryMap[sourceIndex];
-      console.log('[Category Detection] Detected category:', category, 'from prefixed index:', sourceIndex);
+      console.error('[Category Detection] Detected category:', category, 'from prefixed index:', sourceIndex);
       return category;
     }
     
-    console.log('[Category Detection] Unknown index or no index, defaulting to general');
+    console.error('[Category Detection] Unknown index or no index, defaulting to general');
     return 'general';
   };
 
@@ -390,7 +391,8 @@ function App() {
       if (window.electronAPI && window.electronAPI.saveChat) {
         // Detect category from search results
         const category = detectCategoryFromSearchResults(finalResults);
-        console.log('[Chat Save] Detected Category:', category, 'from', finalResults.length, 'results');
+        console.error('[Chat Save] Detected Category:', category, 'from', finalResults.length, 'results');
+        console.error('[Chat Save] First result for category detection:', finalResults.length > 0 ? JSON.stringify(finalResults[0], null, 2) : 'No results');
         
         // Save both user message and the detected category
         await window.electronAPI.saveChat(
@@ -400,6 +402,7 @@ function App() {
           },
           userMessage
         );
+        console.error('[Chat Save] Chat saved with category:', category);
       }
     } catch (error) {
       console.error('Search error:', error);
