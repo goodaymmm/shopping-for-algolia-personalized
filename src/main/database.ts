@@ -370,7 +370,10 @@ export class DatabaseService {
 
   // Database management methods
   resetDatabase() {
+    console.log('[DEBUG][Database] resetDatabase() called');
+    
     // Drop all tables
+    console.log('[DEBUG][Database] Dropping all tables...');
     this.db.exec(`
       DROP TABLE IF EXISTS users;
       DROP TABLE IF EXISTS chat_sessions;
@@ -384,35 +387,47 @@ export class DatabaseService {
       DROP TABLE IF EXISTS user_settings;
       DROP TABLE IF EXISTS api_configs;
     `)
+    console.log('[DEBUG][Database] All tables dropped successfully');
     
     // Recreate tables
+    console.log('[DEBUG][Database] Recreating tables...');
     this.createTables()
+    console.log('[DEBUG][Database] Tables recreated successfully');
+    console.log('[DEBUG][Database] resetDatabase() completed');
   }
 
   resetMLData() {
+    console.log('[DEBUG][Database] resetMLData() called');
+    
     // Clear ML training data tables
     try {
       // Delete from ml_training_events (created by PersonalizationEngine)
+      console.log('[DEBUG][Database] Deleting from ml_training_events...');
       this.db.exec(`DELETE FROM ml_training_events`)
+      console.log('[DEBUG][Database] ml_training_events cleared');
     } catch (error) {
-      console.log('ml_training_events table does not exist yet')
+      console.log('[DEBUG][Database] ml_training_events table does not exist yet')
     }
     
     try {
       // Delete from user_profile (created by PersonalizationEngine)
+      console.log('[DEBUG][Database] Deleting from user_profile...');
       this.db.exec(`DELETE FROM user_profile`)
+      console.log('[DEBUG][Database] user_profile cleared');
     } catch (error) {
-      console.log('user_profile table does not exist yet')
+      console.log('[DEBUG][Database] user_profile table does not exist yet')
     }
     
     // Delete from other ML-related tables
+    console.log('[DEBUG][Database] Deleting from other ML-related tables...');
     this.db.exec(`
       DELETE FROM ml_training_data;
       DELETE FROM outlier_interactions;
       DELETE FROM search_logs;
     `)
+    console.log('[DEBUG][Database] Other ML tables cleared');
     
-    console.log('ML data reset successfully')
+    console.log('[DEBUG][Database] ML data reset successfully')
   }
 
   // API key management

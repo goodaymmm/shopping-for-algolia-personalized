@@ -136,14 +136,6 @@ function App() {
     }
   }, []);
 
-  // Keep sidebar products in sync with current session
-  useEffect(() => {
-    if (currentSession?.searchResults) {
-      // currentViewの条件を削除して、常に同期を保つ
-      setSidebarProducts(currentSession.searchResults);
-      setIsProductSidebarOpen(currentSession.searchResults.length > 0);
-    }
-  }, [currentSessionId, currentSession]);
 
   const handleSendMessage = async (content: string, imageDataUrl?: string) => {
     let sessionId = currentSessionId;

@@ -1360,6 +1360,7 @@ class MainApplication {
         
         if (saveResult.lastInsertRowid) {
           // Track the save interaction
+          console.log(`[DEBUG] Tracking save event for ML learning...`);
           await this.personalization.trackUserInteraction({
             eventType: 'save',
             productId: product.id,
@@ -1371,6 +1372,7 @@ class MainApplication {
             weight: 1.0,
             source: 'standalone-app'
           })
+          console.log(`[DEBUG] ML save event tracked successfully`);
         }
         
         return saveResult

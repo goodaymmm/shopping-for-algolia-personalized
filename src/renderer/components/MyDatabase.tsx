@@ -22,10 +22,13 @@ export const MyDatabase: React.FC<MyDatabaseProps> = ({ onBack, isDark }) => {
   // Load saved products from database
   useEffect(() => {
     const loadSavedProducts = async () => {
+      console.log('[DEBUG][MyDatabase] Loading saved products...');
       if (window.electronAPI?.getProducts) {
         setIsLoading(true);
         try {
           const savedProducts = await window.electronAPI.getProducts();
+          console.log(`[DEBUG][MyDatabase] Loaded ${savedProducts.length} products from database`);
+          
           // Convert database products to component format
           const formattedProducts = savedProducts.map((product: any) => ({
             id: product.id,
@@ -42,12 +45,15 @@ export const MyDatabase: React.FC<MyDatabaseProps> = ({ onBack, isDark }) => {
             tags: product.tags || '',
           }));
           setProducts(formattedProducts);
+          console.log('[DEBUG][MyDatabase] Products formatted and set to state');
         } catch (error) {
-          console.error('Failed to load saved products:', error);
+          console.error('[DEBUG][MyDatabase] Failed to load saved products:', error);
           // Keep mock data on error
         } finally {
           setIsLoading(false);
         }
+      } else {
+        console.log('[DEBUG][MyDatabase] electronAPI.getProducts not available');
       }
     };
 
