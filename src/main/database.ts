@@ -6,9 +6,30 @@ import { Product, Message, ChatSession, DiscoveryPercentage } from '../shared/ty
 export class DatabaseService {
   private db: Database.Database
 
-  constructor() {
-    const dbPath = join(app.getPath('userData'), 'shopping-data.db')
-    this.db = new Database(dbPath)
+  constructor(mcpMode: boolean = false) {
+    let dbPath: string;
+    
+    if (mcpMode) {
+      // MCP mode: Use OS home directory
+      const os = require('os');
+      const homeDir = os.homedir();
+      const mcpDataDir = join(homeDir, '.shopping-algolia');
+      
+      // Create directory if it doesn't exist
+      const fs = require('fs');
+      if (!fs.existsSync(mcpDataDir)) {
+        fs.mkdirSync(mcpDataDir, { recursive: true });
+      }
+      
+      dbPath = join(mcpDataDir, 'shopping-data.db');
+      console.log('[Database] MCP mode - Using database at:', dbPath);
+    } else {
+      // Electron mode
+      dbPath = join(app.getPath('userData'), 'shopping-data.db');
+      console.log('[Database] Electron mode - Using database at:', dbPath);
+    }
+    
+    this.db = new Database(dbPath);
   }
 
   get database(): Database.Database {

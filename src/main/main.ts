@@ -2014,7 +2014,7 @@ if (process.argv.includes('--mcp-server')) {
   // Run as MCP server
   import('./mcp-server').then(({ ShoppingMCPServer }) => {
     console.log('[MCP] Starting Shopping for Algolia MCP Server...');
-    const database = new DatabaseService();
+    const database = new DatabaseService(true); // Pass true for MCP mode
     database.initialize();
     const personalization = new PersonalizationEngine(database.database);
     const mcpServer = new ShoppingMCPServer(personalization);

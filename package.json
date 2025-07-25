@@ -17,7 +17,9 @@
     "preview": "vite preview",
     "lint": "eslint src --ext .ts,.tsx",
     "type-check": "tsc --noEmit",
-    "preprocess-amazon-data": "tsc scripts/preprocess-amazon-data.ts --outDir dist/scripts --target es2020 --module commonjs && node dist/scripts/preprocess-amazon-data.js"
+    "preprocess-amazon-data": "tsc scripts/preprocess-amazon-data.ts --outDir dist/scripts --target es2020 --module commonjs && node dist/scripts/preprocess-amazon-data.js",
+    "mcp:build": "tsc src/main/mcp-entry.ts src/main/database.ts src/main/personalization.ts src/main/mcp-server.ts --outDir dist/main --target es2020 --module commonjs --esModuleInterop --resolveJsonModule --skipLibCheck",
+    "mcp:start": "node dist/main/mcp-entry.js"
   },
   "keywords": [
     "electron",
