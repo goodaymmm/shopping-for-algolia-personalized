@@ -1148,22 +1148,46 @@ class MainApplication {
 
     // Reset database (clear all data)
     ipcMain.handle('reset-database', async () => {
+      console.log('[DEBUG] reset-database called');
       try {
+        console.log('[DEBUG] Calling database.resetDatabase()...');
         this.database.resetDatabase()
+        console.log('[DEBUG] Database reset completed');
+        
+        // Re-initialize PersonalizationEngine tables
+        if (this.personalization) {
+          console.log('[DEBUG] Re-initializing PersonalizationEngine...');
+          this.personalization.initialize()
+          console.log('[DEBUG] PersonalizationEngine re-initialized');
+        }
+        
+        console.log('[DEBUG] reset-database completed successfully');
         return { success: true, message: 'Database reset successfully' }
       } catch (error) {
-        console.error('Reset database error:', error)
+        console.error('[DEBUG] Failed to reset database:', error)
         return { success: false, message: (error as Error).message }
       }
     })
 
     // Reset ML training data only
     ipcMain.handle('reset-ml-data', async () => {
+      console.log('[DEBUG] reset-ml-data called');
       try {
+        console.log('[DEBUG] Calling database.resetMLData()...');
         this.database.resetMLData()
+        console.log('[DEBUG] ML data reset completed');
+        
+        // Re-initialize PersonalizationEngine tables after clearing
+        if (this.personalization) {
+          console.log('[DEBUG] Re-initializing PersonalizationEngine...');
+          this.personalization.initialize()
+          console.log('[DEBUG] PersonalizationEngine re-initialized');
+        }
+        
+        console.log('[DEBUG] reset-ml-data completed successfully');
         return { success: true, message: 'ML training data cleared successfully' }
       } catch (error) {
-        console.error('Reset ML data error:', error)
+        console.error('[DEBUG] Failed to reset ML data:', error)
         return { success: false, message: (error as Error).message }
       }
     })

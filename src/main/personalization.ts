@@ -63,6 +63,12 @@ export class PersonalizationEngine {
     this.initializeTables();
   }
 
+  public initialize(): void {
+    console.log('[PersonalizationEngine] Initializing ML tables...');
+    this.initializeTables();
+    console.log('[PersonalizationEngine] ML tables initialized successfully');
+  }
+
   private initializeTables() {
     // Enhanced ML training data table with weights
     this.db.exec(`
