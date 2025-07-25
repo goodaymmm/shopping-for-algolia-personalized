@@ -1633,13 +1633,34 @@ class MainApplication {
     count: number,
     excludeProducts: any[]
   ): Promise<any[]> {
-    // Simplify the query for discovery - use only the first 1-2 keywords
-    const queryWords = originalQuery.split(' ').filter(word => 
-      word.length > 2 && !['the', 'and', 'for', 'with', 'can', 'you', 'find', 'one'].includes(word.toLowerCase())
-    );
-    const simplifiedQuery = queryWords.slice(0, 2).join(' ') || 'product';
+    // Extract meaningful keywords from the query
+    const stopWords = ['the', 'and', 'for', 'with', 'can', 'you', 'find', 'one', 'under', 'over', 'like', 'similar', 'style'];
+    const queryWords = originalQuery.toLowerCase().split(' ')
+      .filter(word => word.length > 2 && !stopWords.includes(word));
     
-    console.log(`[Discovery] Original query: "${originalQuery}", Simplified: "${simplifiedQuery}"`);
+    // Try to extract brand from the query or existing products
+    const brandFromQuery = queryWords.find(word => 
+      ['nike', 'adidas', 'apple', 'samsung', 'sony', 'hp', 'dell', 'canon', 'puma', 'reebok'].includes(word)
+    );
+    
+    // Extract brands from exclude products
+    const existingBrands = excludeProducts
+      .map(p => {
+        // Try to extract brand from product name
+        const nameParts = p.name?.toLowerCase().split(' ') || [];
+        return nameParts.find((part: string) => 
+          ['nike', 'adidas', 'apple', 'samsung', 'sony', 'hp', 'dell', 'canon', 'puma', 'reebok'].includes(part)
+        );
+      })
+      .filter(Boolean);
+    
+    // Create a more generic query for discovery
+    const productType = queryWords.find(word => 
+      ['shoes', 'shirt', 'pants', 'watch', 'phone', 'laptop', 'camera', 'headphones'].includes(word)
+    ) || 'product';
+    
+    console.log(`[Discovery] Original query: "${originalQuery}"`);
+    console.log(`[Discovery] Extracted: brand="${brandFromQuery}", type="${productType}", categories=${JSON.stringify(categories)}`);
     
     const discoveryStrategies = [
       // Strategy 1: Different category
@@ -1651,9 +1672,9 @@ class MainApplication {
           console.log(`[Discovery] Strategy 1: Searching in different category: ${randomCategory}`);
           try {
             const results = await this.algoliaMCPService.searchProductsMultiIndex(
-              simplifiedQuery, // Use simplified query
+              productType,
               [randomCategory],
-              { hitsPerPage: count * 3 }
+              { hitsPerPage: count * 5 } // Increase results to have better selection
             );
             console.log(`[Discovery] Strategy 1 returned ${results?.length || 0} products`);
             return results || [];
@@ -1671,12 +1692,12 @@ class MainApplication {
           ? excludeProducts.reduce((sum, p) => sum + (p.price || 0), 0) / excludeProducts.length
           : 100;
         const priceFilter = avgPrice > 100 ? 'price < 50' : 'price > 200';
-        console.log(`[Discovery] Strategy 2: Searching with price filter: ${priceFilter}`);
+        console.log(`[Discovery] Strategy 2: Searching "${productType}" with price filter: ${priceFilter}`);
         try {
           const results = await this.algoliaMCPService.searchProductsMultiIndex(
-            simplifiedQuery, // Use simplified query
-            categories.length > 0 ? categories : undefined,
-            { hitsPerPage: count * 3, filters: priceFilter }
+            productType,
+            categories.length > 0 ? categories : ['fashion', 'electronics'],
+            { hitsPerPage: count * 5, filters: priceFilter }
           );
           console.log(`[Discovery] Strategy 2 returned ${results?.length || 0} products`);
           return results || [];
@@ -1686,21 +1707,50 @@ class MainApplication {
         }
       },
       
-      // Strategy 3: Popular brands
+      // Strategy 3: Different brand in same category
       async () => {
-        const popularBrands = ['Nike', 'Adidas', 'Apple', 'Samsung', 'Sony', 'Canon', 'Dell', 'HP'];
-        const randomBrand = popularBrands[Math.floor(Math.random() * popularBrands.length)];
-        console.log(`[Discovery] Strategy 3: Searching for brand: ${randomBrand}`);
+        // Select a brand different from the ones in query/products
+        const allBrands = ['Nike', 'Adidas', 'Puma', 'Reebok', 'Under Armour', 'New Balance', 
+                          'Apple', 'Samsung', 'Sony', 'LG', 'Microsoft', 'Google'];
+        const availableBrands = allBrands.filter(b => 
+          b.toLowerCase() !== brandFromQuery && 
+          !existingBrands.includes(b.toLowerCase())
+        );
+        
+        if (availableBrands.length > 0) {
+          const randomBrand = availableBrands[Math.floor(Math.random() * availableBrands.length)];
+          console.log(`[Discovery] Strategy 3: Searching for different brand: ${randomBrand}`);
+          try {
+            const results = await this.algoliaMCPService.searchProductsMultiIndex(
+              randomBrand,
+              categories.length > 0 ? categories : ['fashion', 'electronics'],
+              { hitsPerPage: count * 5 }
+            );
+            console.log(`[Discovery] Strategy 3 returned ${results?.length || 0} products`);
+            return results || [];
+          } catch (error) {
+            console.error('[Discovery] Strategy 3 error:', error);
+            return [];
+          }
+        }
+        return [];
+      },
+      
+      // Strategy 4: Trending or popular items
+      async () => {
+        console.log(`[Discovery] Strategy 4: Searching for trending items`);
         try {
+          const trendingQueries = ['bestseller', 'trending', 'popular', 'new arrival'];
+          const randomTrending = trendingQueries[Math.floor(Math.random() * trendingQueries.length)];
           const results = await this.algoliaMCPService.searchProductsMultiIndex(
-            randomBrand,
-            categories.length > 0 ? categories : undefined,
-            { hitsPerPage: count * 3 }
+            randomTrending,
+            undefined, // Search across all categories
+            { hitsPerPage: count * 5 }
           );
-          console.log(`[Discovery] Strategy 3 returned ${results?.length || 0} products`);
+          console.log(`[Discovery] Strategy 4 returned ${results?.length || 0} products`);
           return results || [];
         } catch (error) {
-          console.error('[Discovery] Strategy 3 error:', error);
+          console.error('[Discovery] Strategy 4 error:', error);
           return [];
         }
       }

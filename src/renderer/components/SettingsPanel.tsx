@@ -968,50 +968,53 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
           
           <div className="space-y-4">
             <div className="p-4 rounded-xl border shadow-sm bg-white dark:bg-slate-800/50 border-gray-200 dark:border-slate-600 backdrop-blur-sm">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <div className="font-medium text-gray-900 dark:text-white">
-                    Log File
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    {logFilePath || 'Log file path not available'}
-                  </div>
+              {/* Log File Path Section */}
+              <div className="mb-4 p-3 rounded-lg bg-gray-50 dark:bg-slate-700/50">
+                <div className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
+                  Log File Location
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleLoadLogs}
-                    disabled={isLoadingLogs}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white transition-colors"
-                  >
-                    {isLoadingLogs ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Download className="w-4 h-4" />
-                    )}
-                    Load Logs
-                  </button>
-                  <button
-                    onClick={handleClearLogs}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    Clear Logs
-                  </button>
-                  <button
-                    onClick={async () => {
-                      if (window.electronAPI?.openLogFolder) {
-                        const result = await window.electronAPI.openLogFolder();
-                        if (!result.success) {
-                          alert('Failed to open log folder: ' + (result.error || 'Unknown error'));
-                        }
+                <div className="text-sm font-mono text-gray-700 dark:text-gray-300 break-all">
+                  {logFilePath || 'Loading...'}
+                </div>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  onClick={handleLoadLogs}
+                  disabled={isLoadingLogs}
+                  className="flex flex-col items-center gap-2 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 disabled:bg-gray-100 dark:disabled:bg-gray-800 text-blue-600 dark:text-blue-400 disabled:text-gray-400 transition-colors"
+                >
+                  {isLoadingLogs ? (
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Download className="w-5 h-5" />
+                  )}
+                  <span className="text-xs font-medium">Load Logs</span>
+                </button>
+                
+                <button
+                  onClick={handleClearLogs}
+                  className="flex flex-col items-center gap-2 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition-colors"
+                >
+                  <RotateCcw className="w-5 h-5" />
+                  <span className="text-xs font-medium">Clear Logs</span>
+                </button>
+                
+                <button
+                  onClick={async () => {
+                    if (window.electronAPI?.openLogFolder) {
+                      const result = await window.electronAPI.openLogFolder();
+                      if (!result.success) {
+                        alert('Failed to open log folder: ' + (result.error || 'Unknown error'));
                       }
-                    }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-500 hover:bg-gray-600 text-white transition-colors"
-                  >
-                    <FolderOpen className="w-4 h-4" />
-                    Open Log Folder
-                  </button>
-                </div>
+                    }
+                  }}
+                  className="flex flex-col items-center gap-2 p-4 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                >
+                  <FolderOpen className="w-5 h-5" />
+                  <span className="text-xs font-medium">Open Folder</span>
+                </button>
               </div>
               
               {logs && (
