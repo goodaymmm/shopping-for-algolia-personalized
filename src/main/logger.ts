@@ -43,7 +43,7 @@ export class Logger {
       if (existsSync(this.logFilePath)) {
         appendFileSync(this.logFilePath, sessionHeader)
       } else {
-        writeFileSync(this.logFilePath, `Shopping for AIgolia personalized - Log File${sessionHeader}`)
+        writeFileSync(this.logFilePath, `Shopping for Algolia personalized - Log File${sessionHeader}`)
       }
 
       this.isInitialized = true
@@ -121,7 +121,7 @@ export class Logger {
 
   public clearLogs(): void {
     try {
-      const header = `Shopping for AIgolia personalized - Log File\n=== Logs Cleared: ${new Date().toISOString()} ===\n`
+      const header = `Shopping for Algolia personalized - Log File\n=== Logs Cleared: ${new Date().toISOString()} ===\n`
       writeFileSync(this.logFilePath, header)
       this.info('Logger', 'Log file cleared successfully')
     } catch (error) {

@@ -218,7 +218,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 ? 'border-gray-700 text-gray-500' 
                 : 'border-gray-200 text-gray-400'
             }`}>
-              Shopping for AIgolia personalized • Version 1.0.0
+              Shopping for Algolia personalized • Version 1.0.0
             </div>
           </div>
         </div>

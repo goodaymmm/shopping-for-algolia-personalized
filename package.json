@@ -31,7 +31,7 @@
     "gemini",
     "mcp"
   ],
-  "author": "Shopping for AIgolia personalized",
+  "author": "Shopping for Algolia personalized",
   "license": "MIT",
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -72,7 +72,7 @@
   },
   "build": {
     "appId": "com.example.shopping-for-algolia-personalized",
-    "productName": "Shopping for AIgolia personalized",
+    "productName": "Shopping for Algolia personalized",
     "npmRebuild": true,
     "directories": {
       "output": "release",
@@ -81,6 +81,8 @@
     "files": [
       "dist/**/*",
       "src/data/**/*",
+      "mcp-server.bat",
+      "mcp-server.sh",
       "!dist/**/*.map",
       "!dist/**/*.ts",
       "node_modules/**/*",
@@ -103,7 +105,8 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "warningsAsErrors": false
+      "warningsAsErrors": false,
+      "perMachine": true
     },
     "mac": {
       "target": "dmg"

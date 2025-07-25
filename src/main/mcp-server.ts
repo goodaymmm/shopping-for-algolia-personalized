@@ -39,7 +39,7 @@ export class ShoppingMCPServer {
         tools: [
           {
             name: 'personalized_product_search',
-            description: 'Search for products using personalized data from Shopping for AIgolia (Read-only, no ML accumulation)',
+            description: 'Search for products using personalized data from Shopping for Algolia (Read-only, no ML accumulation)',
             inputSchema: {
               type: 'object',
               properties: {
@@ -119,7 +119,7 @@ export class ShoppingMCPServer {
         return {
           content: [{
             type: 'text',
-            text: `No personalization data available yet. Please use the Shopping for AIgolia personalized app to build your preferences first.
+            text: `No personalization data available yet. Please use the Shopping for Algolia personalized app to build your preferences first.
             
 You can still search, but results won't be personalized.`
           }]
@@ -185,7 +185,7 @@ You can still search, but results won't be personalized.`
 **Status**: No personalization data available yet.
 
 To build your personalization profile:
-1. Use the Shopping for AIgolia personalized app
+1. Use the Shopping for Algolia personalized app
 2. Search for products and interact with results
 3. Save products you like
 4. Return here for personalized recommendations
@@ -313,10 +313,10 @@ ${results.slice(0, 8).map((product, index) => `
 `).join('')}
 
 ---
-📊 **Personalization Info**: Based on ${userProfile.interactionHistory.totalSaves} saved items and ${userProfile.interactionHistory.totalClicks} product clicks from your Shopping for AIgolia app usage.
+📊 **Personalization Info**: Based on ${userProfile.interactionHistory.totalSaves} saved items and ${userProfile.interactionHistory.totalClicks} product clicks from your Shopping for Algolia app usage.
 
 ⚠️  **Note**: This is read-only access. To update your preferences:
-- Use the Shopping for AIgolia personalized app
+- Use the Shopping for Algolia personalized app
 - Save more products you like
 - Your preferences will automatically improve over time
 `;
@@ -363,9 +363,9 @@ ${topCategories.length > 0 ? topCategories.join('\n') : 'Still building preferen
 - **Last Updated**: ${profile.lastUpdated.toLocaleDateString()}
 
 ---
-🚀 **Improve Your Profile**: Use the Shopping for AIgolia personalized app more to get better recommendations!
+🚀 **Improve Your Profile**: Use the Shopping for Algolia personalized app more to get better recommendations!
 
-📈 **Data Source**: Shopping for AIgolia personalized (Local ML data)
+📈 **Data Source**: Shopping for Algolia personalized (Local ML data)
 🔒 **Privacy**: All data stored locally on your device
 `;
   }

@@ -433,7 +433,7 @@ export class PersonalizationEngine {
           .slice(0, 3)
       },
       metadata: {
-        appSource: 'Shopping for AIgolia personalized (MVP)',
+        appSource: 'Shopping for Algolia personalized (MVP)',
         dataVersion: '2.1.0',
         lastSync: new Date(),
         confidenceLevel: profile.confidenceLevel,
