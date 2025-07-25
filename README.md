@@ -136,37 +136,67 @@ Our Algolia implementation uses specialized indices for optimal search performan
 
 To use this app as an MCP server with Claude Desktop:
 
-1. Build the MCP server:
+1. **For installed app users**: The MCP server is already included in your installation.
+
+2. **For developers**: Build the MCP server from source:
    ```bash
    npm install
    npm run mcp:build
    ```
 
-2. Add to your Claude Desktop configuration:
+3. Add to your Claude Desktop configuration file:
+   
+   **Finding the config file:**
+   - Windows: Press `Win+R`, type `%APPDATA%\Claude\claude_desktop_config.json`
+   - macOS: Open Terminal, type `open ~/.config/Claude/claude_desktop_config.json`
 
-   **Windows** (`%APPDATA%\Claude\claude_desktop_config.json`):
+   **Windows configuration**:
    ```json
    {
      "mcpServers": {
        "shopping-ai": {
-         "command": "C:\\path\\to\\shopping-for-algolia-personalized\\mcp-server.bat"
+         "command": "C:\\Program Files\\Shopping for Algolia Personalized\\resources\\app\\mcp-server.bat"
+       }
+     }
+   }
+   ```
+   
+   If you installed from source code:
+   ```json
+   {
+     "mcpServers": {
+       "shopping-ai": {
+         "command": "C:\\Users\\YourUsername\\shopping-for-algolia-personalized\\mcp-server.bat"
        }
      }
    }
    ```
 
-   **macOS/Linux** (`~/.config/Claude/claude_desktop_config.json`):
+   **macOS configuration**:
    ```json
    {
      "mcpServers": {
        "shopping-ai": {
-         "command": "/path/to/shopping-for-algolia-personalized/mcp-server.sh"
+         "command": "/Applications/Shopping for Algolia Personalized.app/Contents/Resources/app/mcp-server.sh"
+       }
+     }
+   }
+   ```
+   
+   If you installed from source code:
+   ```json
+   {
+     "mcpServers": {
+       "shopping-ai": {
+         "command": "/Users/YourUsername/shopping-for-algolia-personalized/mcp-server.sh"
        }
      }
    }
    ```
 
-3. Restart Claude Desktop to load the MCP server
+4. Restart Claude Desktop to load the MCP server.
+
+5. Test the connection: In Claude Desktop, you should see "shopping-ai" listed in the MCP servers when everything is configured correctly.
 
 The MCP server provides access to your personalization profile and search capabilities directly within Claude.
 
