@@ -377,7 +377,10 @@ export class DatabaseService {
       DROP TABLE IF EXISTS chat_messages;
       DROP TABLE IF EXISTS saved_products;
       DROP TABLE IF EXISTS ml_training_data;
+      DROP TABLE IF EXISTS ml_training_events;
       DROP TABLE IF EXISTS outlier_interactions;
+      DROP TABLE IF EXISTS search_logs;
+      DROP TABLE IF EXISTS user_profile;
       DROP TABLE IF EXISTS user_settings;
       DROP TABLE IF EXISTS api_configs;
     `)
@@ -388,10 +391,28 @@ export class DatabaseService {
 
   resetMLData() {
     // Clear ML training data tables
+    try {
+      // Delete from ml_training_events (created by PersonalizationEngine)
+      this.db.exec(`DELETE FROM ml_training_events`)
+    } catch (error) {
+      console.log('ml_training_events table does not exist yet')
+    }
+    
+    try {
+      // Delete from user_profile (created by PersonalizationEngine)
+      this.db.exec(`DELETE FROM user_profile`)
+    } catch (error) {
+      console.log('user_profile table does not exist yet')
+    }
+    
+    // Delete from other ML-related tables
     this.db.exec(`
       DELETE FROM ml_training_data;
       DELETE FROM outlier_interactions;
+      DELETE FROM search_logs;
     `)
+    
+    console.log('ML data reset successfully')
   }
 
   // API key management

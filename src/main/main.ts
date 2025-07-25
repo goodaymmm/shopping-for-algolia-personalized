@@ -1075,10 +1075,11 @@ class MainApplication {
     // Get database path
     ipcMain.handle('get-database-path', async () => {
       try {
-        return join(app.getPath('userData'), 'shopping-data.db')
+        const path = join(app.getPath('userData'), 'shopping-data.db')
+        return { success: true, path }
       } catch (error) {
         console.error('Get database path error:', error)
-        return null
+        return { success: false, error: (error as Error).message }
       }
     })
 
