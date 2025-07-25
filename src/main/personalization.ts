@@ -58,6 +58,14 @@ export class PersonalizationEngine {
     timeSpent: 0.1 // Per 10 seconds
   };
 
+  // Category learning configuration
+  private readonly CATEGORY_CONFIG = {
+    baseWeight: 0.8,          // Increased from 0.5 to 0.8 for stronger category influence
+    newProductBoost: 1.2,     // Boost factor for products with no interaction history
+    minConfidence: 0.3,       // Minimum confidence level for category scoring
+    brandWeight: 0.6          // Weight for brand affinity scoring
+  };
+
   constructor(database: Database.Database) {
     this.db = database;
     this.initializeTables();
@@ -235,6 +243,18 @@ export class PersonalizationEngine {
           }
         }
 
+        // Extract brand information from algolia_data
+        if ((event as any).algolia_data) {
+          try {
+            const algoliaData = JSON.parse((event as any).algolia_data);
+            if (algoliaData.brand) {
+              profile.brandAffinity[algoliaData.brand] = (profile.brandAffinity[algoliaData.brand] || 0) + weight;
+            }
+          } catch {
+            // Ignore malformed algolia data
+          }
+        }
+
         // Price learning removed for MVP - will use real-time API pricing in future
 
         // Extract style preferences from context
@@ -283,31 +303,49 @@ export class PersonalizationEngine {
       let score = 0.5; // Base score
       console.log(`[ML] Scoring product: ${product.name} (ID: ${product.id})`);
       console.log(`[ML] - Categories: ${JSON.stringify(product.categories)}`);
+      console.log(`[ML] - Brand: ${product.brand || 'unknown'}`);
 
-      // Category affinity (increased weight from 0.4 to 0.5)
-      let categoryScore = 0;
-      if (product.categories && product.categories.length > 0) {
-        categoryScore = product.categories.reduce((sum, cat) => {
-          const catScore = userProfile!.categoryScores[cat] || 0;
-          console.log(`[ML]   - Category "${cat}" score: ${catScore}`);
-          return sum + catScore;
-        }, 0) / product.categories.length;
-        score += categoryScore * 0.5;
-      }
-      console.log(`[ML] - Category score component: ${categoryScore * 0.5}`);
-
-      // Price learning removed - MVP focuses on stable attributes
-      // Future API integration will provide real-time pricing
-
-      // Historical interactions with this specific product
+      // Check if this is a new product (no interaction history)
       const interactions = this.db.prepare(`
         SELECT SUM(weight) as total_weight, COUNT(*) as count
         FROM ml_training_events
         WHERE product_id = ? AND source = 'standalone-app'
       `).get(product.id);
 
+      const hasInteractions = interactions && (interactions as any).total_weight;
+      const isNewProduct = !hasInteractions;
+
+      // Category affinity with enhanced weight
+      let categoryScore = 0;
+      let categoryMultiplier = this.CATEGORY_CONFIG.baseWeight;
+      
+      // Boost category influence for new products
+      if (isNewProduct) {
+        categoryMultiplier *= this.CATEGORY_CONFIG.newProductBoost;
+        console.log(`[ML] - New product detected, boosting category weight to ${categoryMultiplier}`);
+      }
+
+      if (product.categories && product.categories.length > 0) {
+        categoryScore = product.categories.reduce((sum, cat) => {
+          const catScore = userProfile!.categoryScores[cat] || 0;
+          console.log(`[ML]   - Category "${cat}" score: ${catScore}`);
+          return sum + catScore;
+        }, 0) / product.categories.length;
+        score += categoryScore * categoryMultiplier;
+      }
+      console.log(`[ML] - Category score component: ${categoryScore * categoryMultiplier}`);
+
+      // Brand affinity scoring
+      let brandScore = 0;
+      if (product.brand && userProfile.brandAffinity[product.brand]) {
+        brandScore = userProfile.brandAffinity[product.brand];
+        score += brandScore * this.CATEGORY_CONFIG.brandWeight;
+        console.log(`[ML] - Brand affinity score: ${brandScore * this.CATEGORY_CONFIG.brandWeight} (brand: ${product.brand})`);
+      }
+
+      // Historical interactions with this specific product
       let interactionScore = 0;
-      if (interactions && (interactions as any).total_weight) {
+      if (hasInteractions) {
         const weight = (interactions as any).total_weight;
         const count = (interactions as any).count;
         
@@ -325,12 +363,12 @@ export class PersonalizationEngine {
       console.log(`[ML] - Interaction score: ${interactionScore} (weight: ${(interactions as any)?.total_weight || 0}, count: ${(interactions as any)?.count || 0})`);
 
       // Apply confidence level to score adjustments
-      // This makes ML effects more visible with less data
-      const confidenceMultiplier = Math.max(0.5, userProfile.confidenceLevel);
+      // Use higher minimum confidence for category-based learning
+      const confidenceMultiplier = Math.max(this.CATEGORY_CONFIG.minConfidence, userProfile.confidenceLevel);
       const adjustedScore = 0.5 + (score - 0.5) * confidenceMultiplier;
       
       const finalScore = Math.max(0, Math.min(1, adjustedScore));
-      console.log(`[ML] - Final score: ${finalScore} (confidence: ${userProfile.confidenceLevel})`);
+      console.log(`[ML] - Final score: ${finalScore} (confidence: ${userProfile.confidenceLevel}, isNewProduct: ${isNewProduct})`);
       console.log(`[ML] --------------------------------`);
 
       return finalScore;
@@ -380,21 +418,32 @@ export class PersonalizationEngine {
           .sort(([, a], [, b]) => (b as number) - (a as number))
           .slice(0, 5)
           .map(([cat, score]) => ({ category: cat, affinity: score })),
-        brandAffinities: profile.brandAffinity
+        brandAffinities: Object.entries(profile.brandAffinity)
+          .sort(([, a], [, b]) => (b as number) - (a as number))
+          .slice(0, 5)
+          .map(([brand, score]) => ({ brand, affinity: score }))
       },
       searchOptimization: {
         commonKeywords: this.extractCommonKeywords(),
         preferredCategories: Object.keys(profile.categoryScores)
           .filter(cat => profile.categoryScores[cat] > 0.1)
-          .slice(0, 5)
+          .slice(0, 5),
+        preferredBrands: Object.keys(profile.brandAffinity)
+          .filter(brand => profile.brandAffinity[brand] > 0.1)
+          .slice(0, 3)
       },
       metadata: {
         appSource: 'Shopping for AIgolia personalized (MVP)',
-        dataVersion: '2.0.0',
+        dataVersion: '2.1.0',
         lastSync: new Date(),
         confidenceLevel: profile.confidenceLevel,
         dataPoints: this.getInteractionCount(),
-        note: 'Price learning disabled in MVP - future versions will use real-time API pricing'
+        features: [
+          'Enhanced category-based learning (0.8 weight)',
+          'Brand affinity tracking',
+          'New product boost (1.2x category weight)',
+          'Price learning disabled in MVP'
+        ]
       }
     };
   }
@@ -469,5 +518,54 @@ export class PersonalizationEngine {
     `).get();
 
     return result ? (result as any).count : 0;
+  }
+
+  // Get category suggestions for search enhancement
+  async getCategorySuggestions(limit: number = 5): Promise<{ category: string; score: number }[]> {
+    try {
+      const profile = await this.getUserProfile();
+      
+      // Get top categories with positive scores
+      const suggestions = Object.entries(profile.categoryScores)
+        .filter(([, score]) => score > 0)
+        .sort(([, a], [, b]) => (b as number) - (a as number))
+        .slice(0, limit)
+        .map(([category, score]) => ({ category, score: score as number }));
+      
+      console.log(`[ML] Category suggestions: ${suggestions.map(s => `${s.category} (${s.score.toFixed(3)})`).join(', ')}`);
+      return suggestions;
+    } catch (error) {
+      console.error('Failed to get category suggestions:', error);
+      return [];
+    }
+  }
+
+  // Get brand suggestions for search enhancement
+  async getBrandSuggestions(limit: number = 3): Promise<{ brand: string; score: number }[]> {
+    try {
+      const profile = await this.getUserProfile();
+      
+      // Get top brands with positive scores
+      const suggestions = Object.entries(profile.brandAffinity)
+        .filter(([, score]) => score > 0)
+        .sort(([, a], [, b]) => (b as number) - (a as number))
+        .slice(0, limit)
+        .map(([brand, score]) => ({ brand, score: score as number }));
+      
+      console.log(`[ML] Brand suggestions: ${suggestions.map(s => `${s.brand} (${s.score.toFixed(3)})`).join(', ')}`);
+      return suggestions;
+    } catch (error) {
+      console.error('Failed to get brand suggestions:', error);
+      return [];
+    }
+  }
+
+  // Check if we have enough data for meaningful ML predictions
+  async hasEnoughData(): Promise<boolean> {
+    const profile = await this.getUserProfile();
+    const interactionCount = this.getInteractionCount();
+    
+    // Need at least 5 interactions and some category data
+    return interactionCount >= 5 && Object.keys(profile.categoryScores).length > 0;
   }
 }
