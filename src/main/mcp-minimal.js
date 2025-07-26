@@ -40,13 +40,13 @@ async function startMinimalMCPServer() {
   try {
     log('Loading MCP SDK modules...');
     
-    const { Server } = require('@modelcontextprotocol/sdk/dist/cjs/server/index.js');
-    const { StdioServerTransport } = require('@modelcontextprotocol/sdk/dist/cjs/server/stdio.js');
+    const { Server } = require('@modelcontextprotocol/sdk/server');
+    const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
     const {
       CallToolRequestSchema,
       ListToolsRequestSchema,
       InitializeRequestSchema,
-    } = require('@modelcontextprotocol/sdk/dist/cjs/types.js');
+    } = require('@modelcontextprotocol/sdk/types.js');
     
     log('MCP SDK modules loaded successfully');
     

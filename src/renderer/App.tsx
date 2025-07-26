@@ -35,8 +35,10 @@ function App() {
 
   // Detect category from search results based on the index of the first result
   const detectCategoryFromSearchResults = (products: (Product | ProductWithContext)[]): string => {
-    console.log('[detectCategoryFromSearchResults] Called with', products?.length || 0, 'products');
-    console.log('[detectCategoryFromSearchResults] First product:', products?.[0]);
+    console.error('[detectCategory] ===== FUNCTION CALLED =====');
+    console.error('[detectCategory] Products count:', products?.length || 0);
+    console.error('[detectCategory] First product:', products?.[0]);
+    console.error('[detectCategory] Product type:', products?.[0] ? ('product' in products[0] ? 'ProductWithContext' : 'Product') : 'none');
     
     // Send to debug log
     if (window.electronAPI?.debugLog) {
@@ -55,12 +57,13 @@ function App() {
     const firstProduct = products[0];
     const sourceIndex = 'product' in firstProduct ? firstProduct.product.sourceIndex : firstProduct.sourceIndex;
     
-    console.log('[detectCategoryFromSearchResults] First product source index:', sourceIndex);
-    console.log('[detectCategoryFromSearchResults] Product structure:', {
-      isProductWithContext: 'product' in firstProduct,
-      sourceIndex,
-      productKeys: Object.keys(firstProduct)
-    });
+    console.error('[detectCategory] First product keys:', Object.keys(firstProduct));
+    console.error('[detectCategory] Source index extracted:', sourceIndex);
+    console.error('[detectCategory] Is ProductWithContext?', 'product' in firstProduct);
+    if ('product' in firstProduct) {
+      console.error('[detectCategory] Inner product keys:', Object.keys(firstProduct.product));
+      console.error('[detectCategory] Inner product sourceIndex:', firstProduct.product.sourceIndex);
+    }
     
     // Check if sourceIndex is already a direct category name
     const directCategories = ['fashion', 'electronics', 'home', 'sports', 'beauty', 'books', 'food', 'general'];
@@ -83,11 +86,15 @@ function App() {
     
     if (sourceIndex && indexToCategoryMap[sourceIndex]) {
       const category = indexToCategoryMap[sourceIndex];
-      console.error('[Category Detection] Detected category:', category, 'from prefixed index:', sourceIndex);
+      console.error('[detectCategory] ===== DETECTED CATEGORY =====');
+      console.error('[detectCategory] Mapped category:', category);
+      console.error('[detectCategory] From index:', sourceIndex);
       return category;
     }
     
-    console.error('[Category Detection] Unknown index or no index, defaulting to general');
+    console.error('[detectCategory] ===== DEFAULT CATEGORY =====');
+    console.error('[detectCategory] No matching index found');
+    console.error('[detectCategory] sourceIndex was:', sourceIndex);
     return 'general';
   };
 
@@ -435,9 +442,14 @@ function App() {
         
         // Update category detection for new or pending sessions
         const currentChatSession = sessions.find(s => s.id === sessionId);
-        console.log('[Category Detection] Current session:', currentChatSession);
-        console.log('[Category Detection] Current category:', currentChatSession?.category);
-        console.log('[Category Detection] Results count:', finalResults.length);
+        console.error('[DEBUG Category] ========== START CATEGORY DETECTION ==========');
+        console.error('[DEBUG Category] Current session:', currentChatSession);
+        console.error('[DEBUG Category] Session ID:', sessionId);
+        console.error('[DEBUG Category] Current category:', currentChatSession?.category);
+        console.error('[DEBUG Category] Results count:', finalResults.length);
+        console.error('[DEBUG Category] First result:', finalResults[0]);
+        console.error('[DEBUG Category] Sessions array:', sessions);
+        console.error('[DEBUG Category] currentSession from hook:', currentSession);
         
         // Debug log category detection attempt
         if (window.electronAPI?.debugLog) {
@@ -450,7 +462,7 @@ function App() {
         }
         
         if (finalResults.length > 0 && (currentChatSession?.category === 'pending' || currentChatSession?.category === 'general')) {
-          console.log('[Category Detection] Session has pending/general category, detecting from results');
+          console.error('[DEBUG Category] Session has pending/general category, will detect from results');
           
           // Detect category from search results immediately
           const category = detectCategoryFromSearchResults(finalResults);
@@ -458,8 +470,10 @@ function App() {
           console.log('[Category Update] First result:', finalResults[0]);
           
           // Update session with detected category locally first
-          console.log('[Category Update] Updating local session with category:', category);
+          console.error('[DEBUG Category] Before updateSession - sessions:', sessions);
+          console.error('[DEBUG Category] Calling updateSession with:', { sessionId, category });
           updateSession(sessionId, { category });
+          console.error('[DEBUG Category] After updateSession called');
           
           // Force UI update
           setSearchFeedback(`Category detected: ${category}`);

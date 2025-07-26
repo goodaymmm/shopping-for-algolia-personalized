@@ -55,6 +55,11 @@ export const useChatSessions = () => {
   };
 
   const updateSession = (sessionId: string, updates: Partial<ChatSession>) => {
+    console.error('[useChatSessions] updateSession called');
+    console.error('[useChatSessions] sessionId:', sessionId);
+    console.error('[useChatSessions] updates:', updates);
+    console.error('[useChatSessions] current sessions before update:', sessions);
+    
     // Debug log the update
     if (window.electronAPI?.debugLog) {
       window.electronAPI.debugLog('updateSession called', {
@@ -64,11 +69,15 @@ export const useChatSessions = () => {
       });
     }
     
-    setSessions(prev => prev.map(session => 
-      session.id === sessionId 
-        ? { ...session, ...updates, updatedAt: new Date() }
-        : session
-    ));
+    setSessions(prev => {
+      const newSessions = prev.map(session => 
+        session.id === sessionId 
+          ? { ...session, ...updates, updatedAt: new Date() }
+          : session
+      );
+      console.error('[useChatSessions] new sessions after update:', newSessions);
+      return newSessions;
+    });
   };
 
   const deleteSession = (sessionId: string) => {
