@@ -422,6 +422,9 @@ function App() {
             if (updateResult.success) {
               setCategorizedSessions(prev => new Set(prev).add(sessionId));
               console.error('[Category Update] Successfully updated session category to:', category);
+              
+              // Reload sessions to reflect the category change in UI
+              await loadChatSessions();
             } else {
               console.error('[Category Update] Failed to update category:', updateResult.error);
             }
