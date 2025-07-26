@@ -2,7 +2,10 @@
 
 *Submission for the [Algolia MCP Server Challenge](https://dev.to/challenges/algolia-2025-07-09)*
 
-AI-powered personalized shopping assistant with advanced image recognition and smart search capabilities, demonstrating the power of Algolia MCP Server integration.
+> **🔗 This is an Algolia MCP Server Application**  
+> All Algolia operations in this app are performed through the official **[Algolia MCP Server](https://github.com/algolia/mcp-node)** using the Model Context Protocol. No direct Algolia REST API calls are made - everything goes through MCP for natural language understanding and enhanced search capabilities.
+
+An innovative **Algolia MCP Server-powered** shopping assistant that demonstrates advanced integration patterns for natural language search, personalization, and AI-driven product discovery through the Model Context Protocol (MCP).
 
 ## Demo
 
@@ -10,24 +13,24 @@ AI-powered personalized shopping assistant with advanced image recognition and s
 📹 **Demo Video**: *Coming Soon - Video walkthrough showing key features and Algolia MCP Server integration*
 
 **Demo Highlights:**
-- Real-time product search with natural language queries
-- AI image analysis for visual product discovery
-- Personalized recommendations based on user behavior
-- MCP Server integration with Claude Desktop
-- Progressive search strategies and intelligent fallbacks
+- **Algolia MCP Server Integration**: All search operations are routed through MCP for natural language understanding
+- **MCP-Powered Product Discovery**: Leverages MCP tools for intelligent query transformation
+- **AI Image Analysis**: Combines Gemini API with Algolia MCP for visual search
+- **MCP Personalization Tools**: Custom MCP tools for user preferences and analytics
+- **Claude Desktop Compatible**: Seamlessly extends Claude with shopping capabilities
 
 ## Features
 
-- 🤖 **AI Image Analysis**: Advanced product recognition using Google Gemini API
-- 🔍 **Smart Search**: Multi-index Algolia search with intelligent fallback strategies
-- 🧠 **ML Personalization**: Learns your preferences and recommends products tailored to you
-- 📊 **Search History**: Track and review past searches with collapsible sections
-- 🎯 **Smart Query**: Progressive query simplification for better search results
-- 🔗 **MCP Integration**: Compatible with Claude Desktop for AI-enhanced shopping
+- 🔗 **Algolia MCP Server Core**: All Algolia operations are performed through MCP, not direct API calls
+- 🤖 **MCP + AI Integration**: Combines Algolia MCP with Gemini API for intelligent product discovery
+- 🧠 **MCP Personalization Tools**: Custom MCP tools (`get_user_preferences`, `suggest_products`) for AI agents
+- 🔍 **MCP Multi-Index Search**: Leverages MCP's `searchSingleIndex` across multiple product categories
+- 📊 **MCP Analytics**: `get_interaction_analytics` tool provides insights to AI assistants
+- 🎯 **Natural Language Processing**: MCP Server translates queries into optimized Algolia searches
 - 🎨 **Modern UI**: Clean interface with dark mode support
-- 🔒 **Secure**: Your data stays local, API keys are securely stored
+- 🔒 **Secure MCP Auth**: API keys passed securely to MCP Server via stdio protocol
 
-## Architecture Overview
+## Architecture Overview: Algolia MCP Server Integration
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -42,11 +45,18 @@ AI-powered personalized shopping assistant with advanced image recognition and s
 ┌────────────────────────────┴────────────────────────────────┐
 │                    Main Process (Electron)                   │
 │  ┌─────────────┐  ┌──────────────┐  ┌─────────────────┐   │
-│  │   Gemini    │  │   Algolia    │  │  Personalization│   │
-│  │   Service   │  │   Service    │  │     Engine      │   │
-│  │ - Image AI  │  │ - Multi-idx  │  │ - ML Tracking   │   │
-│  │ - Analysis  │  │ - Fallback   │  │ - Scoring       │   │
+│  │   Gemini    │  │AlgoliaMCP    │  │  Personalization│   │
+│  │   Service   │  │  Service     │  │     Engine      │   │
+│  │ - Image AI  │  │ - MCP Client │  │ - ML Tracking   │   │
+│  │ - Analysis  │  │ - stdio IPC  │  │ - Scoring       │   │
 │  └──────┬──────┘  └──────┬───────┘  └────────┬────────┘   │
+│         │                 │                    │             │
+│         │          ┌──────┴───────┐            │             │
+│         │          │ Algolia MCP  │            │             │
+│         │          │   Server      │            │             │
+│         │          │ - JSON-RPC   │            │             │
+│         │          │ - Auth: API  │            │             │
+│         │          └──────┬───────┘            │             │
 │         │                 │                    │             │
 │  ┌──────┴─────────────────┴────────────────────┴────────┐  │
 │  │                  SQLite Database                      │  │
@@ -57,18 +67,21 @@ AI-powered personalized shopping assistant with advanced image recognition and s
 │  └──────────────────────────────────────────────────────┘  │
 │                                                             │
 │  ┌──────────────────────────────────────────────────────┐  │
-│  │              MCP Server Interface                     │  │
-│  │  - Exposed to Claude Desktop via --mcp-server flag   │  │
-│  │  - Provides personalized search & profile access     │  │
+│  │         Shopping AI MCP Server (This App)            │  │
+│  │  Tools: - get_personalization_summary               │  │
+│  │         - get_user_preferences                      │  │
+│  │         - get_interaction_analytics                 │  │
+│  │         - suggest_products                          │  │
 │  └──────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
                              │
-                    External Services
+              External Services & Protocols
 ┌─────────────────────┐  ┌─────────────────┐  ┌──────────────┐
-│   Algolia Search    │  │  Google Gemini  │  │Claude Desktop│
-│   - fashion index   │  │  - gemini-1.5   │  │ - MCP Client │
-│   - electronics idx │  │  - Image API    │  │ - Search API │
-│   - products index  │  │                 │  │              │
+│  Algolia MCP Server │  │  Google Gemini  │  │Claude Desktop│
+│  - searchSingleIndex│  │  - gemini-1.5   │  │ - MCP Client │
+│  - setSettings      │  │  - Image API    │  │ - Uses our   │
+│  - saveObject       │  │  (Direct API)   │  │   MCP Tools  │
+│  - listIndices      │  │                 │  │              │
 └─────────────────────┘  └─────────────────┘  └──────────────┘
 ```
 
@@ -87,10 +100,11 @@ AI-powered personalized shopping assistant with advanced image recognition and s
 - **SQLite3** - Local database for user data and ML training
 - **keytar** - Native OS keychain integration for secure API storage
 
-### AI & Search Integration
-- **@google/generative-ai 0.24.1** - Gemini API for advanced image analysis
-- **algoliasearch 5.32.0** - Official Algolia client for search operations
-- **@modelcontextprotocol/sdk 1.15.1** - MCP server for Claude Desktop
+### AI & MCP Integration
+- **Algolia MCP Server** - Core search infrastructure, all Algolia operations go through MCP
+- **@google/generative-ai 0.24.1** - Gemini API for advanced image analysis (direct API)
+- **@modelcontextprotocol/sdk 1.15.1** - MCP SDK for building custom tools
+- **stdio Protocol** - JSON-RPC communication with Algolia MCP Server
 
 ### Key Technologies & Patterns
 - **IPC Architecture** - Secure communication between renderer and main process
@@ -103,38 +117,67 @@ AI-powered personalized shopping assistant with advanced image recognition and s
 
 ## How I Utilized the Algolia MCP Server
 
-This project leverages **Algolia MCP Server** to create a seamless AI-powered shopping experience:
+This project is built entirely around **Algolia MCP Server**, replacing traditional REST API calls with MCP-based communication:
 
-### 1. **Natural Language Processing**
-- MCP Server translates complex user queries into optimized Algolia searches
-- Supports context-aware product discovery ("shoes like this photo but in red")
-- Intelligent query expansion and refinement
-
-### 2. **Advanced Search Strategies**
+### 1. **Complete MCP Integration**
 ```typescript
-// Multi-index search with intelligent fallback
-const searchStrategies = [
-  { index: 'fashion', filters: 'category:shoes' },
-  { index: 'electronics', filters: 'price<500' },
-  { index: 'products', query: simplifiedQuery }
-];
+// All Algolia operations go through MCP Server
+class AlgoliaMCPClient {
+  async searchSingleIndex(params) {
+    // Communicates with Algolia MCP Server via stdio
+    return this.callTool('searchSingleIndex', params);
+  }
+}
 ```
+- **NO Direct API Calls**: All search, indexing, and settings operations use MCP
+- **stdio Protocol**: JSON-RPC communication with Algolia MCP Server process
+- **API Key Authentication**: Secure credentials passed via `--credentials` flag
 
-### 3. **Multi-Index Architecture**
-Our Algolia implementation uses specialized indices for optimal search performance:
-- **fashion**: Clothing, shoes, accessories (3,000+ products)
-- **electronics**: Devices, gadgets, tech gear (2,000+ products)  
-- **products**: Universal fallback index for cross-category search
-- Auto-created indices for beauty, sports, books, home, and food categories
+### 2. **MCP Tools Implementation**
+We've created custom MCP tools that extend the shopping experience:
+- `get_personalization_summary`: Provides AI agents with user shopping insights
+- `get_user_preferences`: Exposes category affinities and brand preferences
+- `get_interaction_analytics`: Delivers engagement metrics for AI analysis
+- `suggest_products`: Generates personalized recommendations based on context
 
-### 4. **Real-time Personalization**
-- User interaction tracking with weighted preferences
-- ML-powered recommendation engine using Algolia's analytics
-- Dynamic search result ranking based on user behavior
+### 3. **Multi-Index Search via MCP**
+```typescript
+// Parallel MCP searches across category indices
+const searchPromises = indicesToSearch.map(indexName => 
+  this.mcpClient.searchSingleIndex({
+    indexName,
+    query,
+    ...additionalParams
+  })
+);
+```
+- All index operations (create, configure, search) go through MCP
+- Leverages MCP's `searchSingleIndex` for category-specific searches
+- Index settings configured via MCP's `setSettings` tool
 
-### 5. **Claude Desktop Integration**
+### 4. **MCP-Powered Personalization Flow**
+1. **User Action** → Saved to local SQLite database
+2. **ML Processing** → PersonalizationEngine calculates preferences
+3. **MCP Tools** → Expose data to AI assistants (Claude Desktop)
+4. **Search Enhancement** → Results filtered through personalization layer
 
-To use this app as an MCP server with Claude Desktop:
+### 5. **Dual MCP Architecture**
+
+This app implements a unique **dual MCP architecture**:
+
+1. **Algolia MCP Server (External)**: Handles all Algolia API operations
+   - Downloaded from official Algolia releases
+   - Provides tools like `searchSingleIndex`, `setSettings`, `saveObject`
+   - Authenticates via API keys
+
+2. **Shopping AI MCP Server (This App)**: Extends Claude Desktop with shopping capabilities
+   - Built into the application
+   - Provides personalization and analytics tools
+   - Accesses local SQLite data
+
+### 6. **Claude Desktop Integration**
+
+To use this app's MCP server with Claude Desktop:
 
 1. **For installed app users**: The MCP server is already included in your installation.
 
@@ -198,36 +241,39 @@ To use this app as an MCP server with Claude Desktop:
 
 5. Test the connection: In Claude Desktop, you should see "shopping-ai" listed in the MCP servers when everything is configured correctly.
 
-The MCP server provides access to your personalization profile and search capabilities directly within Claude.
+6. Available MCP tools in Claude:
+   - `shopping-ai.get_personalization_summary` - View your shopping profile
+   - `shopping-ai.get_user_preferences` - Access category and brand preferences
+   - `shopping-ai.get_interaction_analytics` - Analyze shopping behavior
+   - `shopping-ai.suggest_products` - Get AI-powered product recommendations
 
 ## Technical Implementation Details
 
-### Search Architecture
+### MCP-Based Search Architecture
 
-Our multi-layered search approach ensures users always find relevant products:
+All search operations are performed through **Algolia MCP Server**, ensuring natural language understanding:
 
 ```typescript
-// 1. Primary Search - Direct query with filters
-const primarySearch = await algolia.search({
+// 1. MCP Search - All queries go through Algolia MCP Server
+const searchResults = await this.mcpClient.searchSingleIndex({
+  indexName: 'fashion',
   query: userQuery,
-  filters: buildFilters(context),
-  hitsPerPage: 20
+  hitsPerPage: 20,
+  facetFilters: buildFilters(context)
 });
 
-// 2. Fallback Strategy - Progressive simplification
-if (primarySearch.hits.length === 0) {
-  const strategies = [
-    removeModelNumbers(query),    // "iPhone 15 Pro" → "iPhone"
-    extractBrandCategory(query),  // "Nike Air Max" → "Nike shoes"
-    extractKeyTerms(query)        // First 3 meaningful words
-  ];
-}
-
-// 3. Cross-Index Search - Category exploration
-const indices = ['fashion', 'electronics', 'products'];
-const multiIndexResults = await Promise.all(
-  indices.map(index => searchIndex(index, query))
+// 2. Multi-Index MCP Search - Parallel searches via MCP
+const searchPromises = ['fashion', 'electronics', 'products'].map(
+  indexName => this.mcpClient.searchSingleIndex({ indexName, query })
 );
+const results = await Promise.all(searchPromises);
+
+// 3. MCP Index Management - Settings configured via MCP
+await this.mcpClient.setSettings(indexName, {
+  searchableAttributes: ['brand', 'name', 'description'],
+  attributesForFaceting: ['searchable(brand)', 'searchable(categories)'],
+  customRanking: ['desc(popularity)', 'desc(rating)']
+});
 ```
 
 ### ML Personalization Engine
@@ -329,6 +375,42 @@ This project uses real-world e-commerce data for research and educational purpos
 - **Memory**: 4GB RAM minimum
 - **Storage**: 500MB free space
 - **Internet**: Required for AI features
+- **Algolia MCP Server**: Automatically included in releases
+
+## Algolia MCP Server Setup
+
+This application requires **Algolia MCP Server** for all search operations:
+
+### For Pre-built Release Users
+The Algolia MCP Server executable is **already included** in the application bundle. No additional setup required!
+
+### For Developers Building from Source
+
+1. **Download Algolia MCP Server**:
+   ```bash
+   # Windows
+   curl -L https://github.com/algolia/mcp-node/releases/latest/download/algolia-mcp-win.exe -o resources/algolia-mcp/algolia-mcp.exe
+   
+   # macOS
+   curl -L https://github.com/algolia/mcp-node/releases/latest/download/algolia-mcp-macos -o resources/algolia-mcp/algolia-mcp
+   chmod +x resources/algolia-mcp/algolia-mcp
+   
+   # Linux
+   curl -L https://github.com/algolia/mcp-node/releases/latest/download/algolia-mcp-linux -o resources/algolia-mcp/algolia-mcp
+   chmod +x resources/algolia-mcp/algolia-mcp
+   ```
+
+2. **Verify Installation**:
+   ```bash
+   # Test that Algolia MCP Server is working
+   ./resources/algolia-mcp/algolia-mcp --version
+   ```
+
+### How It Works
+- The app spawns Algolia MCP Server as a child process
+- Communication happens via stdio using JSON-RPC protocol
+- API keys are passed securely via the `--credentials` flag
+- All Algolia operations (search, indexing, settings) go through MCP
 
 ## Getting Started
 
@@ -399,6 +481,43 @@ Over time, search results will be tailored to your preferences.
 - The ML system needs time to learn (5-10 interactions minimum)
 - Check if Discovery Mode is set too high (try 0-5%)
 - Clear ML data in Settings → Database if needed
+
+## Development Journey with Algolia MCP Server
+
+### Key Learnings
+
+Building this application around **Algolia MCP Server** provided unique insights:
+
+1. **MCP Architecture Benefits**:
+   - Natural language understanding built into the search pipeline
+   - Consistent API across different Algolia operations
+   - Clean separation of concerns between UI and search logic
+
+2. **Implementation Challenges Solved**:
+   - **Child Process Management**: Spawning and managing Algolia MCP Server lifecycle
+   - **stdio Communication**: Implementing robust JSON-RPC over stdio pipes
+   - **Error Handling**: Graceful fallbacks when MCP Server is unavailable
+   - **Authentication**: Secure credential passing via command-line arguments
+
+3. **MCP vs REST API Comparison**:
+   ```typescript
+   // Traditional REST API approach (NOT used in this app)
+   const algoliaClient = algoliasearch(appId, apiKey);
+   const index = algoliaClient.initIndex('products');
+   const results = await index.search(query);
+   
+   // MCP Server approach (USED in this app)
+   const results = await mcpClient.searchSingleIndex({
+     indexName: 'products',
+     query: query
+   });
+   ```
+
+4. **Why MCP Server?**
+   - **Unified Interface**: One protocol for all Algolia operations
+   - **AI-Ready**: Designed for integration with AI assistants like Claude
+   - **Future-Proof**: As MCP evolves, the app gains new capabilities
+   - **Natural Language**: Built for conversational search experiences
 
 ## Uninstalling
 

@@ -73,6 +73,37 @@ async function buildExtension() {
       process.exit(1);
     }
     
+    // Copy Algolia MCP Server executable
+    const algoliaMcpDir = path.join(buildDir, 'resources', 'algolia-mcp');
+    fs.ensureDirSync(algoliaMcpDir);
+    
+    const platform = process.platform;
+    let algoliaMcpSrc, algoliaMcpDest;
+    
+    if (platform === 'win32') {
+      algoliaMcpSrc = path.join(rootDir, 'resources', 'algolia-mcp', 'algolia-mcp.exe');
+      algoliaMcpDest = path.join(algoliaMcpDir, 'algolia-mcp.exe');
+    } else if (platform === 'darwin') {
+      algoliaMcpSrc = path.join(rootDir, 'resources', 'algolia-mcp', 'algolia-mcp');
+      algoliaMcpDest = path.join(algoliaMcpDir, 'algolia-mcp');
+    } else {
+      algoliaMcpSrc = path.join(rootDir, 'resources', 'algolia-mcp', 'algolia-mcp');
+      algoliaMcpDest = path.join(algoliaMcpDir, 'algolia-mcp');
+    }
+    
+    if (fs.existsSync(algoliaMcpSrc)) {
+      fs.copyFileSync(algoliaMcpSrc, algoliaMcpDest);
+      console.log(`Copied Algolia MCP Server to resources/algolia-mcp/`);
+      
+      // Make executable on Unix-like systems
+      if (platform !== 'win32') {
+        fs.chmodSync(algoliaMcpDest, '755');
+      }
+    } else {
+      console.warn('Warning: Algolia MCP Server executable not found. DXT will not include it.');
+      console.warn('Download it from: https://github.com/algolia/mcp-node/releases');
+    }
+    
     // Copy only required node_modules
     const requiredModules = [
       '@modelcontextprotocol',

@@ -46,12 +46,25 @@ class MainApplication {
     })
 
     app.on('window-all-closed', () => {
+      // Cleanup MCP client before quitting
+      if (this.algoliaMCPService) {
+        console.log('[Main] Cleaning up Algolia MCP client...')
+        this.algoliaMCPService.cleanup()
+      }
       if (process.platform !== 'darwin') app.quit()
     })
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
         this.createWindow()
+      }
+    })
+
+    app.on('before-quit', () => {
+      // Ensure cleanup before app quits
+      if (this.algoliaMCPService) {
+        console.log('[Main] Cleaning up Algolia MCP client before quit...')
+        this.algoliaMCPService.cleanup()
       }
     })
   }

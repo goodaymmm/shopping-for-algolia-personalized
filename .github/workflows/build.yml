@@ -89,16 +89,35 @@ jobs:
         shell: bash
         run: npm run build:all
 
+      - name: Download Algolia MCP Server
+        shell: bash
+        run: |
+          echo "Downloading Algolia MCP Server..."
+          mkdir -p resources/algolia-mcp
+          
+          if [ "${{ matrix.os }}" == "windows-latest" ]; then
+            echo "Downloading Windows version..."
+            curl -L https://github.com/algolia/mcp-node/releases/latest/download/algolia-mcp-win.exe -o resources/algolia-mcp/algolia-mcp.exe
+            echo "Downloaded algolia-mcp.exe"
+            ls -la resources/algolia-mcp/
+          elif [ "${{ matrix.os }}" == "macos-latest" ]; then
+            echo "Downloading macOS version..."
+            curl -L https://github.com/algolia/mcp-node/releases/latest/download/algolia-mcp-macos -o resources/algolia-mcp/algolia-mcp
+            chmod +x resources/algolia-mcp/algolia-mcp
+            echo "Downloaded and made executable algolia-mcp"
+            ls -la resources/algolia-mcp/
+          fi
+
       - name: Copy MCP server files to dist
         shell: bash
         run: |
           echo "Copying MCP server files..."
-          if [ -f "src/main/mcp-server-simple.js" ]; then
-            cp src/main/mcp-server-simple.js dist/main/
-            echo "Copied mcp-server-simple.js to dist/main/"
-            ls -la dist/main/mcp-server*.js || echo "MCP server files in dist/main"
+          if [ -f "src/main/mcp-minimal.js" ]; then
+            cp src/main/mcp-minimal.js dist/main/
+            echo "Copied mcp-minimal.js to dist/main/"
+            ls -la dist/main/mcp-*.js || echo "MCP server files in dist/main"
           else
-            echo "ERROR: mcp-server-simple.js not found!"
+            echo "ERROR: mcp-minimal.js not found!"
             exit 1
           fi
 
@@ -113,8 +132,7 @@ jobs:
           # Verify MCP files exist
           echo "MCP files in dist:"
           ls -la dist/mcp-server.* || echo "No MCP launcher scripts found"
-          ls -la dist/main/mcp-standalone.js || echo "No mcp-standalone.js found"
-          ls -la dist/main/mcp-server-simple.js || echo "No mcp-server-simple.js found"
+          ls -la dist/main/mcp-minimal.js || echo "No mcp-minimal.js found"
 
       - name: Build Electron app
         shell: bash

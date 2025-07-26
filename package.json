@@ -83,6 +83,7 @@
     "files": [
       "dist/**/*",
       "src/data/**/*",
+      "resources/algolia-mcp/**/*",
       "mcp-server.bat",
       "mcp-server.sh",
       "!dist/**/*.map",
@@ -101,11 +102,13 @@
       "src/data/**/*",
       "mcp-server.bat",
       "mcp-server.sh",
-      "dist/main/mcp-standalone.js",
+      "dist/main/mcp-minimal.js",
       "dist/main/database.js",
       "dist/main/personalization.js",
-      "dist/main/mcp-server.js",
-      "dist/main/mcp-server-simple.js"
+      "resources/algolia-mcp/**/*"
+    ],
+    "extraResources": [
+      "resources/algolia-mcp/**/*"
     ],
     "extraMetadata": {
       "main": "dist/main/main.js"
