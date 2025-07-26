@@ -18,7 +18,7 @@
     "lint": "eslint src --ext .ts,.tsx",
     "type-check": "tsc --noEmit",
     "preprocess-amazon-data": "tsc scripts/preprocess-amazon-data.ts --outDir dist/scripts --target es2020 --module commonjs && node dist/scripts/preprocess-amazon-data.js",
-    "mcp:build": "tsc src/main/mcp-standalone.js src/main/database.ts src/main/personalization.ts src/main/mcp-server.ts --outDir dist/main --target es2020 --module commonjs --esModuleInterop --resolveJsonModule --skipLibCheck --allowJs",
+    "mcp:build": "npx tsc src/main/mcp-standalone.js src/main/database.ts src/main/personalization.ts src/main/mcp-server.ts --outDir dist/main --target es2020 --module commonjs --esModuleInterop --resolveJsonModule --skipLibCheck --allowJs",
     "mcp:start": "node dist/main/mcp-standalone.js",
     "build:extension": "node scripts/build-extension.js"
   },

@@ -19,17 +19,29 @@ async function startSimpleMCPServer() {
     console.error('[MCP Simple] Node version:', process.version);
     console.error('[MCP Simple] Platform:', process.platform);
     console.error('[MCP Simple] Working directory:', process.cwd());
+    console.error('[MCP Simple] Script path:', __filename);
+    console.error('[MCP Simple] Process argv:', process.argv);
     
     // Initialize database in MCP mode
     console.error('[MCP Simple] Initializing database in MCP mode...');
-    const database = new DatabaseService(true);
-    database.initialize();
-    console.error('[MCP Simple] Database initialized successfully');
+    let database;
+    let personalization;
     
-    // Initialize personalization engine
-    console.error('[MCP Simple] Initializing personalization engine...');
-    const personalization = new PersonalizationEngine(database.database);
-    console.error('[MCP Simple] Personalization engine initialized successfully');
+    try {
+      database = new DatabaseService(true);
+      database.initialize();
+      console.error('[MCP Simple] Database initialized successfully');
+      
+      // Initialize personalization engine
+      console.error('[MCP Simple] Initializing personalization engine...');
+      personalization = new PersonalizationEngine(database.database);
+      console.error('[MCP Simple] Personalization engine initialized successfully');
+    } catch (dbError) {
+      console.error('[MCP Simple] Database initialization error:', dbError.message);
+      console.error('[MCP Simple] Stack trace:', dbError.stack);
+      // Continue with limited functionality
+      console.error('[MCP Simple] Continuing with limited functionality...');
+    }
     
     // Create MCP server
     const server = new Server(
@@ -73,6 +85,10 @@ async function startSimpleMCPServer() {
       console.error('[MCP Simple] Handling tool call:', request.params.name);
       
       try {
+        if (!personalization) {
+          throw new Error('Database not initialized. Please check your Shopping for Algolia app installation.');
+        }
+        
         switch (request.params.name) {
           case 'get_personalization_summary':
             return await handlePersonalizationSummary(personalization);
@@ -97,34 +113,76 @@ async function startSimpleMCPServer() {
     // Connect to transport
     console.error('[MCP Simple] Connecting to stdio transport...');
     const transport = new StdioServerTransport();
-    await server.connect(transport);
     
-    console.error('[MCP Simple] Server connected successfully');
-    console.error('[MCP Simple] Ready to handle requests');
+    try {
+      await server.connect(transport);
+      console.error('[MCP Simple] Server connected successfully');
+      console.error('[MCP Simple] Ready to handle requests');
+      
+      // Wait a bit to ensure initialization is complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      console.error('[MCP Simple] Initialization complete');
+      
+      // Send initial response to keep connection alive
+      console.error('[MCP Simple] MCP server is now ready and listening');
+    } catch (connectError) {
+      console.error('[MCP Simple] Failed to connect transport:', connectError.message);
+      console.error('[MCP Simple] Stack trace:', connectError.stack);
+      throw connectError;
+    }
     
-    // Keep process alive
+    // Keep process alive with stronger mechanisms
     process.stdin.resume();
-    process.stdin.on('data', () => {});
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', (data) => {
+      // Log any stdin data for debugging
+      if (data.trim()) {
+        console.error('[MCP Simple] Received stdin data:', data.trim().substring(0, 100));
+      }
+    });
+    
+    // Handle stdin end
+    process.stdin.on('end', () => {
+      console.error('[MCP Simple] stdin ended, keeping process alive');
+    });
+    
+    process.stdin.on('error', (err) => {
+      console.error('[MCP Simple] stdin error:', err.message);
+    });
+    
+    // Heartbeat to show server is alive
+    const heartbeatInterval = setInterval(() => {
+      console.error('[MCP Simple] Heartbeat - server is alive at', new Date().toISOString());
+    }, 30000); // Every 30 seconds
     
     // Handle graceful shutdown
+    const cleanup = () => {
+      console.error('[MCP Simple] Cleaning up...');
+      clearInterval(heartbeatInterval);
+    };
+    
     process.on('SIGINT', () => {
       console.error('[MCP Simple] Received SIGINT, shutting down...');
+      cleanup();
       process.exit(0);
     });
     
     process.on('SIGTERM', () => {
       console.error('[MCP Simple] Received SIGTERM, shutting down...');
+      cleanup();
       process.exit(0);
     });
     
     process.on('uncaughtException', (error) => {
       console.error('[MCP Simple] Uncaught exception:', error);
       console.error('[MCP Simple] Stack trace:', error.stack);
+      cleanup();
       process.exit(1);
     });
     
     process.on('unhandledRejection', (reason, promise) => {
       console.error('[MCP Simple] Unhandled rejection at:', promise, 'reason:', reason);
+      cleanup();
       process.exit(1);
     });
     

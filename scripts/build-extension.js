@@ -98,7 +98,24 @@ async function buildExtension() {
       const moduleDest = path.join(nodeModulesDest, moduleName);
       
       if (fs.existsSync(moduleSrc)) {
-        fs.copySync(moduleSrc, moduleDest);
+        // Copy module with filtering for better-sqlite3
+        const filter = (src) => {
+          // Skip problematic files in better-sqlite3
+          if (moduleName === 'better-sqlite3') {
+            const relativePath = path.relative(moduleSrc, src);
+            // Skip build tools and python scripts
+            if (relativePath.includes('node_gyp_bins') || 
+                relativePath.includes('deps') ||
+                relativePath.includes('.github') ||
+                relativePath.endsWith('.md') ||
+                relativePath.endsWith('.txt')) {
+              return false;
+            }
+          }
+          return true;
+        };
+        
+        fs.copySync(moduleSrc, moduleDest, { filter });
         console.log(`Copied node_modules/${moduleName}`);
         
         // Check for dependencies

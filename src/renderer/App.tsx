@@ -87,6 +87,7 @@ function App() {
   const [lastSearchResult, setLastSearchResult] = useState<IPCSearchResult | null>(null);
   const [lastSearchQuery, setLastSearchQuery] = useState<string>('');
   const [sidebarWidth, setSidebarWidth] = useState(600); // Default width
+  const [categorizedSessions, setCategorizedSessions] = useState<Set<string>>(new Set()); // Track which sessions have been categorized
 
   // Get search results from current session
   const searchResults = currentSession?.searchResults || [];
@@ -178,6 +179,17 @@ function App() {
       createNewSession();
     }
   }, []);
+
+  // Reset categorization flag when session changes
+  useEffect(() => {
+    if (currentSessionId && !sessions.find(s => s.id === currentSessionId)) {
+      setCategorizedSessions(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(currentSessionId);
+        return newSet;
+      });
+    }
+  }, [currentSessionId, sessions]);
 
 
   const handleSendMessage = async (content: string, imageDataUrl?: string) => {
@@ -387,22 +399,36 @@ function App() {
 
       addMessageToSession(sessionId, assistantMessage);
 
-      // Save chat to database with correct category (only if Electron API is available)
+      // Save chat to database (only if Electron API is available)
       if (window.electronAPI && window.electronAPI.saveChat) {
-        // Detect category from search results
-        const category = detectCategoryFromSearchResults(finalResults);
-        console.error('[Chat Save] Detected Category:', category, 'from', finalResults.length, 'results');
-        console.error('[Chat Save] First result for category detection:', finalResults.length > 0 ? JSON.stringify(finalResults[0], null, 2) : 'No results');
-        
-        // Save both user message and the detected category
+        // Initially save with general category
         await window.electronAPI.saveChat(
           { 
             name: content.substring(0, 50) + '...', 
-            category: category 
+            category: 'general' 
           },
           userMessage
         );
-        console.error('[Chat Save] Chat saved with category:', category);
+        console.error('[Chat Save] Chat saved with initial category: general');
+        
+        // Update category on first search results if not already categorized
+        if (!categorizedSessions.has(sessionId) && finalResults.length > 0 && window.electronAPI?.updateChatCategory) {
+          const category = detectCategoryFromSearchResults(finalResults);
+          console.error('[Category Update] Detected Category:', category, 'from', finalResults.length, 'results');
+          console.error('[Category Update] First result for category detection:', JSON.stringify(finalResults[0], null, 2));
+          
+          try {
+            const updateResult = await window.electronAPI.updateChatCategory(sessionId, category);
+            if (updateResult.success) {
+              setCategorizedSessions(prev => new Set(prev).add(sessionId));
+              console.error('[Category Update] Successfully updated session category to:', category);
+            } else {
+              console.error('[Category Update] Failed to update category:', updateResult.error);
+            }
+          } catch (error) {
+            console.error('[Category Update] Error updating category:', error);
+          }
+        }
       }
     } catch (error) {
       console.error('Search error:', error);
