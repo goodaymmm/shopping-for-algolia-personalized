@@ -20,7 +20,8 @@
     "preprocess-amazon-data": "tsc scripts/preprocess-amazon-data.ts --outDir dist/scripts --target es2020 --module commonjs && node dist/scripts/preprocess-amazon-data.js",
     "mcp:build": "npx tsc src/main/mcp-standalone.js src/main/database.ts src/main/personalization.ts src/main/mcp-server.ts --outDir dist/main --target es2020 --module commonjs --esModuleInterop --resolveJsonModule --skipLibCheck --allowJs",
     "mcp:start": "node dist/main/mcp-standalone.js",
-    "build:extension": "node scripts/build-extension.js"
+    "build:extension": "node scripts/build-extension.js",
+    "copy:algolia-mcp": "node scripts/copy-algolia-mcp.js"
   },
   "keywords": [
     "electron",
@@ -41,6 +42,7 @@
     "algoliasearch": "^5.32.0",
     "better-sqlite3": "^12.2.0",
     "clsx": "^2.1.1",
+    "commander": "^12.1.0",
     "hyparquet": "^1.17.1",
     "keytar": "^7.9.0",
     "lucide-react": "^0.525.0",
@@ -59,6 +61,7 @@
     "@vitejs/plugin-react": "^4.6.0",
     "archiver": "^7.0.1",
     "autoprefixer": "^10.4.21",
+    "fs-extra": "^11.2.0",
     "electron": "^37.2.1",
     "electron-builder": "^25.1.8",
     "eslint": "^9.31.0",

@@ -89,19 +89,29 @@ jobs:
         shell: bash
         run: npm run build:all
 
-      - name: Download Algolia MCP Server
+      - name: Prepare Algolia MCP Server
         shell: bash
         run: |
-          echo "Downloading Algolia MCP Server..."
-          mkdir -p resources/algolia-mcp
+          echo "Preparing Algolia MCP Server..."
           
           if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            echo "Downloading Windows version..."
-            curl -L https://github.com/algolia/mcp-node/releases/latest/download/algolia-mcp-win.exe -o resources/algolia-mcp/algolia-mcp.exe
-            echo "Downloaded algolia-mcp.exe"
+            echo "Windows: Using official Algolia MCP Server source with Node.js"
+            # Clone official repository for Windows build
+            git clone https://github.com/algolia/mcp-node.git ../AIgolia-mcp-node-main || true
+            
+            # Copy source files to resources
+            mkdir -p resources/algolia-mcp/algolia-mcp-source
+            if [ -d "../AIgolia-mcp-node-main/src" ]; then
+              cp -r ../AIgolia-mcp-node-main/src resources/algolia-mcp/algolia-mcp-source/
+              cp ../AIgolia-mcp-node-main/package.json resources/algolia-mcp/algolia-mcp-source/ || true
+              cp ../AIgolia-mcp-node-main/tsconfig.json resources/algolia-mcp/algolia-mcp-source/ || true
+              echo "Copied official Algolia MCP Server source"
+            fi
+            
             ls -la resources/algolia-mcp/
           elif [ "${{ matrix.os }}" == "macos-latest" ]; then
-            echo "Downloading macOS version..."
+            echo "macOS: Downloading official binary..."
+            mkdir -p resources/algolia-mcp
             curl -L https://github.com/algolia/mcp-node/releases/latest/download/algolia-mcp-macos -o resources/algolia-mcp/algolia-mcp
             chmod +x resources/algolia-mcp/algolia-mcp
             echo "Downloaded and made executable algolia-mcp"

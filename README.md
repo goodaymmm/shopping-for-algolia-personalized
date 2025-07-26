@@ -371,11 +371,13 @@ This project uses real-world e-commerce data for research and educational purpos
 
 - **Operating System**: 
   - Windows 10/11 (fully tested)
-  - macOS 10.14+ (limited testing)
+  - macOS 10.14+ (build provided but untested - no Mac environment available)
 - **Memory**: 4GB RAM minimum
 - **Storage**: 500MB free space
 - **Internet**: Required for AI features
-- **Algolia MCP Server**: Automatically included in releases
+- **Algolia MCP Server**: 
+  - Windows: Custom Node.js implementation (official binary not yet available)
+  - macOS: Official binary included (untested due to lack of Mac environment)
 
 ## Algolia MCP Server Setup
 
@@ -386,19 +388,20 @@ The Algolia MCP Server executable is **already included** in the application bun
 
 ### For Developers Building from Source
 
-1. **Download Algolia MCP Server**:
-   ```bash
-   # Windows
-   curl -L https://github.com/algolia/mcp-node/releases/latest/download/algolia-mcp-win.exe -o resources/algolia-mcp/algolia-mcp.exe
+1. **Algolia MCP Server Setup**:
    
-   # macOS
+   **Windows**: Uses Node.js wrapper (included in repository)
+   - No additional download needed
+   - Requires Node.js 18+ installed on the system
+   
+   **macOS**: Download official binary
+   ```bash
    curl -L https://github.com/algolia/mcp-node/releases/latest/download/algolia-mcp-macos -o resources/algolia-mcp/algolia-mcp
    chmod +x resources/algolia-mcp/algolia-mcp
-   
-   # Linux
-   curl -L https://github.com/algolia/mcp-node/releases/latest/download/algolia-mcp-linux -o resources/algolia-mcp/algolia-mcp
-   chmod +x resources/algolia-mcp/algolia-mcp
    ```
+   
+   **Linux**: Official support coming soon
+   - Use the Node.js wrapper approach similar to Windows
 
 2. **Verify Installation**:
    ```bash
@@ -411,6 +414,10 @@ The Algolia MCP Server executable is **already included** in the application bun
 - Communication happens via stdio using JSON-RPC protocol
 - API keys are passed securely via the `--credentials` flag
 - All Algolia operations (search, indexing, settings) go through MCP
+
+### Platform-Specific Notes
+- **Windows**: Uses a custom Node.js-based MCP server implementation that provides the same MCP protocol interface as the official server. This is a temporary solution until the official Windows binary is released.
+- **macOS**: Uses the official Algolia MCP Server binary. Note: macOS functionality has not been tested due to lack of Mac development environment.
 
 ## Getting Started
 
@@ -498,6 +505,7 @@ Building this application around **Algolia MCP Server** provided unique insights
    - **stdio Communication**: Implementing robust JSON-RPC over stdio pipes
    - **Error Handling**: Graceful fallbacks when MCP Server is unavailable
    - **Authentication**: Secure credential passing via command-line arguments
+   - **Windows Support**: Created custom MCP server implementation in Node.js that follows the MCP protocol specification, since official Windows binary not yet available
 
 3. **MCP vs REST API Comparison**:
    ```typescript

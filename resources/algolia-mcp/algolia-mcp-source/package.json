@@ -1,0 +1,16 @@
+{
+  "name": "algolia-mcp",
+  "version": "0.0.8",
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.11.0",
+    "ajv": "^8.17.1",
+    "algoliasearch": "^5.23.4",
+    "commander": "^13.1.0",
+    "open": "^10.1.0",
+    "zod": "^3.24.4"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

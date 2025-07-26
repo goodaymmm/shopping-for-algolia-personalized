@@ -1,5 +1,6 @@
 import { spawn, ChildProcess } from 'child_process';
 import * as path from 'path';
+import * as fs from 'fs';
 import * as readline from 'readline';
 import { app } from 'electron';
 
@@ -98,17 +99,29 @@ export class AlgoliaMCPClient {
     const isProduction = app.isPackaged;
     
     let mcpFileName = 'algolia-mcp';
+    
+    // Windows uses batch file that wraps Node.js implementation
     if (platform === 'win32') {
-      mcpFileName = 'algolia-mcp.exe';
+      mcpFileName = 'algolia-mcp.bat';
     }
     
-    if (isProduction) {
-      // In production, look in resources directory
-      return path.join(process.resourcesPath, 'algolia-mcp', mcpFileName);
-    } else {
-      // In development, look in project resources
-      return path.join(__dirname, '..', '..', 'resources', 'algolia-mcp', mcpFileName);
+    const mcpPath = isProduction
+      ? path.join(process.resourcesPath, 'algolia-mcp', mcpFileName)
+      : path.join(__dirname, '..', '..', 'resources', 'algolia-mcp', mcpFileName);
+    
+    // Check if file exists and has reasonable size
+    try {
+      const stats = fs.statSync(mcpPath);
+      if (stats.size < 100) {
+        console.error(`[AlgoliaMCP Client] MCP executable too small (${stats.size} bytes): ${mcpPath}`);
+        throw new Error(`Invalid MCP executable at ${mcpPath} (file size: ${stats.size} bytes)`);
+      }
+    } catch (error) {
+      console.error('[AlgoliaMCP Client] MCP executable not found or invalid:', mcpPath);
+      throw new Error(`MCP executable not found at ${mcpPath}`);
     }
+    
+    return mcpPath;
   }
 
   private async waitForInitialization(): Promise<void> {

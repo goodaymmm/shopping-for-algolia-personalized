@@ -81,27 +81,54 @@ async function buildExtension() {
     let algoliaMcpSrc, algoliaMcpDest;
     
     if (platform === 'win32') {
-      algoliaMcpSrc = path.join(rootDir, 'resources', 'algolia-mcp', 'algolia-mcp.exe');
-      algoliaMcpDest = path.join(algoliaMcpDir, 'algolia-mcp.exe');
-    } else if (platform === 'darwin') {
-      algoliaMcpSrc = path.join(rootDir, 'resources', 'algolia-mcp', 'algolia-mcp');
-      algoliaMcpDest = path.join(algoliaMcpDir, 'algolia-mcp');
-    } else {
-      algoliaMcpSrc = path.join(rootDir, 'resources', 'algolia-mcp', 'algolia-mcp');
-      algoliaMcpDest = path.join(algoliaMcpDir, 'algolia-mcp');
-    }
-    
-    if (fs.existsSync(algoliaMcpSrc)) {
-      fs.copyFileSync(algoliaMcpSrc, algoliaMcpDest);
-      console.log(`Copied Algolia MCP Server to resources/algolia-mcp/`);
+      // Copy Windows wrapper files
+      const windowsFiles = ['algolia-mcp.bat', 'algolia-mcp-windows.js'];
+      windowsFiles.forEach(file => {
+        const src = path.join(rootDir, 'resources', 'algolia-mcp', file);
+        const dest = path.join(algoliaMcpDir, file);
+        if (fs.existsSync(src)) {
+          fs.copyFileSync(src, dest);
+          console.log(`Copied ${file} to resources/algolia-mcp/`);
+        }
+      });
       
-      // Make executable on Unix-like systems
-      if (platform !== 'win32') {
-        fs.chmodSync(algoliaMcpDest, '755');
+      // Copy official Algolia MCP Server source
+      const officialMcpSrc = path.join(rootDir, '..', 'AIgolia-mcp-node-main');
+      const officialMcpDest = path.join(algoliaMcpDir, 'algolia-mcp-source');
+      
+      if (fs.existsSync(officialMcpSrc)) {
+        fs.ensureDirSync(officialMcpDest);
+        
+        // Copy essential directories
+        const itemsToCopy = ['src', 'package.json', 'tsconfig.json'];
+        itemsToCopy.forEach(item => {
+          const srcPath = path.join(officialMcpSrc, item);
+          const destPath = path.join(officialMcpDest, item);
+          if (fs.existsSync(srcPath)) {
+            fs.copySync(srcPath, destPath, {
+              filter: (src) => !src.includes('.test.') && !src.includes('__tests__')
+            });
+          }
+        });
+        
+        console.log('Copied official Algolia MCP Server source for Windows');
+      } else {
+        console.warn('Warning: Official Algolia MCP Server source not found');
+        console.warn('Windows users will need to ensure Node.js 22+ is installed');
       }
     } else {
-      console.warn('Warning: Algolia MCP Server executable not found. DXT will not include it.');
-      console.warn('Download it from: https://github.com/algolia/mcp-node/releases');
+      // macOS and Linux
+      algoliaMcpSrc = path.join(rootDir, 'resources', 'algolia-mcp', 'algolia-mcp');
+      algoliaMcpDest = path.join(algoliaMcpDir, 'algolia-mcp');
+      
+      if (fs.existsSync(algoliaMcpSrc)) {
+        fs.copyFileSync(algoliaMcpSrc, algoliaMcpDest);
+        console.log(`Copied Algolia MCP Server to resources/algolia-mcp/`);
+        fs.chmodSync(algoliaMcpDest, '755');
+      } else {
+        console.warn('Warning: Algolia MCP Server executable not found for', platform);
+        console.warn('Download it from: https://github.com/algolia/mcp-node/releases');
+      }
     }
     
     // Copy only required node_modules
