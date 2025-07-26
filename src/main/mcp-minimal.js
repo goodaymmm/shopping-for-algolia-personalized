@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Minimal MCP Server for Shopping for Algolia Personalized
-// This version uses file-based logging and minimal dependencies
+// This version uses the high-level McpServer API like the official examples
 
 const fs = require('fs');
 const path = require('path');
@@ -45,134 +45,74 @@ async function startMinimalMCPServer() {
     const baseDir = path.join(__dirname, '..', 'node_modules', '@modelcontextprotocol', 'sdk', 'dist', 'cjs');
     log(`Base directory: ${baseDir}`);
     
-    const { Server } = require(path.join(baseDir, 'server', 'index.js'));
+    const { McpServer } = require(path.join(baseDir, 'server', 'mcp.js'));
     const { StdioServerTransport } = require(path.join(baseDir, 'server', 'stdio.js'));
-    const {
-      CallToolRequestSchema,
-      ListToolsRequestSchema,
-      InitializeRequestSchema,
-    } = require(path.join(baseDir, 'types.js'));
     
     log('MCP SDK modules loaded successfully');
     
-    // Create MCP server
-    const server = new Server(
-      {
-        name: 'shopping-for-algolia-personalized',
-        version: '1.0.6',
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      }
-    );
+    // Create MCP server using high-level API
+    const server = new McpServer({
+      name: 'shopping-for-algolia-personalized',
+      version: '1.0.6',
+    });
     
     log('MCP server instance created');
     
-    // Handle initialization
-    server.setRequestHandler(InitializeRequestSchema, async (request) => {
-      log(`Initialize request received: ${JSON.stringify(request.params)}`);
-      const response = {
-        protocolVersion: request.params.protocolVersion,
-        capabilities: server.serverInfo.capabilities,
-        serverInfo: server.serverInfo
-      };
-      log(`Sending initialize response: ${JSON.stringify(response)}`);
-      return response;
-    });
-    
-    // Setup tools
-    server.setRequestHandler(ListToolsRequestSchema, async () => {
-      log('ListTools request received');
-      const tools = [
-        {
-          name: 'get_personalization_summary',
-          description: 'Get summary of user\'s shopping personalization data',
-          inputSchema: {
-            type: 'object',
-            properties: {}
-          }
-        },
-        {
-          name: 'get_user_preferences',
-          description: 'Get user\'s shopping preferences and category interests',
-          inputSchema: {
-            type: 'object',
-            properties: {}
-          }
-        }
-      ];
-      log(`Returning ${tools.length} tools`);
-      return { tools };
-    });
-    
-    // Handle tool calls with dummy data
-    server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      log(`Tool call received: ${request.params.name}`);
-      
-      try {
-        switch (request.params.name) {
-          case 'get_personalization_summary':
-            return {
-              content: [{
-                type: 'text',
-                text: `# Your Shopping Personalization Profile
-
-**Status**: Demo mode - using sample data
-
-## Category Preferences
-- Fashion: 80%
-- Electronics: 60%
-- Home: 40%
-
-## Shopping Behavior
-- **Budget Range**: $50 - $500
-- **Sweet Spot**: $150
-
-## Interaction History
-- **Total Searches**: 10
-- **Products Saved**: 5
-
----
-Note: This is demo data from the minimal MCP server.`
-              }]
-            };
-          
-          case 'get_user_preferences':
-            return {
-              content: [{
-                type: 'text',
-                text: JSON.stringify({
-                  categories: {
-                    fashion: '80%',
-                    electronics: '60%',
-                    home: '40%'
-                  },
-                  priceRange: {
-                    min: 50,
-                    max: 500,
-                    sweetSpot: 150
-                  },
-                  confidenceLevel: '0%',
-                  totalInteractions: 15
-                }, null, 2)
-              }]
-            };
-          
-          default:
-            throw new Error(`Unknown tool: ${request.params.name}`);
-        }
-      } catch (error) {
-        log(`Tool error: ${error.message}`);
+    // Register tools using the high-level API
+    server.registerTool(
+      'get_personalization_summary',
+      {
+        description: 'Get summary of user\'s shopping personalization data',
+        inputSchema: {},
+      },
+      async () => {
+        log('Tool called: get_personalization_summary');
         return {
           content: [{
             type: 'text',
-            text: `Error: ${error.message}`
+            text: JSON.stringify({
+              totalProducts: 0,
+              categoriesInterested: [],
+              priceRange: { min: 0, max: 0 },
+              lastActivityDate: 'No activity yet',
+              favoriteCategories: []
+            }, null, 2)
           }]
         };
       }
-    });
+    );
+    
+    server.registerTool(
+      'get_user_preferences',
+      {
+        description: 'Get user\'s shopping preferences and category interests',
+        inputSchema: {},
+      },
+      async () => {
+        log('Tool called: get_user_preferences');
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              discoveryMode: 'disabled',
+              categoryPreferences: {
+                electronics: '25%',
+                fashion: '25%',
+                sports: '25%',
+                home: '25%'
+              },
+              priceRange: {
+                min: 0,
+                max: 1000,
+                sweetSpot: 200
+              },
+              confidenceLevel: '0%',
+              totalInteractions: 0
+            }, null, 2)
+          }]
+        };
+      }
+    );
     
     // Connect to transport
     log('Creating stdio transport...');
@@ -184,6 +124,9 @@ Note: This is demo data from the minimal MCP server.`
     
     // Keep process alive
     log('Server is ready and listening');
+    
+    // Log to stderr like the official examples
+    console.error('Shopping for Algolia MCP server running on stdio');
     
     // Log heartbeat every 30 seconds
     setInterval(() => {
@@ -200,7 +143,8 @@ Note: This is demo data from the minimal MCP server.`
 
 // Start the server
 log('Starting server...');
-startMinimalMCPServer().catch(e => {
-  log(`Startup error: ${e.message}`);
+startMinimalMCPServer().catch((error) => {
+  log(`Startup error: ${error.message}`);
+  log(`Stack: ${error.stack}`);
   process.exit(1);
 });

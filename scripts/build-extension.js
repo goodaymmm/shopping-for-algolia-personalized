@@ -78,6 +78,7 @@ async function buildExtension() {
       '@modelcontextprotocol',
       'better-sqlite3',
       'zod',
+      'zod-to-json-schema',
       'ajv',
       'uri-js',
       'fast-deep-equal',
