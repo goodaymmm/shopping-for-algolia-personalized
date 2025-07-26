@@ -9,7 +9,7 @@ export interface ElectronAPI {
   removeProduct: (productId: string) => Promise<{ success: boolean }>
   updateProduct: (productId: string, updates: { customName?: string; tags?: string }) => Promise<{ success: boolean }>
   getChatHistory: () => Promise<ChatSession[]>
-  saveChat: (sessionData: { name: string; category?: string }, message: Message) => Promise<{ success: boolean; sessionId?: number }>
+  saveChat: (sessionData: { name: string }, message: Message) => Promise<{ success: boolean; sessionId?: number }>
   
   // Settings
   saveDiscoverySetting: (percentage: DiscoveryPercentage) => Promise<{ success: boolean }>
@@ -123,8 +123,6 @@ export interface Message {
 export interface ChatSession {
   id: string
   title: string
-  category?: string
-  subcategory?: string
   messages: Message[]
   searchResults?: (Product | ProductWithContext)[]
   createdAt: Date

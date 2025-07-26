@@ -33,70 +33,6 @@ function App() {
     clearSessionSearchResults,
   } = useChatSessions();
 
-  // Detect category from search results based on the index of the first result
-  const detectCategoryFromSearchResults = (products: (Product | ProductWithContext)[]): string => {
-    console.error('[detectCategory] ===== FUNCTION CALLED =====');
-    console.error('[detectCategory] Products count:', products?.length || 0);
-    console.error('[detectCategory] First product:', products?.[0]);
-    console.error('[detectCategory] Product type:', products?.[0] ? ('product' in products[0] ? 'ProductWithContext' : 'Product') : 'none');
-    
-    // Send to debug log
-    if (window.electronAPI?.debugLog) {
-      window.electronAPI.debugLog('detectCategoryFromSearchResults called', {
-        productCount: products?.length || 0,
-        firstProduct: products?.[0]
-      });
-    }
-    
-    if (!products || products.length === 0) {
-      console.log('[detectCategoryFromSearchResults] No products found, defaulting to general');
-      return 'general';
-    }
-    
-    // Get the source index from the first product
-    const firstProduct = products[0];
-    const sourceIndex = 'product' in firstProduct ? firstProduct.product.sourceIndex : firstProduct.sourceIndex;
-    
-    console.error('[detectCategory] First product keys:', Object.keys(firstProduct));
-    console.error('[detectCategory] Source index extracted:', sourceIndex);
-    console.error('[detectCategory] Is ProductWithContext?', 'product' in firstProduct);
-    if ('product' in firstProduct) {
-      console.error('[detectCategory] Inner product keys:', Object.keys(firstProduct.product));
-      console.error('[detectCategory] Inner product sourceIndex:', firstProduct.product.sourceIndex);
-    }
-    
-    // Check if sourceIndex is already a direct category name
-    const directCategories = ['fashion', 'electronics', 'home', 'sports', 'beauty', 'books', 'food', 'general'];
-    if (sourceIndex && directCategories.includes(sourceIndex)) {
-      console.log('[detectCategoryFromSearchResults] Detected direct category:', sourceIndex);
-      return sourceIndex;
-    }
-    
-    // Map Algolia index names with products_ prefix to categories
-    const indexToCategoryMap: Record<string, string> = {
-      'products_fashion': 'fashion',
-      'products_electronics': 'electronics',
-      'products_home': 'home',
-      'products_sports': 'sports',
-      'products_beauty': 'beauty',
-      'products_books': 'books',
-      'products_food': 'food',
-      'products': 'general'
-    };
-    
-    if (sourceIndex && indexToCategoryMap[sourceIndex]) {
-      const category = indexToCategoryMap[sourceIndex];
-      console.error('[detectCategory] ===== DETECTED CATEGORY =====');
-      console.error('[detectCategory] Mapped category:', category);
-      console.error('[detectCategory] From index:', sourceIndex);
-      return category;
-    }
-    
-    console.error('[detectCategory] ===== DEFAULT CATEGORY =====');
-    console.error('[detectCategory] No matching index found');
-    console.error('[detectCategory] sourceIndex was:', sourceIndex);
-    return 'general';
-  };
 
   const [currentView, setCurrentView] = useState<AppView>('chat');
   const [isLoading, setIsLoading] = useState(false);
@@ -414,89 +350,13 @@ function App() {
       addMessageToSession(sessionId, assistantMessage);
 
       // Save chat to database (only if Electron API is available)
-      console.error('[Search Debug] About to save chat, finalResults.length:', finalResults.length);
-      console.error('[Search Debug] First result:', finalResults[0]);
       if (window.electronAPI && window.electronAPI.saveChat) {
-        // Initially save with general category
         await window.electronAPI.saveChat(
           { 
-            name: content.substring(0, 50) + '...', 
-            category: 'general' 
+            name: content.substring(0, 50) + '...'
           },
           userMessage
         );
-        console.error('[Chat Save] Chat saved with initial category: general');
-        
-        // Update category on first search results if not already categorized
-        // Add delay to ensure search results are properly saved
-        console.error('[Category Debug] ========== CATEGORY DETECTION START ==========');
-        console.error('[Category Debug] Checking category update conditions:');
-        console.error('[Category Debug] - sessionId:', sessionId);
-        console.error('[Category Debug] - current session category:', currentChatSession?.category);
-        console.error('[Category Debug] - is pending:', currentChatSession?.category === 'pending');
-        console.error('[Category Debug] - finalResults.length:', finalResults.length);
-        console.error('[Category Debug] - has updateChatCategory:', !!window.electronAPI?.updateChatCategory);
-        console.error('[Category Debug] - first result:', JSON.stringify(finalResults[0], null, 2));
-        console.error('[Category Debug] - first result sourceIndex:', finalResults[0]?.sourceIndex || 'NO SOURCEINDEX');
-        console.error('[Category Debug] ========== CATEGORY DETECTION END ==========');
-        
-        // Update category detection for new or pending sessions
-        const currentChatSession = sessions.find(s => s.id === sessionId);
-        console.error('[DEBUG Category] ========== START CATEGORY DETECTION ==========');
-        console.error('[DEBUG Category] Current session:', currentChatSession);
-        console.error('[DEBUG Category] Session ID:', sessionId);
-        console.error('[DEBUG Category] Current category:', currentChatSession?.category);
-        console.error('[DEBUG Category] Results count:', finalResults.length);
-        console.error('[DEBUG Category] First result:', finalResults[0]);
-        console.error('[DEBUG Category] Sessions array:', sessions);
-        console.error('[DEBUG Category] currentSession from hook:', currentSession);
-        
-        // Debug log category detection attempt
-        if (window.electronAPI?.debugLog) {
-          window.electronAPI.debugLog('Category detection check', {
-            sessionId,
-            currentCategory: currentChatSession?.category,
-            resultsCount: finalResults.length,
-            shouldDetect: finalResults.length > 0 && (currentChatSession?.category === 'pending' || currentChatSession?.category === 'general')
-          });
-        }
-        
-        if (finalResults.length > 0 && (currentChatSession?.category === 'pending' || currentChatSession?.category === 'general')) {
-          console.error('[DEBUG Category] Session has pending/general category, will detect from results');
-          
-          // Detect category from search results immediately
-          const category = detectCategoryFromSearchResults(finalResults);
-          console.log('[Category Update] Detected Category:', category, 'from', finalResults.length, 'results');
-          console.log('[Category Update] First result:', finalResults[0]);
-          
-          // Update session with detected category locally first
-          console.error('[DEBUG Category] Before updateSession - sessions:', sessions);
-          console.error('[DEBUG Category] Calling updateSession with:', { sessionId, category });
-          updateSession(sessionId, { category });
-          console.error('[DEBUG Category] After updateSession called');
-          
-          // Force UI update
-          setSearchFeedback(`Category detected: ${category}`);
-          setTimeout(() => setSearchFeedback(null), 3000);
-          
-          // Then update backend if available
-          if (window.electronAPI?.updateChatCategory) {
-            console.log('[Category Update] Updating backend...');
-            try {
-              const updateResult = await window.electronAPI.updateChatCategory(sessionId, category);
-              console.log('[Category Update] Backend update result:', updateResult);
-              
-              if (updateResult.success) {
-                console.log('[Category Update] Successfully updated backend category to:', category);
-                // Sessions will be automatically updated through the hook
-              }
-            } catch (error) {
-              console.error('[Category Update] Error updating backend category:', error);
-            }
-          }
-        } else {
-          console.log('[Category Detection] Skip - Session already categorized or no results');
-        }
       }
     } catch (error) {
       console.error('[Search Error] ==================');

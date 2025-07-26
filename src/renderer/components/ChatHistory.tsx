@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, MessageSquare, Search, Trash2, Calendar, Filter, ShoppingBag, Edit2, Check, X } from 'lucide-react';
+import { ArrowLeft, MessageSquare, Search, Trash2, Calendar, ShoppingBag } from 'lucide-react';
 import { ChatSession } from '../types';
 
 interface ChatHistoryProps {
@@ -18,23 +18,15 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
   isDark
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
-  const [editingCategory, setEditingCategory] = useState<string>('');
 
-  // Filter sessions based on search and category
+  // Filter sessions based on search
   const filteredSessions = sessions.filter(session => {
     const matchesSearch = searchQuery === '' || 
       session.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       session.messages.some(msg => msg.content.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    const matchesCategory = selectedCategory === 'all' || session.category === selectedCategory;
-    
-    return matchesSearch && matchesCategory;
+    return matchesSearch;
   });
-
-  // Get unique categories
-  const categories = ['all', ...Array.from(new Set(sessions.map(s => s.category).filter(Boolean)))];
 
   const formatDate = (date: Date) => {
     return new Intl.DateTimeFormat('en-US', {
@@ -57,39 +49,6 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
   const getProductCount = (session: ChatSession) => {
     return session.searchResults?.length || 0;
   };
-
-  const handleEditCategory = (sessionId: string, currentCategory: string) => {
-    setEditingSessionId(sessionId);
-    setEditingCategory(currentCategory || 'general');
-  };
-
-  const handleSaveCategory = async (sessionId: string) => {
-    if (!window.electronAPI.updateChatCategory) return;
-    
-    try {
-      const result = await window.electronAPI.updateChatCategory(sessionId, editingCategory);
-      if (result.success) {
-        // Update local state by refreshing chat history
-        const updatedSessions = await window.electronAPI.getChatHistory();
-        // Parent component should handle updating sessions
-        window.location.reload(); // Simple refresh for now
-      } else {
-        console.error('Failed to update category:', result.error);
-      }
-    } catch (error) {
-      console.error('Error updating category:', error);
-    } finally {
-      setEditingSessionId(null);
-      setEditingCategory('');
-    }
-  };
-
-  const handleCancelEdit = () => {
-    setEditingSessionId(null);
-    setEditingCategory('');
-  };
-
-  const availableCategories = ['general', 'fashion', 'electronics', 'home', 'sports', 'beauty', 'books', 'food', 'products'];
 
   return (
     <div className={`h-full flex flex-col ${isDark ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'}`}>
@@ -115,45 +74,22 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
           </div>
         </div>
 
-        {/* Search and Filter */}
-        <div className="flex gap-3">
-          <div className="flex-1 relative">
-            <Search size={18} className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${
-              isDark ? 'text-gray-400' : 'text-gray-500'
-            }`} />
-            <input
-              type="text"
-              placeholder="Search conversations..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className={`w-full pl-10 pr-4 py-2 rounded-lg border transition-colors ${
-                isDark 
-                  ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500' 
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-500'
-              } focus:outline-none`}
-            />
-          </div>
-          <div className="relative">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className={`pl-3 pr-8 py-2 rounded-lg border transition-colors appearance-none ${
-                isDark 
-                  ? 'bg-gray-700 border-gray-600 text-white focus:border-purple-500' 
-                  : 'bg-white border-gray-300 text-gray-900 focus:border-purple-500'
-              } focus:outline-none`}
-            >
-              {categories.map(category => (
-                <option key={category} value={category}>
-                  {category === 'all' ? 'All Categories' : 
-                   category.charAt(0).toUpperCase() + category.slice(1)}
-                </option>
-              ))}
-            </select>
-            <Filter size={16} className={`absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none ${
-              isDark ? 'text-gray-400' : 'text-gray-500'
-            }`} />
-          </div>
+        {/* Search */}
+        <div className="relative">
+          <Search size={18} className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${
+            isDark ? 'text-gray-400' : 'text-gray-500'
+          }`} />
+          <input
+            type="text"
+            placeholder="Search conversations..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={`w-full pl-10 pr-4 py-2 rounded-lg border transition-colors ${
+              isDark 
+                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-purple-500' 
+                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-purple-500'
+            } focus:outline-none`}
+          />
         </div>
       </div>
 
@@ -164,8 +100,8 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
             <MessageSquare size={48} className="mx-auto mb-4 opacity-50" />
             <p className="text-lg mb-2">No conversations found</p>
             <p className="text-sm">
-              {searchQuery || selectedCategory !== 'all' 
-                ? 'Try adjusting your search or filter criteria'
+              {searchQuery
+                ? 'Try adjusting your search criteria'
                 : 'Start a new conversation to see it here'
               }
             </p>
@@ -184,69 +120,7 @@ export const ChatHistory: React.FC<ChatHistoryProps> = ({
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="font-medium truncate">{session.title}</h3>
-                      {session.category && (
-                        editingSessionId === session.id ? (
-                          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-                            <select
-                              value={editingCategory}
-                              onChange={(e) => setEditingCategory(e.target.value)}
-                              className={`px-2 py-1 text-xs rounded-lg border ${
-                                isDark 
-                                  ? 'bg-gray-700 border-gray-600 text-white' 
-                                  : 'bg-white border-gray-300 text-gray-900'
-                              } focus:outline-none`}
-                              autoFocus
-                            >
-                              {availableCategories.map(cat => (
-                                <option key={cat} value={cat}>
-                                  {cat.charAt(0).toUpperCase() + cat.slice(1)}
-                                </option>
-                              ))}
-                            </select>
-                            <button
-                              onClick={() => handleSaveCategory(session.id)}
-                              className={`p-1 rounded ${
-                                isDark ? 'hover:bg-gray-600 text-green-400' : 'hover:bg-gray-200 text-green-600'
-                              }`}
-                            >
-                              <Check size={14} />
-                            </button>
-                            <button
-                              onClick={handleCancelEdit}
-                              className={`p-1 rounded ${
-                                isDark ? 'hover:bg-gray-600 text-red-400' : 'hover:bg-gray-200 text-red-600'
-                              }`}
-                            >
-                              <X size={14} />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1">
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              isDark 
-                                ? 'bg-purple-900 text-purple-200' 
-                                : 'bg-purple-100 text-purple-700'
-                            }`}>
-                              {session.category}
-                            </span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditCategory(session.id, session.category || 'general');
-                              }}
-                              className={`p-1 rounded transition-all opacity-40 hover:opacity-100 ${
-                                isDark ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'
-                              }`}
-                              title="Edit category"
-                            >
-                              <Edit2 size={12} />
-                            </button>
-                          </div>
-                        )
-                      )}
-                    </div>
+                    <h3 className="font-medium truncate mb-1">{session.title}</h3>
                     <p className={`text-sm mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
                       {getLastMessage(session)}
                     </p>

@@ -40,13 +40,18 @@ async function startMinimalMCPServer() {
   try {
     log('Loading MCP SDK modules...');
     
-    const { Server } = require('@modelcontextprotocol/sdk/server');
-    const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
+    // Use relative paths to avoid module resolution issues
+    const path = require('path');
+    const baseDir = path.join(__dirname, '..', 'node_modules', '@modelcontextprotocol', 'sdk', 'dist', 'cjs');
+    log(`Base directory: ${baseDir}`);
+    
+    const { Server } = require(path.join(baseDir, 'server', 'index.js'));
+    const { StdioServerTransport } = require(path.join(baseDir, 'server', 'stdio.js'));
     const {
       CallToolRequestSchema,
       ListToolsRequestSchema,
       InitializeRequestSchema,
-    } = require('@modelcontextprotocol/sdk/types.js');
+    } = require(path.join(baseDir, 'types.js'));
     
     log('MCP SDK modules loaded successfully');
     
