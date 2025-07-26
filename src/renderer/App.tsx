@@ -34,21 +34,11 @@ function App() {
 
   // Detect category from search results based on the index of the first result
   const detectCategoryFromSearchResults = (products: (Product | ProductWithContext)[]): string => {
-    // Debug: Add visible logging
-    const debugLog = (message: string, data?: any) => {
-      console.error(message, data);
-      // Also store in sessionStorage for debugging
-      const logs = JSON.parse(sessionStorage.getItem('categoryDetectionLogs') || '[]');
-      logs.push({ time: new Date().toISOString(), message, data });
-      sessionStorage.setItem('categoryDetectionLogs', JSON.stringify(logs.slice(-10))); // Keep last 10 logs
-    };
-
-    debugLog('[Category Detection] Starting detection with products:', products?.length || 0);
-    console.error('[Category Detection] Starting detection with products:', products?.length || 0);
-    console.error('[Category Detection] First product full structure:', JSON.stringify(products?.[0], null, 2));
+    console.log('[detectCategoryFromSearchResults] Called with', products?.length || 0, 'products');
+    console.log('[detectCategoryFromSearchResults] First product:', products?.[0]);
     
     if (!products || products.length === 0) {
-      debugLog('[Category Detection] No products found, defaulting to general');
+      console.log('[detectCategoryFromSearchResults] No products found, defaulting to general');
       return 'general';
     }
     
@@ -56,13 +46,17 @@ function App() {
     const firstProduct = products[0];
     const sourceIndex = 'product' in firstProduct ? firstProduct.product.sourceIndex : firstProduct.sourceIndex;
     
-    debugLog('[Category Detection] First product source index:', sourceIndex);
-    debugLog('[Category Detection] First product data:', JSON.stringify(firstProduct, null, 2));
+    console.log('[detectCategoryFromSearchResults] First product source index:', sourceIndex);
+    console.log('[detectCategoryFromSearchResults] Product structure:', {
+      isProductWithContext: 'product' in firstProduct,
+      sourceIndex,
+      productKeys: Object.keys(firstProduct)
+    });
     
     // Check if sourceIndex is already a direct category name
     const directCategories = ['fashion', 'electronics', 'home', 'sports', 'beauty', 'books', 'food', 'general'];
     if (sourceIndex && directCategories.includes(sourceIndex)) {
-      debugLog('[Category Detection] Detected direct category:', sourceIndex);
+      console.log('[detectCategoryFromSearchResults] Detected direct category:', sourceIndex);
       return sourceIndex;
     }
     
@@ -432,31 +426,44 @@ function App() {
         
         // Update category detection for new or pending sessions
         const currentChatSession = sessions.find(s => s.id === sessionId);
+        console.log('[Category Detection] Current session:', currentChatSession);
+        console.log('[Category Detection] Current category:', currentChatSession?.category);
+        console.log('[Category Detection] Results count:', finalResults.length);
+        
         if (finalResults.length > 0 && (currentChatSession?.category === 'pending' || currentChatSession?.category === 'general')) {
-          console.error('[Category Detection] Session has pending/general category, detecting from results');
+          console.log('[Category Detection] Session has pending/general category, detecting from results');
           
           // Detect category from search results immediately
           const category = detectCategoryFromSearchResults(finalResults);
-          console.error('[Category Update] Detected Category:', category, 'from', finalResults.length, 'results');
+          console.log('[Category Update] Detected Category:', category, 'from', finalResults.length, 'results');
+          console.log('[Category Update] First result:', finalResults[0]);
           
           // Update session with detected category locally first
+          console.log('[Category Update] Updating local session with category:', category);
           updateSession(sessionId, { category });
+          
+          // Force UI update
+          setSearchFeedback(`Category detected: ${category}`);
+          setTimeout(() => setSearchFeedback(null), 3000);
           
           // Then update backend if available
           if (window.electronAPI?.updateChatCategory) {
-            setTimeout(async () => {
-              try {
-                const updateResult = await window.electronAPI.updateChatCategory(sessionId, category);
-                console.error('[Category Update] Backend update result:', updateResult);
-                
-                if (updateResult.success) {
-                  console.error('[Category Update] Successfully updated backend category to:', category);
-                }
-              } catch (error) {
-                console.error('[Category Update] Error updating backend category:', error);
+            console.log('[Category Update] Updating backend...');
+            try {
+              const updateResult = await window.electronAPI.updateChatCategory(sessionId, category);
+              console.log('[Category Update] Backend update result:', updateResult);
+              
+              if (updateResult.success) {
+                console.log('[Category Update] Successfully updated backend category to:', category);
+                // Reload sessions to ensure UI is in sync
+                await loadChatSessions();
               }
-            }, 100); // Small delay to ensure local state is updated first
+            } catch (error) {
+              console.error('[Category Update] Error updating backend category:', error);
+            }
           }
+        } else {
+          console.log('[Category Detection] Skip - Session already categorized or no results');
         }
       }
     } catch (error) {

@@ -60,11 +60,13 @@ async function startSimpleMCPServer() {
     // Handle initialization
     server.setRequestHandler(InitializeRequestSchema, async (request) => {
       console.error('[MCP Simple] Handling initialize request:', request.params);
-      return {
+      const response = {
         protocolVersion: request.params.protocolVersion,
         capabilities: server.serverInfo.capabilities,
         serverInfo: server.serverInfo
       };
+      console.error('[MCP Simple] Sending initialize response:', JSON.stringify(response));
+      return response;
     });
     
     // Setup tools
@@ -128,37 +130,33 @@ async function startSimpleMCPServer() {
     try {
       await server.connect(transport);
       console.error('[MCP Simple] Server connected successfully');
+      console.error('[MCP Simple] Server info:', JSON.stringify(server.serverInfo));
       console.error('[MCP Simple] Ready to handle requests');
       
-      // Wait a bit to ensure initialization is complete
-      await new Promise(resolve => setTimeout(resolve, 100));
-      console.error('[MCP Simple] Initialization complete');
+      // Keep the connection alive
+      console.error('[MCP Simple] MCP server is now ready and listening for requests');
       
-      // Send initial response to keep connection alive
-      console.error('[MCP Simple] MCP server is now ready and listening');
+      // Set a flag to indicate server is ready
+      let serverReady = true;
+      
     } catch (connectError) {
       console.error('[MCP Simple] Failed to connect transport:', connectError.message);
       console.error('[MCP Simple] Stack trace:', connectError.stack);
       throw connectError;
     }
     
-    // Keep process alive with stronger mechanisms
+    // Keep process alive - MCP communication happens through stdio
     process.stdin.resume();
-    process.stdin.setEncoding('utf8');
-    process.stdin.on('data', (data) => {
-      // Log any stdin data for debugging
-      if (data.trim()) {
-        console.error('[MCP Simple] Received stdin data:', data.trim().substring(0, 100));
-      }
-    });
     
-    // Handle stdin end
+    // Don't process stdin data directly - let MCP server handle it
     process.stdin.on('end', () => {
-      console.error('[MCP Simple] stdin ended, keeping process alive');
+      console.error('[MCP Simple] stdin ended, shutting down gracefully');
+      process.exit(0);
     });
     
     process.stdin.on('error', (err) => {
       console.error('[MCP Simple] stdin error:', err.message);
+      // Don't exit on stdin errors, let MCP handle recovery
     });
     
     // Heartbeat to show server is alive

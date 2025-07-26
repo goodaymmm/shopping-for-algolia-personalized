@@ -1,6 +1,6 @@
 {
   "name": "shopping-for-algolia-personalized",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "AI-powered personalized shopping assistant with Gemini API image analysis and Algolia MCP integration",
   "main": "dist/main/main.js",
   "homepage": ".",
