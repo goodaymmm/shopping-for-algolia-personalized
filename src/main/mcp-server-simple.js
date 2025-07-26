@@ -6,12 +6,12 @@
 const path = require('path');
 const { DatabaseService } = require('./database');
 const { PersonalizationEngine } = require('./personalization');
-const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
-const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
+const { Server } = require('@modelcontextprotocol/sdk/dist/cjs/server/index.js');
+const { StdioServerTransport } = require('@modelcontextprotocol/sdk/dist/cjs/server/stdio.js');
 const {
   CallToolRequestSchema,
   ListToolsRequestSchema,
-} = require('@modelcontextprotocol/sdk/types.js');
+} = require('@modelcontextprotocol/sdk/dist/cjs/types.js');
 
 async function startSimpleMCPServer() {
   try {

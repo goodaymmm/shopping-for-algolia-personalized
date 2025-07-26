@@ -413,6 +413,8 @@ function App() {
       addMessageToSession(sessionId, assistantMessage);
 
       // Save chat to database (only if Electron API is available)
+      console.error('[Search Debug] About to save chat, finalResults.length:', finalResults.length);
+      console.error('[Search Debug] First result:', finalResults[0]);
       if (window.electronAPI && window.electronAPI.saveChat) {
         // Initially save with general category
         await window.electronAPI.saveChat(
@@ -426,14 +428,16 @@ function App() {
         
         // Update category on first search results if not already categorized
         // Add delay to ensure search results are properly saved
+        console.error('[Category Debug] ========== CATEGORY DETECTION START ==========');
         console.error('[Category Debug] Checking category update conditions:');
         console.error('[Category Debug] - sessionId:', sessionId);
         console.error('[Category Debug] - categorizedSessions:', Array.from(categorizedSessions));
         console.error('[Category Debug] - has been categorized:', categorizedSessions.has(sessionId));
         console.error('[Category Debug] - finalResults.length:', finalResults.length);
         console.error('[Category Debug] - has updateChatCategory:', !!window.electronAPI?.updateChatCategory);
-        console.error('[Category Debug] - first result:', finalResults[0]);
+        console.error('[Category Debug] - first result:', JSON.stringify(finalResults[0], null, 2));
         console.error('[Category Debug] - first result sourceIndex:', finalResults[0]?.sourceIndex || 'NO SOURCEINDEX');
+        console.error('[Category Debug] ========== CATEGORY DETECTION END ==========');
         
         // TEMPORARY: Force category detection for testing
         const forceDetection = true; // TODO: Remove this after testing
@@ -477,7 +481,10 @@ function App() {
         }
       }
     } catch (error) {
-      console.error('Search error:', error);
+      console.error('[Search Error] ==================');
+      console.error('[Search Error] Error occurred:', error);
+      console.error('[Search Error] Stack:', error.stack);
+      console.error('[Search Error] ==================');
       
       let errorText = 'An error occurred while searching for products.';
       
