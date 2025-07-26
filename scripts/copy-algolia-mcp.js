@@ -15,9 +15,10 @@ async function copyAlgoliaMcpSource() {
   
   // Check if source directory exists
   if (!fs.existsSync(sourceDir)) {
-    console.error(`Error: Algolia MCP Server source not found at ${sourceDir}`);
-    console.error('Please ensure AIgolia-mcp-node-main is available in the parent directory.');
-    process.exit(1);
+    console.warn(`Warning: Algolia MCP Server source not found at ${sourceDir}`);
+    console.warn('This is expected for non-Windows builds or when using pre-built binaries.');
+    console.log('Skipping Algolia MCP source copy.');
+    return; // Exit gracefully without error
   }
   
   try {
