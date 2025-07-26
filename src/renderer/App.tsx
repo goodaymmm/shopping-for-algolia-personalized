@@ -34,8 +34,19 @@ function App() {
 
   // Detect category from search results based on the index of the first result
   const detectCategoryFromSearchResults = (products: (Product | ProductWithContext)[]): string => {
+    // Debug: Add visible logging
+    const debugLog = (message: string, data?: any) => {
+      console.error(message, data);
+      // Also store in sessionStorage for debugging
+      const logs = JSON.parse(sessionStorage.getItem('categoryDetectionLogs') || '[]');
+      logs.push({ time: new Date().toISOString(), message, data });
+      sessionStorage.setItem('categoryDetectionLogs', JSON.stringify(logs.slice(-10))); // Keep last 10 logs
+    };
+
+    debugLog('[Category Detection] Starting detection with products:', products?.length || 0);
+    
     if (!products || products.length === 0) {
-      console.error('[Category Detection] No products found, defaulting to general');
+      debugLog('[Category Detection] No products found, defaulting to general');
       return 'general';
     }
     
@@ -43,13 +54,13 @@ function App() {
     const firstProduct = products[0];
     const sourceIndex = 'product' in firstProduct ? firstProduct.product.sourceIndex : firstProduct.sourceIndex;
     
-    console.error('[Category Detection] First product source index:', sourceIndex);
-    console.error('[Category Detection] First product data:', JSON.stringify(firstProduct, null, 2));
+    debugLog('[Category Detection] First product source index:', sourceIndex);
+    debugLog('[Category Detection] First product data:', JSON.stringify(firstProduct, null, 2));
     
     // Check if sourceIndex is already a direct category name
     const directCategories = ['fashion', 'electronics', 'home', 'sports', 'beauty', 'books', 'food', 'general'];
     if (sourceIndex && directCategories.includes(sourceIndex)) {
-      console.error('[Category Detection] Detected direct category:', sourceIndex);
+      debugLog('[Category Detection] Detected direct category:', sourceIndex);
       return sourceIndex;
     }
     
@@ -412,25 +423,43 @@ function App() {
         console.error('[Chat Save] Chat saved with initial category: general');
         
         // Update category on first search results if not already categorized
+        // Add delay to ensure search results are properly saved
         if (!categorizedSessions.has(sessionId) && finalResults.length > 0 && window.electronAPI?.updateChatCategory) {
-          const category = detectCategoryFromSearchResults(finalResults);
-          console.error('[Category Update] Detected Category:', category, 'from', finalResults.length, 'results');
-          console.error('[Category Update] First result for category detection:', JSON.stringify(finalResults[0], null, 2));
+          // Show temporary UI indicator
+          setSearchFeedback('🔍 Detecting category...');
           
-          try {
-            const updateResult = await window.electronAPI.updateChatCategory(sessionId, category);
-            if (updateResult.success) {
-              setCategorizedSessions(prev => new Set(prev).add(sessionId));
-              console.error('[Category Update] Successfully updated session category to:', category);
+          setTimeout(async () => {
+            const category = detectCategoryFromSearchResults(finalResults);
+            console.error('[Category Update] Detected Category:', category, 'from', finalResults.length, 'results');
+            console.error('[Category Update] First result for category detection:', JSON.stringify(finalResults[0], null, 2));
+            console.error('[Category Update] Session ID:', sessionId);
+            console.error('[Category Update] Already categorized sessions:', Array.from(categorizedSessions));
+            
+            try {
+              const updateResult = await window.electronAPI.updateChatCategory(sessionId, category);
+              console.error('[Category Update] Update result:', updateResult);
               
-              // Reload sessions to reflect the category change in UI
-              await loadChatSessions();
-            } else {
-              console.error('[Category Update] Failed to update category:', updateResult.error);
+              if (updateResult.success) {
+                setCategorizedSessions(prev => new Set(prev).add(sessionId));
+                console.error('[Category Update] Successfully updated session category to:', category);
+                setSearchFeedback(`✅ Category set to: ${category}`);
+                
+                // Reload sessions to reflect the category change in UI
+                await loadChatSessions();
+                
+                // Clear feedback after 3 seconds
+                setTimeout(() => setSearchFeedback(null), 3000);
+              } else {
+                console.error('[Category Update] Failed to update category:', updateResult.error);
+                setSearchFeedback(`❌ Failed to set category: ${updateResult.error}`);
+                setTimeout(() => setSearchFeedback(null), 5000);
+              }
+            } catch (error) {
+              console.error('[Category Update] Error updating category:', error);
+              setSearchFeedback(`❌ Error setting category`);
+              setTimeout(() => setSearchFeedback(null), 5000);
             }
-          } catch (error) {
-            console.error('[Category Update] Error updating category:', error);
-          }
+          }, 1000); // 1 second delay
         }
       }
     } catch (error) {
