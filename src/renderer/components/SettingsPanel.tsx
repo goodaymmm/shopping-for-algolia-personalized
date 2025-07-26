@@ -1052,11 +1052,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({
               )}
             </div>
             
-            <div className="p-4 rounded-xl bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
+            {/* <div className="p-4 rounded-xl bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
               <p className="text-sm text-yellow-800 dark:text-yellow-200">
                 <strong>Debug Mode:</strong> Logs include detailed information about Gemini API calls, database operations, and error details for troubleshooting.
               </p>
-            </div>
+            </div> */}
           </div>
         </section>
 
