@@ -2,7 +2,7 @@
   "dxt_version": "0.1",
   "name": "shopping-for-algolia-personalized",
   "display_name": "Shopping for Algolia Personalized",
-  "version": "1.0.1",
+  "version": "1.0.4",
   "description": "Read-only access to your shopping personalization data from the Shopping for Algolia app",
   "long_description": "This extension provides read-only access to your shopping personalization profile created by the Shopping for Algolia Personalized desktop app. View your category preferences, price ranges, and shopping patterns to help AI assistants understand your shopping preferences.",
   "author": {

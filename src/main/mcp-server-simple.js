@@ -11,6 +11,7 @@ const { StdioServerTransport } = require('@modelcontextprotocol/sdk/dist/cjs/ser
 const {
   CallToolRequestSchema,
   ListToolsRequestSchema,
+  InitializeRequestSchema,
 } = require('@modelcontextprotocol/sdk/dist/cjs/types.js');
 
 async function startSimpleMCPServer() {
@@ -55,6 +56,16 @@ async function startSimpleMCPServer() {
         },
       }
     );
+    
+    // Handle initialization
+    server.setRequestHandler(InitializeRequestSchema, async (request) => {
+      console.error('[MCP Simple] Handling initialize request:', request.params);
+      return {
+        protocolVersion: request.params.protocolVersion,
+        capabilities: server.serverInfo.capabilities,
+        serverInfo: server.serverInfo
+      };
+    });
     
     // Setup tools
     server.setRequestHandler(ListToolsRequestSchema, async () => {

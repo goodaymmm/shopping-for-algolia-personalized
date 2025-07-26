@@ -100,7 +100,7 @@ function App() {
   const [lastSearchResult, setLastSearchResult] = useState<IPCSearchResult | null>(null);
   const [lastSearchQuery, setLastSearchQuery] = useState<string>('');
   const [sidebarWidth, setSidebarWidth] = useState(600); // Default width
-  const [categorizedSessions, setCategorizedSessions] = useState<Set<string>>(new Set()); // Track which sessions have been categorized
+  // Removed categorizedSessions - now handled by checking if session.category === 'pending'
 
   // Get search results from current session
   const searchResults = currentSession?.searchResults || [];
@@ -193,16 +193,7 @@ function App() {
     }
   }, []);
 
-  // Reset categorization flag when session changes
-  useEffect(() => {
-    if (currentSessionId && !sessions.find(s => s.id === currentSessionId)) {
-      setCategorizedSessions(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(currentSessionId);
-        return newSet;
-      });
-    }
-  }, [currentSessionId, sessions]);
+  // Removed - categorization is now handled by checking session.category === 'pending'
 
 
   const handleSendMessage = async (content: string, imageDataUrl?: string) => {
@@ -431,53 +422,41 @@ function App() {
         console.error('[Category Debug] ========== CATEGORY DETECTION START ==========');
         console.error('[Category Debug] Checking category update conditions:');
         console.error('[Category Debug] - sessionId:', sessionId);
-        console.error('[Category Debug] - categorizedSessions:', Array.from(categorizedSessions));
-        console.error('[Category Debug] - has been categorized:', categorizedSessions.has(sessionId));
+        console.error('[Category Debug] - current session category:', currentChatSession?.category);
+        console.error('[Category Debug] - is pending:', currentChatSession?.category === 'pending');
         console.error('[Category Debug] - finalResults.length:', finalResults.length);
         console.error('[Category Debug] - has updateChatCategory:', !!window.electronAPI?.updateChatCategory);
         console.error('[Category Debug] - first result:', JSON.stringify(finalResults[0], null, 2));
         console.error('[Category Debug] - first result sourceIndex:', finalResults[0]?.sourceIndex || 'NO SOURCEINDEX');
         console.error('[Category Debug] ========== CATEGORY DETECTION END ==========');
         
-        // TEMPORARY: Force category detection for testing
-        const forceDetection = true; // TODO: Remove this after testing
-        if ((forceDetection || !categorizedSessions.has(sessionId)) && finalResults.length > 0 && window.electronAPI?.updateChatCategory) {
-          // Show temporary UI indicator
-          setSearchFeedback('🔍 Detecting category...');
+        // Update category detection for new or pending sessions
+        const currentChatSession = sessions.find(s => s.id === sessionId);
+        if (finalResults.length > 0 && (currentChatSession?.category === 'pending' || currentChatSession?.category === 'general')) {
+          console.error('[Category Detection] Session has pending/general category, detecting from results');
           
-          setTimeout(async () => {
-            console.error('[Category Debug] Inside setTimeout, about to detect category');
-            const category = detectCategoryFromSearchResults(finalResults);
-            console.error('[Category Update] Detected Category:', category, 'from', finalResults.length, 'results');
-            console.error('[Category Update] First result for category detection:', JSON.stringify(finalResults[0], null, 2));
-            console.error('[Category Update] Session ID:', sessionId);
-            console.error('[Category Update] Already categorized sessions:', Array.from(categorizedSessions));
-            
-            try {
-              const updateResult = await window.electronAPI.updateChatCategory(sessionId, category);
-              console.error('[Category Update] Update result:', updateResult);
-              
-              if (updateResult.success) {
-                setCategorizedSessions(prev => new Set(prev).add(sessionId));
-                console.error('[Category Update] Successfully updated session category to:', category);
-                setSearchFeedback(`✅ Category set to: ${category}`);
+          // Detect category from search results immediately
+          const category = detectCategoryFromSearchResults(finalResults);
+          console.error('[Category Update] Detected Category:', category, 'from', finalResults.length, 'results');
+          
+          // Update session with detected category locally first
+          updateSession(sessionId, { category });
+          
+          // Then update backend if available
+          if (window.electronAPI?.updateChatCategory) {
+            setTimeout(async () => {
+              try {
+                const updateResult = await window.electronAPI.updateChatCategory(sessionId, category);
+                console.error('[Category Update] Backend update result:', updateResult);
                 
-                // Reload sessions to reflect the category change in UI
-                await loadChatSessions();
-                
-                // Clear feedback after 3 seconds
-                setTimeout(() => setSearchFeedback(null), 3000);
-              } else {
-                console.error('[Category Update] Failed to update category:', updateResult.error);
-                setSearchFeedback(`❌ Failed to set category: ${updateResult.error}`);
-                setTimeout(() => setSearchFeedback(null), 5000);
+                if (updateResult.success) {
+                  console.error('[Category Update] Successfully updated backend category to:', category);
+                }
+              } catch (error) {
+                console.error('[Category Update] Error updating backend category:', error);
               }
-            } catch (error) {
-              console.error('[Category Update] Error updating category:', error);
-              setSearchFeedback(`❌ Error setting category`);
-              setTimeout(() => setSearchFeedback(null), 5000);
-            }
-          }, 1000); // 1 second delay
+            }, 100); // Small delay to ensure local state is updated first
+          }
         }
       }
     } catch (error) {

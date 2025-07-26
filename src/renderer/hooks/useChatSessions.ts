@@ -38,11 +38,11 @@ export const useChatSessions = () => {
     }
   }, [currentSessionId]);
 
-  const createNewSession = () => {
+  const createNewSession = (category?: string) => {
     const newSession: ChatSession = {
       id: Date.now().toString(),
       title: 'New Chat',
-      category: 'general',
+      category: category || 'pending', // Use 'pending' instead of 'general' initially
       messages: [],
       searchResults: [],
       createdAt: new Date(),
