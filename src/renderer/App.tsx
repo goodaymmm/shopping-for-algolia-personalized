@@ -44,6 +44,8 @@ function App() {
     };
 
     debugLog('[Category Detection] Starting detection with products:', products?.length || 0);
+    console.error('[Category Detection] Starting detection with products:', products?.length || 0);
+    console.error('[Category Detection] First product full structure:', JSON.stringify(products?.[0], null, 2));
     
     if (!products || products.length === 0) {
       debugLog('[Category Detection] No products found, defaulting to general');
@@ -424,11 +426,23 @@ function App() {
         
         // Update category on first search results if not already categorized
         // Add delay to ensure search results are properly saved
-        if (!categorizedSessions.has(sessionId) && finalResults.length > 0 && window.electronAPI?.updateChatCategory) {
+        console.error('[Category Debug] Checking category update conditions:');
+        console.error('[Category Debug] - sessionId:', sessionId);
+        console.error('[Category Debug] - categorizedSessions:', Array.from(categorizedSessions));
+        console.error('[Category Debug] - has been categorized:', categorizedSessions.has(sessionId));
+        console.error('[Category Debug] - finalResults.length:', finalResults.length);
+        console.error('[Category Debug] - has updateChatCategory:', !!window.electronAPI?.updateChatCategory);
+        console.error('[Category Debug] - first result:', finalResults[0]);
+        console.error('[Category Debug] - first result sourceIndex:', finalResults[0]?.sourceIndex || 'NO SOURCEINDEX');
+        
+        // TEMPORARY: Force category detection for testing
+        const forceDetection = true; // TODO: Remove this after testing
+        if ((forceDetection || !categorizedSessions.has(sessionId)) && finalResults.length > 0 && window.electronAPI?.updateChatCategory) {
           // Show temporary UI indicator
           setSearchFeedback('🔍 Detecting category...');
           
           setTimeout(async () => {
+            console.error('[Category Debug] Inside setTimeout, about to detect category');
             const category = detectCategoryFromSearchResults(finalResults);
             console.error('[Category Update] Detected Category:', category, 'from', finalResults.length, 'results');
             console.error('[Category Update] First result for category detection:', JSON.stringify(finalResults[0], null, 2));
