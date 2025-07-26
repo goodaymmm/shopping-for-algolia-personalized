@@ -375,8 +375,9 @@ This project uses real-world e-commerce data for research and educational purpos
 - **Memory**: 4GB RAM minimum
 - **Storage**: 500MB free space
 - **Internet**: Required for AI features
+- **Node.js**: Version 22+ required for Windows (for running official Algolia MCP Server)
 - **Algolia MCP Server**: 
-  - Windows: Custom Node.js implementation (official binary not yet available)
+  - Windows: Runs official Algolia MCP Server TypeScript source via Node.js wrapper
   - macOS: Official binary included (untested due to lack of Mac environment)
 
 ## Algolia MCP Server Setup
@@ -390,9 +391,9 @@ The Algolia MCP Server executable is **already included** in the application bun
 
 1. **Algolia MCP Server Setup**:
    
-   **Windows**: Uses Node.js wrapper (included in repository)
-   - No additional download needed
-   - Requires Node.js 18+ installed on the system
+   **Windows**: Uses official Algolia MCP Server source code
+   - Source files automatically copied during build
+   - Requires Node.js 22+ installed on the system
    
    **macOS**: Download official binary
    ```bash
@@ -416,7 +417,7 @@ The Algolia MCP Server executable is **already included** in the application bun
 - All Algolia operations (search, indexing, settings) go through MCP
 
 ### Platform-Specific Notes
-- **Windows**: Uses a custom Node.js-based MCP server implementation that provides the same MCP protocol interface as the official server. This is a temporary solution until the official Windows binary is released.
+- **Windows**: Runs the official Algolia MCP Server TypeScript source code directly using Node.js with `--experimental-strip-types` flag. This ensures full compatibility with the official implementation until a Windows binary is released.
 - **macOS**: Uses the official Algolia MCP Server binary. Note: macOS functionality has not been tested due to lack of Mac development environment.
 
 ## Getting Started
@@ -505,7 +506,7 @@ Building this application around **Algolia MCP Server** provided unique insights
    - **stdio Communication**: Implementing robust JSON-RPC over stdio pipes
    - **Error Handling**: Graceful fallbacks when MCP Server is unavailable
    - **Authentication**: Secure credential passing via command-line arguments
-   - **Windows Support**: Created custom MCP server implementation in Node.js that follows the MCP protocol specification, since official Windows binary not yet available
+   - **Windows Support**: Implemented Node.js wrapper that runs the official Algolia MCP Server TypeScript source directly, ensuring 100% compatibility with the official implementation
 
 3. **MCP vs REST API Comparison**:
    ```typescript

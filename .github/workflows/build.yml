@@ -85,30 +85,40 @@ jobs:
             echo "[]" > src/data/products-other.json
           fi
         
-      - name: Build TypeScript
+      - name: Clone official Algolia MCP Server repository
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: |
+          echo "Cloning official Algolia MCP Server repository..."
+          git clone https://github.com/algolia/mcp-node.git ../AIgolia-mcp-node-main || true
+          
+          # Verify the repository was cloned
+          if [ -d "../AIgolia-mcp-node-main/src" ]; then
+            echo "✓ Official Algolia MCP Server repository cloned successfully"
+            ls -la ../AIgolia-mcp-node-main/
+          else
+            echo "✗ Failed to clone Algolia MCP Server repository"
+            exit 1
+          fi
+
+      - name: Build TypeScript and copy Algolia MCP
         shell: bash
         run: npm run build:all
 
-      - name: Prepare Algolia MCP Server
+      - name: Prepare platform-specific Algolia MCP Server
         shell: bash
         run: |
-          echo "Preparing Algolia MCP Server..."
+          echo "Preparing platform-specific Algolia MCP Server..."
           
           if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            echo "Windows: Using official Algolia MCP Server source with Node.js"
-            # Clone official repository for Windows build
-            git clone https://github.com/algolia/mcp-node.git ../AIgolia-mcp-node-main || true
-            
-            # Copy source files to resources
-            mkdir -p resources/algolia-mcp/algolia-mcp-source
-            if [ -d "../AIgolia-mcp-node-main/src" ]; then
-              cp -r ../AIgolia-mcp-node-main/src resources/algolia-mcp/algolia-mcp-source/
-              cp ../AIgolia-mcp-node-main/package.json resources/algolia-mcp/algolia-mcp-source/ || true
-              cp ../AIgolia-mcp-node-main/tsconfig.json resources/algolia-mcp/algolia-mcp-source/ || true
-              echo "Copied official Algolia MCP Server source"
+            echo "Windows: Verifying official Algolia MCP Server source was copied"
+            if [ -d "resources/algolia-mcp/algolia-mcp-source/src" ]; then
+              echo "✓ Official Algolia MCP Server source present"
+              ls -la resources/algolia-mcp/algolia-mcp-source/
+            else
+              echo "✗ Official Algolia MCP Server source not found"
+              exit 1
             fi
-            
-            ls -la resources/algolia-mcp/
           elif [ "${{ matrix.os }}" == "macos-latest" ]; then
             echo "macOS: Downloading official binary..."
             mkdir -p resources/algolia-mcp
