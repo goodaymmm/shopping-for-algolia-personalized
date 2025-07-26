@@ -77,7 +77,12 @@ async function buildExtension() {
     const requiredModules = [
       '@modelcontextprotocol',
       'better-sqlite3',
-      'zod'
+      'zod',
+      'ajv',
+      'uri-js',
+      'fast-deep-equal',
+      'fast-json-stable-stringify',
+      'json-schema-traverse'
     ];
     
     const nodeModulesSrc = path.join(rootDir, 'node_modules');
