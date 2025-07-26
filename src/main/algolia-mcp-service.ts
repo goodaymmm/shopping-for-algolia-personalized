@@ -280,8 +280,7 @@ export class AlgoliaMCPService {
       categories: hit.categories || [],
       url: hit.url || '',
       brand: hit.brand || '',
-      source: indexName,
-      domain: domain
+      sourceIndex: indexName
     };
   }
 

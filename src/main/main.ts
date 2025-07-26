@@ -443,9 +443,7 @@ class MainApplication {
           searchQuery,
           inferredCategories.length > 0 ? inferredCategories : undefined, // カテゴリ指定がない場合は全インデックス検索
           {
-            hitsPerPage: 20,
-            attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'],
-            searchType: isBrandQuery ? 'brand' : 'fuzzy' // ブランド検索では厳密マッチング
+            hitsPerPage: 20
           }
         );
 
@@ -480,9 +478,7 @@ class MainApplication {
               inferredCategories.length > 0 ? inferredCategories : undefined,
               {
                 hitsPerPage: 20,
-                attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'],
-                searchType: 'fuzzy'
-              }
+                  }
             );
             
             console.log('[Search] Simplified brand search results:', products ? products.length : 0, 'products');
@@ -499,9 +495,7 @@ class MainApplication {
               inferredCategories.length > 0 ? inferredCategories : undefined,
               {
                 hitsPerPage: 20,
-                attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'],
-                searchType: 'fuzzy'
-              }
+                  }
             );
             
             console.log('[Search] Reduced keywords search results:', products ? products.length : 0, 'products');
@@ -525,9 +519,7 @@ class MainApplication {
                 inferredCategories.length > 0 ? inferredCategories : undefined,
                 {
                   hitsPerPage: 20,
-                  attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'],
-                  searchType: 'fuzzy'
-                }
+                        }
               );
               
               console.log('[Search] Generic search results:', products ? products.length : 0, 'products');
@@ -552,9 +544,7 @@ class MainApplication {
               inferredCategories.length > 0 ? inferredCategories : undefined,
               {
                 hitsPerPage: 20,
-                attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'],
-                searchType: 'exact'
-              }
+                  }
             );
             
             console.log('[Search] Brand exact search results:', products ? products.length : 0, 'products');
@@ -569,10 +559,8 @@ class MainApplication {
                 inferredCategories.length > 0 ? inferredCategories : undefined,
                 {
                   hitsPerPage: 20,
-                  attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'],
-                  filters: brandFilters,
-                  searchType: 'exact'
-                }
+                        filters: brandFilters,
+                  }
               );
               
               console.log('[Search] Brand filter search results:', products ? products.length : 0, 'products');
@@ -595,9 +583,7 @@ class MainApplication {
                 inferredCategories.length > 0 ? inferredCategories : undefined,
                 {
                   hitsPerPage: 20,
-                  attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'],
-                  searchType: 'fuzzy'
-                }
+                        }
               );
               
               console.log('[Search] Preserved brand search results:', products ? products.length : 0, 'products');
@@ -613,9 +599,7 @@ class MainApplication {
               [imageAnalysis.category],
               {
                 hitsPerPage: 20,
-                attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'],
-                searchType: 'fuzzy'
-              }
+                  }
             );
             
             console.log('[Search] Category-only search results:', products ? products.length : 0, 'products');
@@ -660,9 +644,7 @@ class MainApplication {
                 inferredCategories.length > 0 ? inferredCategories : undefined,
                 {
                   hitsPerPage: 20,
-                  attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'],
-                  searchType: 'fuzzy'
-                }
+                        }
               );
               
               console.log('[Search] Synonym search results:', products ? products.length : 0, 'products');
@@ -678,9 +660,7 @@ class MainApplication {
               undefined, // Search all indices
               {
                 hitsPerPage: 20,
-                attributesToRetrieve: ['name', 'description', 'price', 'salePrice', 'image', 'categories', 'url', 'objectID'],
-                searchType: 'fuzzy'
-              }
+                  }
             );
             
             console.log('[Search] All-categories search results:', products ? products.length : 0, 'products');

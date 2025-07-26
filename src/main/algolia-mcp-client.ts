@@ -178,8 +178,8 @@ export class AlgoliaMCPClient {
       throw new Error('MCP process not initialized');
     }
 
-    const notification: MCPRequest = {
-      jsonrpc: '2.0',
+    const notification = {
+      jsonrpc: '2.0' as const,
       method,
       params
     };
