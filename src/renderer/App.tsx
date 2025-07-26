@@ -25,6 +25,7 @@ function App() {
     currentSessionId,
     setCurrentSessionId,
     createNewSession,
+    updateSession,
     deleteSession,
     addMessageToSession,
     updateSessionSearchResults,
@@ -36,6 +37,14 @@ function App() {
   const detectCategoryFromSearchResults = (products: (Product | ProductWithContext)[]): string => {
     console.log('[detectCategoryFromSearchResults] Called with', products?.length || 0, 'products');
     console.log('[detectCategoryFromSearchResults] First product:', products?.[0]);
+    
+    // Send to debug log
+    if (window.electronAPI?.debugLog) {
+      window.electronAPI.debugLog('detectCategoryFromSearchResults called', {
+        productCount: products?.length || 0,
+        firstProduct: products?.[0]
+      });
+    }
     
     if (!products || products.length === 0) {
       console.log('[detectCategoryFromSearchResults] No products found, defaulting to general');
@@ -430,6 +439,16 @@ function App() {
         console.log('[Category Detection] Current category:', currentChatSession?.category);
         console.log('[Category Detection] Results count:', finalResults.length);
         
+        // Debug log category detection attempt
+        if (window.electronAPI?.debugLog) {
+          window.electronAPI.debugLog('Category detection check', {
+            sessionId,
+            currentCategory: currentChatSession?.category,
+            resultsCount: finalResults.length,
+            shouldDetect: finalResults.length > 0 && (currentChatSession?.category === 'pending' || currentChatSession?.category === 'general')
+          });
+        }
+        
         if (finalResults.length > 0 && (currentChatSession?.category === 'pending' || currentChatSession?.category === 'general')) {
           console.log('[Category Detection] Session has pending/general category, detecting from results');
           
@@ -455,8 +474,7 @@ function App() {
               
               if (updateResult.success) {
                 console.log('[Category Update] Successfully updated backend category to:', category);
-                // Reload sessions to ensure UI is in sync
-                await loadChatSessions();
+                // Sessions will be automatically updated through the hook
               }
             } catch (error) {
               console.error('[Category Update] Error updating backend category:', error);

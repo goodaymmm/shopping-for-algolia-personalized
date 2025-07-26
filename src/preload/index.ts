@@ -86,6 +86,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   getPersonalizationProfile: () =>
     ipcRenderer.invoke('get-personalization-profile'),
+    
+  // Debug logging
+  debugLog: (message: string, data?: any) =>
+    ipcRenderer.invoke('debug-log', message, data),
 
   // ログ管理
   getLogFilePath: () =>

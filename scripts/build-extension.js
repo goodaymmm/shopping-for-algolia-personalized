@@ -40,18 +40,15 @@ async function buildExtension() {
     const serverDir = path.join(buildDir, 'server');
     fs.ensureDirSync(serverDir);
     
-    // Copy mcp-server-simple.js as index.js
-    const simpleSrcPath = path.join(rootDir, 'src', 'main', 'mcp-server-simple.js');
+    // Copy mcp-minimal.js as index.js
+    const minimalSrcPath = path.join(rootDir, 'src', 'main', 'mcp-minimal.js');
     const serverDestPath = path.join(serverDir, 'index.js');
-    if (fs.existsSync(simpleSrcPath)) {
-      // Read and modify the file to adjust require paths
-      let serverContent = fs.readFileSync(simpleSrcPath, 'utf8');
-      serverContent = serverContent.replace(/require\('\.\/database'\)/g, "require('../lib/database')");
-      serverContent = serverContent.replace(/require\('\.\/personalization'\)/g, "require('../lib/personalization')");
-      fs.writeFileSync(serverDestPath, serverContent);
-      console.log('Created server/index.js from mcp-server-simple.js');
+    if (fs.existsSync(minimalSrcPath)) {
+      // Copy the minimal server without modifications
+      fs.copyFileSync(minimalSrcPath, serverDestPath);
+      console.log('Created server/index.js from mcp-minimal.js');
     } else {
-      console.error('Error: mcp-server-simple.js not found.');
+      console.error('Error: mcp-minimal.js not found.');
       process.exit(1);
     }
     

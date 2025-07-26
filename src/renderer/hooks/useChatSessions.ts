@@ -55,6 +55,15 @@ export const useChatSessions = () => {
   };
 
   const updateSession = (sessionId: string, updates: Partial<ChatSession>) => {
+    // Debug log the update
+    if (window.electronAPI?.debugLog) {
+      window.electronAPI.debugLog('updateSession called', {
+        sessionId,
+        updates,
+        hasCategory: 'category' in updates
+      });
+    }
+    
     setSessions(prev => prev.map(session => 
       session.id === sessionId 
         ? { ...session, ...updates, updatedAt: new Date() }

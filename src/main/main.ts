@@ -8,6 +8,7 @@ import { Logger } from './logger'
 import { copyFileSync, existsSync } from 'fs'
 import { SearchSession, IPCSearchResult } from '../shared/types'
 import { NaturalLanguageParser, ParsedConstraints } from './natural-language-parser'
+import { debugLogger } from './debug-logger'
 
 class MainApplication {
   private mainWindow: BrowserWindow | null = null
@@ -1053,6 +1054,12 @@ class MainApplication {
         console.error('Update chat category error:', error)
         return { success: false, error: (error as Error).message }
       }
+    })
+
+    // Debug logging
+    ipcMain.handle('debug-log', async (event, message: string, data?: any) => {
+      debugLogger.log(message, data)
+      return { success: true }
     })
 
     // Discovery settings
