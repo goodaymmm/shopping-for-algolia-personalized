@@ -8,7 +8,9 @@ AI-powered shopping assistant with image search, ML personalization, and Claude 
 
 ## Demo
 
-📹 **Demo Video**: *Coming Soon*
+📹 **Demo Video**: [Watch on YouTube](https://youtu.be/_AIdSyxy_T0)
+
+*Note: English is not the author's native language, so the English narration is AI-generated.*
 
 **Key Features:**
 - AI image analysis with Gemini 2.5 Flash
@@ -24,6 +26,14 @@ AI-powered shopping assistant with image search, ML personalization, and Claude 
 - 📊 **8 MCP Tools**: Full suite for Claude Desktop integration
 - 🎨 **Modern UI**: React + TypeScript with dark mode
 - 🔒 **Secure Storage**: OS keychain for API credentials
+
+### AI-Powered Image Search
+![Gemini Image Analysis](SS/01Gemini_Analyze.png)
+*Upload any product image and get instant AI analysis with relevant search results*
+
+### Personalized Search Results
+![Search Results with Discovery Mode](SS/02Result.png)
+*Smart search results combining personalized recommendations with discovery items*
 
 ## Architecture
 
@@ -128,43 +138,40 @@ await mcpClient.searchSingleIndex({
    - Gemini: API Key
 3. **Search**: Upload image or type query
 4. **Personalize**: Click/save products to train ML
+
+## Known Limitations
+
+### Search Result Filtering
+- **Follow-up queries** (e.g., "Can you find one for under $100?") use an in-memory cache that expires after 5 minutes
+- **After app restart**, filtered searches need to be performed as new searches with complete context
+- Example:
+  - ✅ Initial: "Nike shoes" → Follow-up: "under $100" (works within 5 minutes)
+  - ❌ After restart: "under $100" alone (no context, returns no results)
+  - ✅ After restart: "Nike shoes under $100" (complete query works)
+
 ## Installation
 
 1. Download from [Releases](https://github.com/goodaymmm/shopping-for-algolia-personalized/releases)
 2. Run installer
 3. Configure API keys in Settings
+   
+   ![API Key Configuration](SS/03APIKEY_Apply.png)
+   
+   **Note**: When setting up API keys for the first time, the app will upload datasets to Algolia. Please wait a moment for this process to complete.
 
-## Development
-
-### Building from Source
-```bash
-git clone https://github.com/goodaymmm/shopping-for-algolia-personalized.git
-cd shopping-for-algolia-personalized
-npm install
-npm run build:dev
-npm run electron:dev
-```
-
-### Creating Release with GitHub CLI
-```bash
-# Create release and upload files
-gh release create v1.0.0 ./release/*.exe ./release/*.dxt \
-  --title "v1.0.0" \
-  --notes "Release notes here"
-
-# Upload additional files to existing release
-gh release upload v1.0.0 ./release/new-file.zip
-```
+4. Verify indices creation in your Algolia Dashboard
+   
+   ![Algolia Indices Created](SS/04Algolia_index.png)
+   *Three indices (fashion, electronics, other) will be created automatically*
 
 ## Platform Support
 
 - **Windows**: ✅ Fully tested
 - **macOS**: ⚠️ Build provided but untested
-- **Linux**: 🔧 AppImage available
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License.
 
 ### Additional Licenses & Acknowledgments
 
