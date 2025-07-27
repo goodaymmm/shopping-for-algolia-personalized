@@ -56,16 +56,36 @@ async function buildExtension() {
     const libDir = path.join(buildDir, 'lib');
     fs.ensureDirSync(libDir);
     
-    // Copy database.js and personalization.js from dist/main
+    // Copy MCP versions of database and personalization modules
     const distMainSrc = path.join(distDir, 'main');
     if (fs.existsSync(distMainSrc)) {
-      const deps = ['database.js', 'personalization.js'];
-      for (const dep of deps) {
-        const srcPath = path.join(distMainSrc, dep);
-        const destPath = path.join(libDir, dep);
-        if (fs.existsSync(srcPath)) {
-          fs.copyFileSync(srcPath, destPath);
-          console.log(`Copied ${dep} to lib/`);
+      // Copy database-mcp.js as database.js
+      const dbMcpSrc = path.join(distMainSrc, 'database-mcp.js');
+      const dbDest = path.join(libDir, 'database.js');
+      if (fs.existsSync(dbMcpSrc)) {
+        fs.copyFileSync(dbMcpSrc, dbDest);
+        console.log('Copied database-mcp.js as database.js to lib/');
+      } else {
+        // Fallback to regular database.js if MCP version not found
+        const dbSrc = path.join(distMainSrc, 'database.js');
+        if (fs.existsSync(dbSrc)) {
+          fs.copyFileSync(dbSrc, dbDest);
+          console.log('Warning: database-mcp.js not found, copied regular database.js');
+        }
+      }
+      
+      // Copy personalization-mcp.js as personalization.js
+      const persMcpSrc = path.join(distMainSrc, 'personalization-mcp.js');
+      const persDest = path.join(libDir, 'personalization.js');
+      if (fs.existsSync(persMcpSrc)) {
+        fs.copyFileSync(persMcpSrc, persDest);
+        console.log('Copied personalization-mcp.js as personalization.js to lib/');
+      } else {
+        // Fallback to regular personalization.js if MCP version not found
+        const persSrc = path.join(distMainSrc, 'personalization.js');
+        if (fs.existsSync(persSrc)) {
+          fs.copyFileSync(persSrc, persDest);
+          console.log('Warning: personalization-mcp.js not found, copied regular personalization.js');
         }
       }
     } else {

@@ -5,10 +5,11 @@ import { PersonalizationEngine, MLTrainingEvent } from './personalization'
 import { GeminiService, ImageAnalysis } from './gemini-service'
 import { AlgoliaMCPService } from './algolia-mcp-service'
 import { Logger } from './logger'
-import { copyFileSync, existsSync } from 'fs'
+import { copyFileSync, existsSync, mkdirSync, writeFileSync } from 'fs'
 import { SearchSession, IPCSearchResult } from '../shared/types'
 import { NaturalLanguageParser, ParsedConstraints } from './natural-language-parser'
 import { debugLogger } from './debug-logger'
+import { homedir } from 'os'
 
 class MainApplication {
   private mainWindow: BrowserWindow | null = null
@@ -25,6 +26,8 @@ class MainApplication {
     imageAnalysis?: ImageAnalysis 
   }> = new Map()
   private readonly CACHE_EXPIRY_MS = 5 * 60 * 1000 // 5 minutes
+  private mcpExportInterval: NodeJS.Timeout | null = null
+  private readonly MCP_EXPORT_INTERVAL_MS = 5 * 60 * 1000 // 5 minutes
 
   constructor() {
     this.logger = Logger.getInstance()
@@ -43,6 +46,8 @@ class MainApplication {
       this.logger.info('Main', 'Application starting up')
       this.createWindow()
       this.database.initialize()
+      // Start MCP data export timer
+      this.startMCPExportTimer()
     })
 
     app.on('window-all-closed', () => {
@@ -60,12 +65,28 @@ class MainApplication {
       }
     })
 
-    app.on('before-quit', () => {
+    app.on('before-quit', async (event) => {
+      // Prevent immediate quit to allow export
+      event.preventDefault()
+      
+      // Export MCP data one final time
+      console.log('[Main] Exporting MCP data before quit...')
+      await this.exportMCPData()
+      
+      // Clear export timer
+      if (this.mcpExportInterval) {
+        clearInterval(this.mcpExportInterval)
+        this.mcpExportInterval = null
+      }
+      
       // Ensure cleanup before app quits
       if (this.algoliaMCPService) {
         console.log('[Main] Cleaning up Algolia MCP client before quit...')
         this.algoliaMCPService.cleanup()
       }
+      
+      // Now quit
+      app.quit()
     })
   }
 
@@ -95,6 +116,85 @@ class MainApplication {
     // Base64 encoded default product image (gray box with "No Image" text)
     // This is a small gray square that serves as a placeholder
     return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgZmlsbD0iI2UwZTBlMCIvPgogIDx0ZXh0IHg9IjUwJSIgeT0iNTAlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkeT0iLjNlbSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmaWxsPSIjOTk5Ij5ObyBJbWFnZTwvdGV4dD4KPC9zdmc+'
+  }
+
+  private async exportMCPData(): Promise<void> {
+    try {
+      console.log('[MCP Export] Starting data export...')
+      
+      // Create export directory if it doesn't exist
+      const exportDir = join(homedir(), '.shopping-algolia')
+      if (!existsSync(exportDir)) {
+        mkdirSync(exportDir, { recursive: true })
+      }
+      
+      // Gather all data for export
+      const products = await this.database.getProducts()
+      // Get ML data directly from database
+      const mlDataStmt = this.database.database.prepare(`
+        SELECT * FROM ml_training_data
+        ORDER BY timestamp DESC
+      `)
+      const mlTrainingData = mlDataStmt.all()
+      
+      // Get user settings directly
+      const settingsStmt = this.database.database.prepare(`
+        SELECT * FROM user_settings WHERE id = 1
+      `)
+      const userSettings = settingsStmt.get()
+      
+      const personalizationProfile = await this.personalization.exportForClaudeDesktop()
+      
+      // Get last activity date
+      const activityStmt = this.database.database.prepare(`
+        SELECT MAX(timestamp) as last_activity 
+        FROM (
+          SELECT created_at as timestamp FROM products
+          UNION ALL
+          SELECT timestamp FROM ml_training_data
+          UNION ALL
+          SELECT created_at as timestamp FROM chat_messages
+        )
+      `)
+      const lastActivity = activityStmt.get() as any
+      
+      // Create export object
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        version: '1.0',
+        products: products,
+        mlTrainingData: mlTrainingData,
+        userSettings: userSettings,
+        personalizationProfile: personalizationProfile,
+        lastActivityDate: lastActivity?.last_activity || null
+      }
+      
+      // Write to file
+      const exportPath = join(exportDir, 'mcp-export.json')
+      writeFileSync(exportPath, JSON.stringify(exportData, null, 2), 'utf8')
+      
+      console.log(`[MCP Export] Data exported successfully to ${exportPath}`)
+      console.log(`[MCP Export] Exported ${products.length} products, ${mlTrainingData.length} ML events`)
+    } catch (error) {
+      console.error('[MCP Export] Failed to export data:', error)
+    }
+  }
+
+  private startMCPExportTimer(): void {
+    // Clear existing interval if any
+    if (this.mcpExportInterval) {
+      clearInterval(this.mcpExportInterval)
+    }
+    
+    // Export immediately
+    this.exportMCPData()
+    
+    // Set up interval for periodic exports
+    this.mcpExportInterval = setInterval(() => {
+      this.exportMCPData()
+    }, this.MCP_EXPORT_INTERVAL_MS)
+    
+    console.log('[MCP Export] Export timer started (5 minute interval)')
   }
 
   private setupIPC() {
