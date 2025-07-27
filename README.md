@@ -130,6 +130,10 @@ await mcpClient.searchSingleIndex({
    - "Compare my saved products"
    - "Create a shopping analysis report"
 
+### Claude Desktop Integration in Action
+![Claude Desktop MCP Integration](SS/005Claude_Desktop.png)
+*Claude Desktop analyzing your shopping patterns and providing personalized insights through MCP tools*
+
 ## Quick Start
 
 1. **Install**: Download from [Releases](https://github.com/goodaymmm/shopping-for-algolia-personalized/releases)
