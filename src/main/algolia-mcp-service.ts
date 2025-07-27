@@ -225,6 +225,10 @@ export class AlgoliaMCPService {
 
       console.log('[AlgoliaMCP] All required indices are ready');
       
+      // Load and upload sample data to indices
+      console.log('[AlgoliaMCP] Loading sample data...');
+      await this.loadAndUploadSampleData();
+      
     } catch (error) {
       console.error('[AlgoliaMCP] Failed to ensure indices exist:', error);
     }
@@ -287,6 +291,107 @@ export class AlgoliaMCPService {
   private getDefaultProductImage(): string {
     // デフォルトの商品画像URLを返す
     return 'https://via.placeholder.com/300x300?text=No+Image';
+  }
+
+  // Load and upload sample data to indices
+  private async loadAndUploadSampleData(): Promise<void> {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const { app } = require('electron');
+      
+      // Determine data path based on environment
+      const isPackaged = app.isPackaged;
+      const dataPath = isPackaged
+        ? path.join(process.resourcesPath, 'src', 'data')
+        : path.join(__dirname, '..', '..', 'src', 'data');
+      
+      console.log(`[AlgoliaMCP] Loading data from: ${dataPath}`);
+      
+      // Load Best Buy data
+      const bestBuyPath = path.join(dataPath, 'bestbuy-products.json');
+      const amazonPath = path.join(dataPath, 'amazon-products.json');
+      
+      let allProducts: any[] = [];
+      
+      // Load Best Buy products
+      if (fs.existsSync(bestBuyPath)) {
+        const bestBuyData = JSON.parse(fs.readFileSync(bestBuyPath, 'utf8'));
+        allProducts = allProducts.concat(bestBuyData);
+        console.log(`[AlgoliaMCP] Loaded ${bestBuyData.length} Best Buy products`);
+      }
+      
+      // Load Amazon products
+      if (fs.existsSync(amazonPath)) {
+        const amazonData = JSON.parse(fs.readFileSync(amazonPath, 'utf8'));
+        allProducts = allProducts.concat(amazonData);
+        console.log(`[AlgoliaMCP] Loaded ${amazonData.length} Amazon products`);
+      }
+      
+      if (allProducts.length === 0) {
+        console.error('[AlgoliaMCP] No products found to upload');
+        return;
+      }
+      
+      console.log(`[AlgoliaMCP] Total products to upload: ${allProducts.length}`);
+      
+      // Group products by category for appropriate index upload
+      const productsByCategory: { [key: string]: any[] } = {
+        fashion: [],
+        electronics: [],
+        beauty: [],
+        sports: [],
+        books: [],
+        home: [],
+        food: [],
+        products: [] // General/other products
+      };
+      
+      // Categorize products
+      for (const product of allProducts) {
+        let categorized = false;
+        
+        // Check categories array for matching index
+        if (product.categories && Array.isArray(product.categories)) {
+          const lowerCategories = product.categories.map((c: string) => c.toLowerCase());
+          
+          for (const category of Object.keys(productsByCategory)) {
+            if (category === 'products') continue; // Skip general category
+            
+            if (lowerCategories.some((c: string) => 
+              c.includes(category) || 
+              (category === 'electronics' && (c.includes('computer') || c.includes('phone') || c.includes('tablet'))) ||
+              (category === 'fashion' && (c.includes('clothing') || c.includes('shoes') || c.includes('apparel'))) ||
+              (category === 'beauty' && (c.includes('cosmetic') || c.includes('makeup') || c.includes('skincare'))) ||
+              (category === 'sports' && (c.includes('fitness') || c.includes('outdoor') || c.includes('athletic'))) ||
+              (category === 'home' && (c.includes('furniture') || c.includes('decor') || c.includes('kitchen')))
+            )) {
+              productsByCategory[category].push(product);
+              categorized = true;
+              break;
+            }
+          }
+        }
+        
+        // If not categorized, add to general products
+        if (!categorized) {
+          productsByCategory.products.push(product);
+        }
+      }
+      
+      // Upload products to their respective indices
+      for (const [indexName, products] of Object.entries(productsByCategory)) {
+        if (products.length > 0 && this.initializedIndices.has(indexName)) {
+          console.log(`[AlgoliaMCP] Uploading ${products.length} products to ${indexName} index`);
+          await this.uploadDataToIndex(indexName, products);
+        }
+      }
+      
+      console.log('[AlgoliaMCP] Sample data upload completed');
+      
+    } catch (error) {
+      console.error('[AlgoliaMCP] Failed to load and upload sample data:', error);
+    }
   }
 
   // Cleanup method
