@@ -49,7 +49,6 @@ export class AlgoliaMCPClient {
       // Start the MCP server process with credentials
       if (process.platform === 'win32') {
         // Windows: Execute according to official Algolia MCP Server README Development section
-        const nodePath = process.execPath;
         const appTsPath = path.join(
           path.dirname(mcpPath), 
           'algolia-mcp-source', 
@@ -57,8 +56,8 @@ export class AlgoliaMCPClient {
           'app.ts'
         );
         
-        // Use exact command line from official README
-        this.mcpProcess = spawn(nodePath, [
+        // Use system Node.js (not Electron's) with exact command line from official README
+        this.mcpProcess = spawn('node', [
           '--experimental-strip-types',
           '--no-warnings=ExperimentalWarning',
           appTsPath,
@@ -66,7 +65,8 @@ export class AlgoliaMCPClient {
           '--credentials', `${applicationId}:${apiKey}`
         ], {
           stdio: ['pipe', 'pipe', 'pipe'],
-          cwd: path.join(path.dirname(mcpPath), 'algolia-mcp-source')
+          cwd: path.join(path.dirname(mcpPath), 'algolia-mcp-source'),
+          env: { ...process.env, ELECTRON_RUN_AS_NODE: undefined } // Ensure pure Node.js environment
         });
       } else {
         // Other platforms: Direct execution
