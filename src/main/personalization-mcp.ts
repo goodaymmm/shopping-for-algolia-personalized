@@ -1,6 +1,6 @@
 // Lightweight personalization engine for MCP server
 // Works with JSON export data instead of SQLite
-import { DatabaseService } from './database'
+import { Product } from '../shared/types'
 
 export interface MLTrainingEvent {
   id?: number
@@ -14,17 +14,11 @@ export interface MLTrainingEvent {
 }
 
 export class PersonalizationEngine {
-  private database: DatabaseService
+  private database: any // Using any to avoid TypeScript issues with MCP vs regular database
 
-  constructor(database: DatabaseService | any) {
-    // Accept either DatabaseService instance or raw database object
-    if (database instanceof DatabaseService) {
-      this.database = database
-    } else {
-      // If raw database object passed, create a DatabaseService instance
-      this.database = new DatabaseService(true)
-      this.database.initialize()
-    }
+  constructor(database: any) {
+    // Accept database instance (either regular or MCP version)
+    this.database = database
   }
 
   // Main export method for Claude Desktop
@@ -49,9 +43,9 @@ export class PersonalizationEngine {
     const priceRanges: number[] = []
     
     // Analyze saved products
-    products.forEach(product => {
+    products.forEach((product: Product) => {
       // Count categories
-      product.categories?.forEach(cat => {
+      product.categories?.forEach((cat: string) => {
         categoryCount[cat] = (categoryCount[cat] || 0) + 1
       })
       
@@ -68,7 +62,7 @@ export class PersonalizationEngine {
     
     // Analyze ML training data for more insights
     const interactionCount: { [key: string]: { [eventType: string]: number } } = {}
-    mlData.forEach(event => {
+    mlData.forEach((event: MLTrainingEvent) => {
       const productId = event.product_id
       if (!interactionCount[productId]) {
         interactionCount[productId] = {}
