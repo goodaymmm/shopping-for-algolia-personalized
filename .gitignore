@@ -51,5 +51,17 @@ keys.json
 testlist.md
 reclist.md
 
-# Documentation (pending final review)
-README.md
+# Old/deprecated files
+*-old.*
+*-old/
+
+# External sources (managed via npm)
+resources/algolia-mcp/
+
+# Build output variations
+release-win/
+release-mac/
+release-linux/
+__appImage-x64/
+linux-unpacked/
+win-unpacked/
