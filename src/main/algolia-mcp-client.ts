@@ -278,7 +278,7 @@ export class AlgoliaMCPClient {
     return this.callTool('saveObject', {
       applicationId: this.applicationId,
       indexName,
-      body: object
+      requestBody: object
     });
   }
 
@@ -293,7 +293,7 @@ export class AlgoliaMCPClient {
     return this.callTool('setSettings', {
       applicationId: this.applicationId,
       indexName,
-      body: settings
+      requestBody: settings
     });
   }
 
