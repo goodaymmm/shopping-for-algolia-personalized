@@ -171,15 +171,59 @@ class MainApplication {
       `)
       const lastActivity = activityStmt.get() as any
       
-      // Create export object
+      // Get search logs for additional context
+      const searchLogsStmt = this.database.database.prepare(`
+        SELECT * FROM search_logs ORDER BY created_at DESC LIMIT 50
+      `)
+      const searchLogs = searchLogsStmt.all()
+      
+      // Calculate category statistics
+      const categoryStats: { [key: string]: number } = {}
+      products.forEach((product: any) => {
+        try {
+          let categories = []
+          if (typeof product.category === 'string' && product.category.startsWith('[')) {
+            categories = JSON.parse(product.category)
+          } else if (product.category) {
+            categories = [product.category]
+          }
+          categories.forEach((cat: string) => {
+            categoryStats[cat] = (categoryStats[cat] || 0) + 1
+          })
+        } catch (e) {
+          // Ignore parsing errors
+        }
+      })
+      
+      // Calculate brand statistics
+      const brandStats: { [key: string]: number } = {}
+      products.forEach((product: any) => {
+        if (product.brand) {
+          brandStats[product.brand] = (brandStats[product.brand] || 0) + 1
+        }
+      })
+      
+      // Create export object with enriched data
       const exportData = {
         exportedAt: new Date().toISOString(),
-        version: '1.0',
+        version: '1.1',
         products: products,
         mlTrainingData: mlTrainingData,
         userSettings: userSettings,
         personalizationProfile: personalizationProfile,
-        lastActivityDate: lastActivity?.last_activity || null
+        lastActivityDate: lastActivity?.last_activity || null,
+        searchLogs: searchLogs,
+        statistics: {
+          totalProducts: products.length,
+          totalMLEvents: mlTrainingData.length,
+          categoryDistribution: categoryStats,
+          brandDistribution: brandStats,
+          priceRange: products.length > 0 ? {
+            min: Math.min(...products.map((p: any) => p.price || 0)),
+            max: Math.max(...products.map((p: any) => p.price || 0)),
+            average: Math.round(products.reduce((sum: number, p: any) => sum + (p.price || 0), 0) / products.length)
+          } : { min: 0, max: 0, average: 0 }
+        }
       }
       
       // Write to file

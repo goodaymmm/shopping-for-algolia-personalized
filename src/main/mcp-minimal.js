@@ -529,6 +529,464 @@ async function startMinimalMCPServer() {
       }
     );
     
+    // Add get_saved_products tool
+    server.registerTool(
+      'get_saved_products',
+      {
+        description: 'Get all saved products with detailed information including price, categories, and structured data',
+        inputSchema: {},
+      },
+      async () => {
+        log('Tool called: get_saved_products');
+        
+        try {
+          // Check if database is available
+          if (!database) {
+            log('Database not available, returning error');
+            return {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  error: 'Database temporarily unavailable',
+                  message: 'The Shopping for Algolia app database is not accessible.'
+                }, null, 2)
+              }]
+            };
+          }
+          
+          // Get all saved products
+          const products = database.getAllProducts();
+          
+          // Calculate price statistics
+          const prices = products.map(p => p.price).filter(p => p > 0);
+          const priceRange = prices.length > 0 ? {
+            min: Math.min(...prices),
+            max: Math.max(...prices),
+            average: Math.round(prices.reduce((a, b) => a + b, 0) / prices.length)
+          } : { min: 0, max: 0, average: 0 };
+          
+          // Transform products for output
+          const transformedProducts = products.map(product => {
+            // Parse categories if they're stored as JSON string
+            let categories = [];
+            try {
+              if (typeof product.category === 'string' && product.category.startsWith('[')) {
+                categories = JSON.parse(product.category);
+              } else if (Array.isArray(product.categories)) {
+                categories = product.categories;
+              } else if (product.category) {
+                categories = [product.category];
+              }
+            } catch (e) {
+              categories = [product.category || 'uncategorized'];
+            }
+            
+            // Parse algolia_data for structured information
+            let structuredData = {};
+            try {
+              if (product.algolia_data) {
+                const algoliaData = JSON.parse(product.algolia_data);
+                structuredData = {
+                  id: algoliaData.id || product.product_id,
+                  description: algoliaData.description || product.description,
+                  imageUrl: algoliaData.image || product.image_url,
+                  productUrl: algoliaData.url || product.url,
+                  sourceIndex: algoliaData.sourceIndex || 'products',
+                  originalData: algoliaData
+                };
+              } else {
+                structuredData = {
+                  id: product.product_id,
+                  description: product.description,
+                  imageUrl: product.image_url,
+                  productUrl: product.url,
+                  sourceIndex: 'products'
+                };
+              }
+            } catch (e) {
+              structuredData = {
+                id: product.product_id,
+                description: product.description,
+                imageUrl: product.image_url,
+                productUrl: product.url
+              };
+            }
+            
+            return {
+              name: product.name || product.custom_name,
+              price: product.price,
+              categories: categories,
+              brand: product.brand || 'Unknown',
+              savedDate: product.created_at,
+              structuredData: structuredData
+            };
+          });
+          
+          const result = {
+            products: transformedProducts,
+            totalCount: products.length,
+            priceRange: priceRange
+          };
+          
+          return {
+            content: [{
+              type: 'text',
+              text: JSON.stringify(result, null, 2)
+            }]
+          };
+        } catch (error) {
+          log(`Error in get_saved_products: ${error.message}`);
+          return {
+            content: [{
+              type: 'text',
+              text: JSON.stringify({
+                error: 'Failed to retrieve saved products',
+                message: error.message
+              }, null, 2)
+            }]
+          };
+        }
+      }
+    );
+    
+    // Add get_product_comparisons tool
+    server.registerTool(
+      'get_product_comparisons',
+      {
+        description: 'Compare saved products within the same categories',
+        inputSchema: {},
+      },
+      async () => {
+        log('Tool called: get_product_comparisons');
+        
+        try {
+          // Check if database is available
+          if (!database) {
+            log('Database not available, returning error');
+            return {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  error: 'Database temporarily unavailable',
+                  message: 'The Shopping for Algolia app database is not accessible.'
+                }, null, 2)
+              }]
+            };
+          }
+          
+          // Get all saved products
+          const products = database.getAllProducts();
+          
+          // Group products by category
+          const categoryGroups = {};
+          
+          products.forEach(product => {
+            // Parse categories
+            let categories = [];
+            try {
+              if (typeof product.category === 'string' && product.category.startsWith('[')) {
+                categories = JSON.parse(product.category);
+              } else if (Array.isArray(product.categories)) {
+                categories = product.categories;
+              } else if (product.category) {
+                categories = [product.category];
+              }
+            } catch (e) {
+              categories = [product.category || 'uncategorized'];
+            }
+            
+            // Add product to each category group
+            categories.forEach(category => {
+              if (!categoryGroups[category]) {
+                categoryGroups[category] = [];
+              }
+              categoryGroups[category].push({
+                name: product.name || product.custom_name,
+                price: product.price,
+                brand: product.brand || 'Unknown',
+                savedDate: product.created_at
+              });
+            });
+          });
+          
+          // Create comparisons for each category
+          const comparisons = {};
+          
+          Object.entries(categoryGroups).forEach(([category, categoryProducts]) => {
+            if (categoryProducts.length > 1) { // Only compare if there are multiple products
+              const prices = categoryProducts.map(p => p.price).filter(p => p > 0);
+              
+              // Calculate price statistics
+              const priceStats = prices.length > 0 ? {
+                average: Math.round(prices.reduce((a, b) => a + b, 0) / prices.length),
+                median: Math.round(prices.sort((a, b) => a - b)[Math.floor(prices.length / 2)]),
+                lowest: Math.min(...prices),
+                highest: Math.max(...prices)
+              } : null;
+              
+              // Calculate brand distribution
+              const brandDistribution = {};
+              categoryProducts.forEach(product => {
+                const brand = product.brand;
+                brandDistribution[brand] = (brandDistribution[brand] || 0) + 1;
+              });
+              
+              comparisons[category] = {
+                products: categoryProducts.sort((a, b) => a.price - b.price),
+                priceStats: priceStats,
+                brandDistribution: brandDistribution,
+                productCount: categoryProducts.length
+              };
+            }
+          });
+          
+          const result = {
+            comparisons: comparisons,
+            totalCategories: Object.keys(comparisons).length,
+            totalProducts: products.length
+          };
+          
+          return {
+            content: [{
+              type: 'text',
+              text: JSON.stringify(result, null, 2)
+            }]
+          };
+        } catch (error) {
+          log(`Error in get_product_comparisons: ${error.message}`);
+          return {
+            content: [{
+              type: 'text',
+              text: JSON.stringify({
+                error: 'Failed to generate product comparisons',
+                message: error.message
+              }, null, 2)
+            }]
+          };
+        }
+      }
+    );
+    
+    // Add get_shopping_insights tool
+    server.registerTool(
+      'get_shopping_insights',
+      {
+        description: 'Get comprehensive shopping insights and analysis',
+        inputSchema: {},
+      },
+      async () => {
+        log('Tool called: get_shopping_insights');
+        
+        try {
+          // Check if database is available
+          if (!database || !personalization) {
+            log('Database not available, returning error');
+            return {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  error: 'Database temporarily unavailable',
+                  message: 'The Shopping for Algolia app database is not accessible.'
+                }, null, 2)
+              }]
+            };
+          }
+          
+          // Get all data sources
+          const products = database.getAllProducts();
+          const mlData = database.getMLTrainingData();
+          const profile = await personalization.exportForClaudeDesktop();
+          const settings = database.getUserSettings();
+          
+          // Calculate total spent
+          const totalSpent = products.reduce((sum, p) => sum + (p.price || 0), 0);
+          const averagePrice = products.length > 0 ? Math.round(totalSpent / products.length) : 0;
+          
+          // Analyze favorite categories
+          const categoryCount = {};
+          products.forEach(product => {
+            let categories = [];
+            try {
+              if (typeof product.category === 'string' && product.category.startsWith('[')) {
+                categories = JSON.parse(product.category);
+              } else if (Array.isArray(product.categories)) {
+                categories = product.categories;
+              } else if (product.category) {
+                categories = [product.category];
+              }
+            } catch (e) {
+              categories = [product.category || 'uncategorized'];
+            }
+            categories.forEach(cat => {
+              categoryCount[cat] = (categoryCount[cat] || 0) + 1;
+            });
+          });
+          
+          const favoriteCategories = Object.entries(categoryCount)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 5)
+            .map(([cat]) => cat);
+          
+          // Analyze favorite brands
+          const brandCount = {};
+          products.forEach(product => {
+            const brand = product.brand || 'Unknown';
+            brandCount[brand] = (brandCount[brand] || 0) + 1;
+          });
+          
+          const favoriteBrands = Object.entries(brandCount)
+            .sort(([,a], [,b]) => b - a)
+            .slice(0, 5)
+            .map(([brand]) => brand);
+          
+          // Determine price preference
+          let pricePreference = 'balanced';
+          if (averagePrice < 50) {
+            pricePreference = 'budget-conscious';
+          } else if (averagePrice > 200) {
+            pricePreference = 'premium-focused';
+          }
+          
+          // Analyze shopping patterns
+          const shoppingPatterns = {
+            mostActiveCategory: favoriteCategories[0] || 'none',
+            priceRange: averagePrice < 50 ? 'under $50' : averagePrice < 100 ? '$50-$100' : averagePrice < 200 ? '$100-$200' : 'over $200',
+            brandLoyalty: Object.keys(brandCount).length === 1 ? 'high' : Object.keys(brandCount).length <= 3 ? 'medium' : 'low',
+            discoveryMode: settings?.discoveryPercentage > 20 ? 'explorer' : settings?.discoveryPercentage > 0 ? 'moderate' : 'conservative'
+          };
+          
+          // Generate recommendations based on data
+          const recommendations = [];
+          
+          if (favoriteCategories.length > 0) {
+            recommendations.push(`Strong interest in ${favoriteCategories[0]} category`);
+          }
+          
+          if (pricePreference === 'budget-conscious') {
+            recommendations.push(`Price-conscious shopper (average: $${averagePrice})`);
+          } else if (pricePreference === 'premium-focused') {
+            recommendations.push(`Premium product preference (average: $${averagePrice})`);
+          }
+          
+          if (shoppingPatterns.brandLoyalty === 'low') {
+            recommendations.push('Enjoys exploring different brands');
+          } else if (shoppingPatterns.brandLoyalty === 'high') {
+            recommendations.push(`Strong brand loyalty to ${favoriteBrands[0]}`);
+          }
+          
+          if (mlData.length > 10) {
+            recommendations.push('Active user with rich interaction history');
+          }
+          
+          const insights = {
+            totalProducts: products.length,
+            totalSpent: totalSpent,
+            averagePrice: averagePrice,
+            favoriteCategories: favoriteCategories,
+            favoriteBrands: favoriteBrands,
+            pricePreference: pricePreference,
+            shoppingPatterns: shoppingPatterns,
+            recommendations: recommendations,
+            confidenceLevel: profile.insights.confidenceLevel,
+            discoveryMode: settings?.discoveryPercentage || 0
+          };
+          
+          return {
+            content: [{
+              type: 'text',
+              text: JSON.stringify({ insights }, null, 2)
+            }]
+          };
+        } catch (error) {
+          log(`Error in get_shopping_insights: ${error.message}`);
+          return {
+            content: [{
+              type: 'text',
+              text: JSON.stringify({
+                error: 'Failed to generate shopping insights',
+                message: error.message
+              }, null, 2)
+            }]
+          };
+        }
+      }
+    );
+    
+    // Add search_products tool
+    server.registerTool(
+      'search_products',
+      {
+        description: 'Search for products using Algolia with optional filters',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            query: {
+              type: 'string',
+              description: 'Search query'
+            },
+            filters: {
+              type: 'object',
+              properties: {
+                maxPrice: {
+                  type: 'number',
+                  description: 'Maximum price filter'
+                },
+                category: {
+                  type: 'string',
+                  description: 'Category filter'
+                },
+                brand: {
+                  type: 'string',
+                  description: 'Brand filter'
+                }
+              }
+            }
+          },
+          required: ['query']
+        },
+      },
+      async (args) => {
+        log('Tool called: search_products with args:', JSON.stringify(args));
+        
+        try {
+          // Note: This is a simplified implementation since we can't directly access AlgoliaMCPService from here
+          // In a real implementation, this would need to communicate with the main process
+          // For now, we'll return a message indicating how this feature would work
+          
+          const response = {
+            message: 'Product search via MCP',
+            note: 'This feature requires integration with the main Shopping app to perform Algolia searches.',
+            suggestedUsage: 'Use the Shopping for Algolia app directly to search and save products, then use the MCP tools to analyze your saved products.',
+            requestedQuery: args.query,
+            requestedFilters: args.filters || {},
+            alternativeTools: [
+              'get_saved_products - View all your saved products',
+              'get_product_comparisons - Compare products within categories',
+              'suggest_products - Get personalized product suggestions'
+            ]
+          };
+          
+          return {
+            content: [{
+              type: 'text',
+              text: JSON.stringify(response, null, 2)
+            }]
+          };
+        } catch (error) {
+          log(`Error in search_products: ${error.message}`);
+          return {
+            content: [{
+              type: 'text',
+              text: JSON.stringify({
+                error: 'Failed to search products',
+                message: error.message
+              }, null, 2)
+            }]
+          };
+        }
+      }
+    );
+    
     // Helper methods for suggest_products
     server.generateReason = function(product, profile, context) {
       const reasons = [];
