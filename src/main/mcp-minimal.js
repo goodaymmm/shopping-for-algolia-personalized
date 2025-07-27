@@ -160,13 +160,13 @@ async function startMinimalMCPServer() {
           
           const summary = {
             totalProducts: savedProducts.length,
-            categoriesInterested: profile.userProfile.categoryPreferences.map(c => c.category),
+            categoriesInterested: profile.userProfile?.categoryPreferences?.map(c => c.category) || [],
             priceRange,
             lastActivityDate: lastActivity || 'No activity yet',
             favoriteCategories,
             discoveryMode: settings?.discoveryPercentage || 0,
-            confidenceLevel: `${Math.round(profile.insights.confidenceLevel * 100)}%`,
-            totalInteractions: profile.insights.totalInteractions
+            confidenceLevel: profile.insights ? `${Math.round(profile.insights.confidenceLevel * 100)}%` : '0%',
+            totalInteractions: profile.insights?.totalInteractions || 0
           };
           
           return {
@@ -219,11 +219,25 @@ async function startMinimalMCPServer() {
           const profile = await personalization.exportForClaudeDesktop();
           const settings = database.getUserSettings();
           
+          // Ensure profile has expected structure
+          if (!profile || !profile.userProfile) {
+            return {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  error: 'No personalization data available yet',
+                  message: 'Start using the app to build your personalization profile'
+                }, null, 2)
+              }]
+            };
+          }
+          
           // Convert category preferences to percentage format
           const categoryPreferences = {};
-          const totalScore = profile.userProfile.categoryPreferences.reduce((sum, cat) => sum + cat.affinity, 0);
+          const categories = profile.userProfile.categoryPreferences || [];
+          const totalScore = categories.reduce((sum, cat) => sum + cat.affinity, 0);
           
-          profile.userProfile.categoryPreferences.forEach(cat => {
+          categories.forEach(cat => {
             const percentage = totalScore > 0 ? Math.round((cat.affinity / totalScore) * 100) : 0;
             categoryPreferences[cat.category] = `${percentage}%`;
           });
@@ -244,12 +258,12 @@ async function startMinimalMCPServer() {
           const preferences = {
             discoveryMode: settings?.discoveryPercentage ? `${settings.discoveryPercentage}%` : 'disabled',
             categoryPreferences,
-            brandAffinities: profile.userProfile.brandAffinities.slice(0, 5),
+            brandAffinities: (profile.userProfile.brandAffinities || []).slice(0, 5),
             priceRange,
-            confidenceLevel: `${Math.round(profile.insights.confidenceLevel * 100)}%`,
-            totalInteractions: profile.insights.totalInteractions,
-            stylePreferences: profile.userProfile.stylePreferences,
-            occasionHistory: profile.userProfile.occasionHistory
+            confidenceLevel: profile.insights ? `${Math.round(profile.insights.confidenceLevel * 100)}%` : '0%',
+            totalInteractions: profile.insights?.totalInteractions || 0,
+            stylePreferences: profile.userProfile.stylePreferences || [],
+            occasionHistory: profile.userProfile.occasionHistory || []
           };
           
           return {
@@ -430,15 +444,28 @@ async function startMinimalMCPServer() {
           const profile = await personalization.exportForClaudeDesktop();
           const savedProducts = database.getAllProducts();
           
+          // Check if profile exists
+          if (!profile || !profile.userProfile) {
+            return {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  error: 'No personalization data available',
+                  message: 'Save some products first to get personalized suggestions'
+                }, null, 2)
+              }]
+            };
+          }
+          
           // Build suggestions based on user preferences
           const suggestions = [];
           
           // Extract user's top categories and brands
-          const topCategories = profile.userProfile.categoryPreferences
+          const topCategories = (profile.userProfile.categoryPreferences || [])
             .slice(0, 3)
             .map(c => c.category);
           
-          const topBrands = profile.userProfile.brandAffinities
+          const topBrands = (profile.userProfile.brandAffinities || [])
             .slice(0, 3)
             .map(b => b.brand);
           
@@ -887,7 +914,7 @@ async function startMinimalMCPServer() {
             pricePreference: pricePreference,
             shoppingPatterns: shoppingPatterns,
             recommendations: recommendations,
-            confidenceLevel: profile.insights.confidenceLevel,
+            confidenceLevel: profile.insights?.confidenceLevel || 0,
             discoveryMode: settings?.discoveryPercentage || 0
           };
           

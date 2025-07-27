@@ -267,6 +267,18 @@ To use this app's MCP server with Claude Desktop:
    - `shopping-ai.get_user_preferences` - Access category and brand preferences
    - `shopping-ai.get_interaction_analytics` - Analyze shopping behavior
    - `shopping-ai.suggest_products` - Get AI-powered product recommendations
+   - `shopping-ai.get_saved_products` - Retrieve all saved products with detailed information
+   - `shopping-ai.get_product_comparisons` - Compare products within categories
+   - `shopping-ai.get_shopping_insights` - Generate comprehensive shopping insights
+   - `shopping-ai.search_products` - Search for products (placeholder for future implementation)
+
+7. Example prompts to use in Claude Desktop:
+   - "Show me my shopping trends"
+   - "What are my favorite categories and brands?"
+   - "Compare my saved products and tell me which offers the best value"
+   - "Analyze my shopping patterns and give me advice"
+   - "Suggest casual wear items within a $50 budget"
+   - "Create a detailed shopping report including my spending patterns and recommendations"
 
 ## Technical Implementation Details
 
@@ -578,6 +590,17 @@ The application stores the following data locally:
 ### Remove Algolia Data (Optional)
 1. Log in to [Algolia Dashboard](https://www.algolia.com/dashboard)
 2. Delete indices: fashion, electronics, products, etc.
+
+## Platform Support
+
+### Windows
+✅ **Fully tested and supported** - Primary development and testing platform
+
+### macOS
+⚠️ **Untested build provided** - The macOS build is automatically generated but has not been tested due to lack of access to macOS hardware. It is provided as-is for users who wish to try it. Please report any issues you encounter.
+
+### Linux
+🔧 **AppImage available** - Linux AppImage is built and should work on most distributions
 
 ## License
 
