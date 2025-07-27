@@ -1617,9 +1617,22 @@ class MainApplication {
         throw new Error('Missing required Algolia API keys');
       }
       
-      console.log('[Main] All Algolia keys found, initializing MCP service...');
+      console.log('[Main] All Algolia keys found');
       
-      // Initialize the MCP service with multi-search config
+      // Step 1: Use Algolia API directly for initial data upload (one-time setup)
+      console.log('[API Direct] Starting initial data upload using Algolia JavaScript API...');
+      try {
+        const { OptimizedDataLoader } = require('./optimized-data-loader');
+        const loader = new OptimizedDataLoader(algoliaAppId, algoliaWriteKey);
+        await loader.loadOptimizedData();
+        console.log('[API Direct] Initial data upload completed successfully');
+      } catch (uploadError) {
+        console.error('[API Direct] Failed to upload initial data:', uploadError);
+        // Continue even if data upload fails - MCP service can still be used
+      }
+      
+      // Step 2: Initialize MCP service for ongoing operations
+      console.log('[Main] Initializing MCP service for ongoing operations...');
       const multiSearchInitialized = await this.algoliaMCPService.initializeMultiSearch({
         applicationId: algoliaAppId,
         apiKey: algoliaApiKey,
@@ -1640,14 +1653,14 @@ class MainApplication {
         throw new Error('Failed to initialize Algolia MCP service');
       }
       
-      console.log('[Main] MCP service initialized, checking indices...');
+      console.log('[Main] MCP service initialized');
       
-      // Ensure indices exist and load data if needed
+      // Step 3: Check indices via MCP
       await this.algoliaMCPService.ensureIndicesExist();
       
-      console.log('[Main] Algolia initialization and data upload completed successfully');
+      console.log('[Main] Algolia initialization completed - API Direct for initial setup, MCP for ongoing operations');
     } catch (error) {
-      console.error('[Main] Failed to initialize Algolia and upload data:', error);
+      console.error('[Main] Failed to initialize Algolia:', error);
       throw error;
     }
   }

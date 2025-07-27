@@ -87,35 +87,40 @@ export class OptimizedDataLoader {
       isPackaged = false;
     }
     
-    // パッケージ環境では dist/main から見た src/data を参照
-    // 開発環境では data を直接参照
-    this.dataPath = isPackaged
-      ? join(__dirname, '../../src/data')
-      : join(__dirname, '../../data');
+    // パッケージ環境では app.asar.unpacked/src/data を参照
+    // 開発環境では src/data を直接参照
+    if (isPackaged) {
+      // In production, data files are in app.asar.unpacked
+      const { app } = require('electron');
+      this.dataPath = join(app.getAppPath(), '../app.asar.unpacked/src/data');
+    } else {
+      // In development, use src/data
+      this.dataPath = join(__dirname, '../../src/data');
+    }
     
-    console.log(`[OptimizedDataLoader] Data path: ${this.dataPath} (packaged: ${isPackaged})`);
+    console.log(`[API Direct] Data path: ${this.dataPath} (packaged: ${isPackaged})`);
   }
 
   async loadOptimizedData(): Promise<void> {
-    console.log('[OptimizedDataLoader] Starting multi-source optimized data import...');
+    console.log('[API Direct] Starting multi-source optimized data import...');
     
     try {
       // Load data from all sources
       const allProducts = await this.loadMultiSourceData();
-      console.log(`[OptimizedDataLoader] Loaded ${allProducts.length} products from all sources`);
+      console.log(`[API Direct] Loaded ${allProducts.length} products from all sources`);
 
       if (allProducts.length === 0) {
-        console.error('[OptimizedDataLoader] WARNING: No products loaded! Check data file paths.');
+        console.error('[API Direct] WARNING: No products loaded! Check data file paths.');
         throw new Error('No products loaded from data files');
       }
 
       // Upload to indices using optimized method (no clearing)
       await this.uploadToIndicesOptimized(allProducts);
       
-      console.log('[OptimizedDataLoader] Multi-source optimized data import completed successfully!');
-      console.log(`[OptimizedDataLoader] Summary: ${allProducts.length} total products uploaded`);
+      console.log('[API Direct] Multi-source optimized data import completed successfully!');
+      console.log(`[API Direct] Summary: ${allProducts.length} total products uploaded`);
     } catch (error) {
-      console.error('[OptimizedDataLoader] Error during multi-source optimized data import:', error);
+      console.error('[API Direct] Error during multi-source optimized data import:', error);
       throw error;
     }
   }
@@ -126,25 +131,25 @@ export class OptimizedDataLoader {
 
     try {
       // 1. Amazon Reviews 2023データ（既存のOptimizedProduct形式）
-      console.log('[OptimizedDataLoader] Loading Amazon Reviews 2023 data...');
+      console.log('[API Direct] Loading Amazon Reviews 2023 data...');
       const amazonProducts = this.loadPreprocessedData();
       const convertedAmazonProducts = this.convertToAlgoliaFormat(amazonProducts);
       allProducts.push(...convertedAmazonProducts.slice(0, this.DATA_SOURCE_LIMITS.amazon));
-      console.log(`[OptimizedDataLoader] Loaded ${convertedAmazonProducts.length} Amazon products`);
+      console.log(`[API Direct] Loaded ${convertedAmazonProducts.length} Amazon products`);
 
       // 2. Best Buyデータ
-      console.log('[OptimizedDataLoader] Loading Best Buy data...');
+      console.log('[API Direct] Loading Best Buy data...');
       const bestBuyProducts = this.loadBestBuyData();
       allProducts.push(...bestBuyProducts.slice(0, this.DATA_SOURCE_LIMITS.bestBuy));
-      console.log(`[OptimizedDataLoader] Loaded ${bestBuyProducts.length} Best Buy products`);
+      console.log(`[API Direct] Loaded ${bestBuyProducts.length} Best Buy products`);
 
-      console.log(`[OptimizedDataLoader] Total products loaded: ${allProducts.length}`);
+      console.log(`[API Direct] Total products loaded: ${allProducts.length}`);
       
       return allProducts;
       
     } catch (error) {
-      console.error('[OptimizedDataLoader] Error loading multi-source data:', error);
-      console.log('[OptimizedDataLoader] Falling back to Amazon data only...');
+      console.error('[API Direct] Error loading multi-source data:', error);
+      console.log('[API Direct] Falling back to Amazon data only...');
       
       // フォールバック: Amazonデータのみ
       const amazonProducts = this.loadPreprocessedData();
@@ -157,20 +162,20 @@ export class OptimizedDataLoader {
     try {
       // Try to load main products file first
       const mainDataPath = join(this.dataPath, 'amazon-products.json');
-      console.log(`[OptimizedDataLoader] Checking for main products file at: ${mainDataPath}`);
+      console.log(`[API Direct] Checking for main products file at: ${mainDataPath}`);
       
       if (this.fileExists(mainDataPath)) {
-        console.log('[OptimizedDataLoader] Loading main products file...');
+        console.log('[API Direct] Loading main products file...');
         const rawData = readFileSync(mainDataPath, 'utf-8');
         const products = JSON.parse(rawData) as OptimizedProduct[];
-        console.log(`[OptimizedDataLoader] Successfully loaded ${products.length} products from amazon-products.json`);
+        console.log(`[API Direct] Successfully loaded ${products.length} products from amazon-products.json`);
         return products;
       } else {
-        console.log('[OptimizedDataLoader] Main products file not found at:', mainDataPath);
+        console.log('[API Direct] Main products file not found at:', mainDataPath);
       }
       
       // Fallback: load category-specific files
-      console.log('[OptimizedDataLoader] Loading category-specific files...');
+      console.log('[API Direct] Loading category-specific files...');
       const allProducts: OptimizedProduct[] = [];
       
       const categoryFiles = ['products-fashion.json', 'products-electronics.json', 'products-other.json'];
@@ -181,17 +186,17 @@ export class OptimizedDataLoader {
           const rawData = readFileSync(filePath, 'utf-8');
           const categoryProducts = JSON.parse(rawData) as OptimizedProduct[];
           allProducts.push(...categoryProducts);
-          console.log(`[OptimizedDataLoader] Loaded ${categoryProducts.length} Amazon products from ${filename}`);
+          console.log(`[API Direct] Loaded ${categoryProducts.length} Amazon products from ${filename}`);
         } else {
-          console.warn(`[OptimizedDataLoader] Amazon file not found: ${filename}`);
+          console.warn(`[API Direct] Amazon file not found: ${filename}`);
         }
       }
       
       return allProducts;
       
     } catch (error) {
-      console.error('[OptimizedDataLoader] Error loading Amazon preprocessed data:', error);
-      console.log('[OptimizedDataLoader] Falling back to empty Amazon dataset...');
+      console.error('[API Direct] Error loading Amazon preprocessed data:', error);
+      console.log('[API Direct] Falling back to empty Amazon dataset...');
       return [];
     }
   }
@@ -225,14 +230,14 @@ export class OptimizedDataLoader {
       const dataPath = join(this.dataPath, 'bestbuy-products.json');
       
       if (!this.fileExists(dataPath)) {
-        console.warn('[OptimizedDataLoader] Best Buy data file not found at:', dataPath);
+        console.warn('[API Direct] Best Buy data file not found at:', dataPath);
         return [];
       }
       
       const rawData = readFileSync(dataPath, 'utf-8');
       const bestBuyData: BestBuyProduct[] = JSON.parse(rawData);
       
-      console.log(`[OptimizedDataLoader] Loaded ${bestBuyData.length} pre-filtered Best Buy products`);
+      console.log(`[API Direct] Loaded ${bestBuyData.length} pre-filtered Best Buy products`);
       
       // Algolia Product形式に変換（既にフィルタリング済みなのでそのまま使用）
       return bestBuyData.map(product => ({
@@ -249,7 +254,7 @@ export class OptimizedDataLoader {
       }));
       
     } catch (error) {
-      console.error('[OptimizedDataLoader] Error loading Best Buy data:', error);
+      console.error('[API Direct] Error loading Best Buy data:', error);
       return [];
     }
   }
@@ -315,7 +320,7 @@ export class OptimizedDataLoader {
 
 
   private async clearAllIndices(): Promise<void> {
-    console.log('[OptimizedDataLoader] Clearing all indices...');
+    console.log('[API Direct] Clearing all indices...');
     const indices = Object.keys(this.CATEGORY_TARGETS);
     
     for (const indexName of indices) {
@@ -332,10 +337,10 @@ export class OptimizedDataLoader {
         );
         
         if (response.ok) {
-          console.log(`[OptimizedDataLoader] Cleared index: ${indexName}`);
+          console.log(`[API Direct] Cleared index: ${indexName}`);
         }
       } catch (error) {
-        console.warn(`[OptimizedDataLoader] Failed to clear index ${indexName}:`, error);
+        console.warn(`[API Direct] Failed to clear index ${indexName}:`, error);
       }
     }
   }
@@ -354,7 +359,7 @@ export class OptimizedDataLoader {
     });
     
     // Log distribution summary
-    console.log('[OptimizedDataLoader] Product distribution by index:');
+    console.log('[API Direct] Product distribution by index:');
     Object.entries(productsByIndex).forEach(([index, prods]) => {
       console.log(`  ${index}: ${prods.length} products`);
     });
@@ -363,13 +368,13 @@ export class OptimizedDataLoader {
     for (const [indexName, indexProducts] of Object.entries(productsByIndex)) {
       if (indexProducts.length > 0) {
         await this.uploadToAlgoliaWithReplace(indexName, indexProducts);
-        console.log(`[OptimizedDataLoader] ✓ Uploaded ${indexProducts.length} products to ${indexName} index`);
+        console.log(`[API Direct] ✓ Uploaded ${indexProducts.length} products to ${indexName} index`);
       }
     }
     
     // Final summary
     const totalUploaded = Object.values(productsByIndex).reduce((sum, prods) => sum + prods.length, 0);
-    console.log(`[OptimizedDataLoader] Upload complete! Total products uploaded: ${totalUploaded}`);
+    console.log(`[API Direct] Upload complete! Total products uploaded: ${totalUploaded}`);
   }
 
   private async uploadToIndices(products: Product[]): Promise<void> {
@@ -385,7 +390,7 @@ export class OptimizedDataLoader {
     });
     
     // Log distribution summary
-    console.log('[OptimizedDataLoader] Product distribution by index:');
+    console.log('[API Direct] Product distribution by index:');
     Object.entries(productsByIndex).forEach(([index, prods]) => {
       console.log(`  ${index}: ${prods.length} products`);
     });
@@ -394,13 +399,13 @@ export class OptimizedDataLoader {
     for (const [indexName, indexProducts] of Object.entries(productsByIndex)) {
       if (indexProducts.length > 0) {
         await this.uploadToAlgolia(indexName, indexProducts);
-        console.log(`[OptimizedDataLoader] ✓ Uploaded ${indexProducts.length} products to ${indexName} index`);
+        console.log(`[API Direct] ✓ Uploaded ${indexProducts.length} products to ${indexName} index`);
       }
     }
     
     // Final summary
     const totalUploaded = Object.values(productsByIndex).reduce((sum, prods) => sum + prods.length, 0);
-    console.log(`[OptimizedDataLoader] Upload complete! Total products uploaded: ${totalUploaded}`);
+    console.log(`[API Direct] Upload complete! Total products uploaded: ${totalUploaded}`);
   }
 
   // 高速化されたreplaceAllObjectsを使用したアップロード
@@ -433,13 +438,13 @@ export class OptimizedDataLoader {
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error(`[OptimizedDataLoader] Failed to upload batch to ${indexName}:`, errorText);
+          console.error(`[API Direct] Failed to upload batch to ${indexName}:`, errorText);
           continue;
         }
 
         const result = await response.json() as { taskID?: number };
         const progress = Math.min(100, Math.round((i + batchSize) / total * 100));
-        console.log(`[OptimizedDataLoader] Uploading to ${indexName}: ${progress}% - TaskID: ${result.taskID}`);
+        console.log(`[API Direct] Uploading to ${indexName}: ${progress}% - TaskID: ${result.taskID}`);
         
         // Rate limiting（短縮）
         if (i + batchSize < total) {
@@ -447,7 +452,7 @@ export class OptimizedDataLoader {
         }
       }
     } catch (error) {
-      console.error(`[OptimizedDataLoader] Error uploading to ${indexName}:`, error);
+      console.error(`[API Direct] Error uploading to ${indexName}:`, error);
     }
   }
 
@@ -479,13 +484,13 @@ export class OptimizedDataLoader {
 
         if (!response.ok) {
           const errorText = await response.text();
-          console.error(`[OptimizedDataLoader] Failed to upload batch to ${indexName}:`, errorText);
+          console.error(`[API Direct] Failed to upload batch to ${indexName}:`, errorText);
           continue;
         }
 
         const result = await response.json() as { taskID?: number };
         const progress = Math.min(100, Math.round((i + batchSize) / total * 100));
-        console.log(`[OptimizedDataLoader] Uploading to ${indexName}: ${progress}% - TaskID: ${result.taskID}`);
+        console.log(`[API Direct] Uploading to ${indexName}: ${progress}% - TaskID: ${result.taskID}`);
         
         // Rate limiting
         if (i + batchSize < total) {
@@ -493,7 +498,7 @@ export class OptimizedDataLoader {
         }
       }
     } catch (error) {
-      console.error(`[OptimizedDataLoader] Error uploading to ${indexName}:`, error);
+      console.error(`[API Direct] Error uploading to ${indexName}:`, error);
     }
   }
 }

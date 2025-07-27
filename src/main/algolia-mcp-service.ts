@@ -32,7 +32,7 @@ export class AlgoliaMCPService {
 
   async initialize(config: AlgoliaConfig): Promise<boolean> {
     try {
-      console.log('[AlgoliaMCP] Initializing with config:', {
+      console.log('[MCP] Initializing with config:', {
         applicationId: config.applicationId,
         indexName: config.indexName,
         hasApiKey: !!config.apiKey
@@ -42,17 +42,17 @@ export class AlgoliaMCPService {
       // Initialize MCP client
       await this.mcpClient.initialize(config.applicationId, config.apiKey);
       
-      console.log('[AlgoliaMCP] Successfully initialized with MCP client');
+      console.log('[MCP] Successfully initialized with MCP client');
       return true;
     } catch (error) {
-      console.error('[AlgoliaMCP] Failed to initialize:', error);
+      console.error('[MCP] Failed to initialize:', error);
       return false;
     }
   }
 
   async initializeMultiSearch(config: MultiSearchConfig): Promise<boolean> {
     try {
-      console.log('[AlgoliaMCP] Initializing multi-search with config:', {
+      console.log('[MCP] Initializing multi-search with config:', {
         applicationId: config.applicationId,
         indexMappings: Object.keys(config.indexMappings),
         hasApiKey: !!config.apiKey
@@ -64,10 +64,10 @@ export class AlgoliaMCPService {
         await this.mcpClient.initialize(config.applicationId, config.apiKey);
       }
       
-      console.log('[AlgoliaMCP] Successfully initialized multi-search');
+      console.log('[MCP] Successfully initialized multi-search');
       return true;
     } catch (error) {
-      console.error('[AlgoliaMCP] Failed to initialize multi-search:', error);
+      console.error('[MCP] Failed to initialize multi-search:', error);
       return false;
     }
   }
@@ -85,7 +85,7 @@ export class AlgoliaMCPService {
     }
   ): Promise<Product[]> {
     try {
-      console.log('[AlgoliaMCP] Searching via MCP:', { query, indexName, additionalParams });
+      console.log('[MCP] Searching via MCP:', { query, indexName, additionalParams });
       
       const response = await this.mcpClient.searchSingleIndex({
         indexName,
@@ -100,7 +100,7 @@ export class AlgoliaMCPService {
 
       return [];
     } catch (error) {
-      console.error('[AlgoliaMCP] Search error:', error);
+      console.error('[MCP] Search error:', error);
       return [];
     }
   }
@@ -117,13 +117,13 @@ export class AlgoliaMCPService {
       filters?: string;
     }
   ): Promise<Product[]> {
-    console.log('[AlgoliaMCP] Starting multi-index search via MCP...');
-    console.log('[AlgoliaMCP] Query:', query);
-    console.log('[AlgoliaMCP] Categories:', categories);
-    console.log('[AlgoliaMCP] Additional params:', additionalParams);
+    console.log('[MCP] Starting multi-index search via MCP...');
+    console.log('[MCP] Query:', query);
+    console.log('[MCP] Categories:', categories);
+    console.log('[MCP] Additional params:', additionalParams);
     
     if (!this.multiSearchConfig) {
-      console.warn('[AlgoliaMCP] Multi-search not initialized');
+      console.warn('[MCP] Multi-search not initialized');
       return this.config ? this.searchProducts(query, this.config.indexName, additionalParams) : [];
     }
 
@@ -133,7 +133,7 @@ export class AlgoliaMCPService {
         ? categories.map(cat => this.multiSearchConfig!.indexMappings[cat]).filter(idx => idx)
         : Object.values(this.multiSearchConfig.indexMappings);
 
-      console.log('[AlgoliaMCP] Searching indices via MCP:', indicesToSearch);
+      console.log('[MCP] Searching indices via MCP:', indicesToSearch);
 
       // 複数のMCP検索を並列実行
       const searchPromises = indicesToSearch.map(indexName => 
@@ -145,27 +145,29 @@ export class AlgoliaMCPService {
       // 全ての結果を統合
       const allProducts: Product[] = [];
       results.forEach((products, index) => {
-        console.log(`[AlgoliaMCP] Results from ${indicesToSearch[index]}: ${products.length} products`);
+        console.log(`[MCP] Results from ${indicesToSearch[index]}: ${products.length} products`);
         allProducts.push(...products);
       });
 
-      console.log('[AlgoliaMCP] Total products found:', allProducts.length);
+      console.log('[MCP] Total products found:', allProducts.length);
       return allProducts;
 
     } catch (error) {
-      console.error('[AlgoliaMCP] Multi-search error:', error);
+      console.error('[MCP] Multi-search error:', error);
       return [];
     }
   }
 
-  // インデックスの存在確認と作成（MCP経由）
+  // インデックスの存在確認のみ（作成はAPI直接で行う）
   async ensureIndicesExist(): Promise<void> {
     if (!this.multiSearchConfig) {
-      console.warn('[AlgoliaMCP] Multi-search config not initialized, skipping index creation');
+      console.warn('[MCP] Multi-search config not initialized, skipping index check');
       return;
     }
 
     try {
+      console.log('[MCP] Checking existing indices...');
+      
       // 既存のインデックスリストを取得（MCP経由）
       const existingIndices = await this.mcpClient.listIndices();
       const existingIndexNames = new Set(
@@ -176,68 +178,27 @@ export class AlgoliaMCPService {
       const standardIndices = Object.values(this.multiSearchConfig.indexMappings);
       const uniqueIndices = [...new Set(standardIndices)]; // 重複を除去
 
+      // 存在するインデックスを記録
       for (const indexName of uniqueIndices) {
-        if (!existingIndexNames.has(indexName)) {
-          console.log(`[AlgoliaMCP] Creating index '${indexName}' via MCP...`);
-          
-          try {
-            // インデックスを作成（空のオブジェクトを保存して作成）
-            await this.mcpClient.saveObject(indexName, {
-              objectID: 'init',
-              _temporary: true
-            });
-            
-            // インデックスの設定（MCP経由）
-            const indexSettings = {
-              searchableAttributes: [
-                'brand',
-                'name',
-                'description',
-                'categories'
-              ],
-              attributesForFaceting: [
-                'searchable(brand)',
-                'searchable(categories)',
-                'price'
-              ],
-              customRanking: ['desc(popularity)', 'desc(rating)'],
-              highlightPreTag: '<mark>',
-              highlightPostTag: '</mark>',
-              queryType: 'prefixAll',
-              removeWordsIfNoResults: 'allOptional',
-              ignorePlurals: true,
-              enablePersonalization: true
-            };
-
-            await this.mcpClient.setSettings(indexName, indexSettings);
-            
-            console.log(`[AlgoliaMCP] Successfully created and configured index '${indexName}'`);
-            this.initializedIndices.add(indexName);
-            
-          } catch (error) {
-            console.error(`[AlgoliaMCP] Failed to create index '${indexName}':`, error);
-          }
-        } else {
-          console.log(`[AlgoliaMCP] Index '${indexName}' already exists`);
+        if (existingIndexNames.has(indexName)) {
+          console.log(`[MCP] Index '${indexName}' exists`);
           this.initializedIndices.add(indexName);
+        } else {
+          console.log(`[MCP] Index '${indexName}' not found (will be created during initial setup)`);
         }
       }
 
-      console.log('[AlgoliaMCP] All required indices are ready');
-      
-      // Load and upload sample data to indices
-      console.log('[AlgoliaMCP] Loading sample data...');
-      await this.loadAndUploadSampleData();
+      console.log(`[MCP] Found ${this.initializedIndices.size} existing indices`);
       
     } catch (error) {
-      console.error('[AlgoliaMCP] Failed to ensure indices exist:', error);
+      console.error('[MCP] Failed to check indices:', error);
     }
   }
 
   // データをインデックスにアップロード（MCP経由）
   async uploadDataToIndex(indexName: string, data: any[]): Promise<boolean> {
     try {
-      console.log(`[AlgoliaMCP] Uploading ${data.length} items to ${indexName} via MCP...`);
+      console.log(`[MCP] Uploading ${data.length} items to ${indexName} via MCP...`);
       
       // バッチで処理（MCPの制限を考慮）
       const batchSize = 100;
@@ -250,14 +211,14 @@ export class AlgoliaMCPService {
         );
         
         await Promise.all(savePromises);
-        console.log(`[AlgoliaMCP] Uploaded batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(data.length / batchSize)}`);
+        console.log(`[MCP] Uploaded batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(data.length / batchSize)}`);
       }
       
-      console.log(`[AlgoliaMCP] Successfully uploaded all data to ${indexName}`);
+      console.log(`[MCP] Successfully uploaded all data to ${indexName}`);
       return true;
       
     } catch (error) {
-      console.error(`[AlgoliaMCP] Failed to upload data to ${indexName}:`, error);
+      console.error(`[MCP] Failed to upload data to ${indexName}:`, error);
       return false;
     }
   }
@@ -291,107 +252,6 @@ export class AlgoliaMCPService {
   private getDefaultProductImage(): string {
     // デフォルトの商品画像URLを返す
     return 'https://via.placeholder.com/300x300?text=No+Image';
-  }
-
-  // Load and upload sample data to indices
-  private async loadAndUploadSampleData(): Promise<void> {
-    try {
-      const fs = require('fs');
-      const path = require('path');
-      const { app } = require('electron');
-      
-      // Determine data path based on environment
-      const isPackaged = app.isPackaged;
-      const dataPath = isPackaged
-        ? path.join(process.resourcesPath, 'src', 'data')
-        : path.join(__dirname, '..', '..', 'src', 'data');
-      
-      console.log(`[AlgoliaMCP] Loading data from: ${dataPath}`);
-      
-      // Load Best Buy data
-      const bestBuyPath = path.join(dataPath, 'bestbuy-products.json');
-      const amazonPath = path.join(dataPath, 'amazon-products.json');
-      
-      let allProducts: any[] = [];
-      
-      // Load Best Buy products
-      if (fs.existsSync(bestBuyPath)) {
-        const bestBuyData = JSON.parse(fs.readFileSync(bestBuyPath, 'utf8'));
-        allProducts = allProducts.concat(bestBuyData);
-        console.log(`[AlgoliaMCP] Loaded ${bestBuyData.length} Best Buy products`);
-      }
-      
-      // Load Amazon products
-      if (fs.existsSync(amazonPath)) {
-        const amazonData = JSON.parse(fs.readFileSync(amazonPath, 'utf8'));
-        allProducts = allProducts.concat(amazonData);
-        console.log(`[AlgoliaMCP] Loaded ${amazonData.length} Amazon products`);
-      }
-      
-      if (allProducts.length === 0) {
-        console.error('[AlgoliaMCP] No products found to upload');
-        return;
-      }
-      
-      console.log(`[AlgoliaMCP] Total products to upload: ${allProducts.length}`);
-      
-      // Group products by category for appropriate index upload
-      const productsByCategory: { [key: string]: any[] } = {
-        fashion: [],
-        electronics: [],
-        beauty: [],
-        sports: [],
-        books: [],
-        home: [],
-        food: [],
-        products: [] // General/other products
-      };
-      
-      // Categorize products
-      for (const product of allProducts) {
-        let categorized = false;
-        
-        // Check categories array for matching index
-        if (product.categories && Array.isArray(product.categories)) {
-          const lowerCategories = product.categories.map((c: string) => c.toLowerCase());
-          
-          for (const category of Object.keys(productsByCategory)) {
-            if (category === 'products') continue; // Skip general category
-            
-            if (lowerCategories.some((c: string) => 
-              c.includes(category) || 
-              (category === 'electronics' && (c.includes('computer') || c.includes('phone') || c.includes('tablet'))) ||
-              (category === 'fashion' && (c.includes('clothing') || c.includes('shoes') || c.includes('apparel'))) ||
-              (category === 'beauty' && (c.includes('cosmetic') || c.includes('makeup') || c.includes('skincare'))) ||
-              (category === 'sports' && (c.includes('fitness') || c.includes('outdoor') || c.includes('athletic'))) ||
-              (category === 'home' && (c.includes('furniture') || c.includes('decor') || c.includes('kitchen')))
-            )) {
-              productsByCategory[category].push(product);
-              categorized = true;
-              break;
-            }
-          }
-        }
-        
-        // If not categorized, add to general products
-        if (!categorized) {
-          productsByCategory.products.push(product);
-        }
-      }
-      
-      // Upload products to their respective indices
-      for (const [indexName, products] of Object.entries(productsByCategory)) {
-        if (products.length > 0 && this.initializedIndices.has(indexName)) {
-          console.log(`[AlgoliaMCP] Uploading ${products.length} products to ${indexName} index`);
-          await this.uploadDataToIndex(indexName, products);
-        }
-      }
-      
-      console.log('[AlgoliaMCP] Sample data upload completed');
-      
-    } catch (error) {
-      console.error('[AlgoliaMCP] Failed to load and upload sample data:', error);
-    }
   }
 
   // Cleanup method

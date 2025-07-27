@@ -85,6 +85,27 @@ An innovative **Algolia MCP Server-powered** shopping assistant that demonstrate
 └─────────────────────┘  └─────────────────┘  └──────────────┘
 ```
 
+### Algolia Integration Strategy
+
+This application uses a hybrid approach for Algolia integration:
+
+#### Initial Setup (One-time, API Direct)
+When API keys are first configured, the application uses the **Algolia JavaScript API directly** to:
+- Create all required indices (fashion, electronics, products, beauty, sports, books, home, food)
+- Upload the pre-processed dataset (Best Buy + Amazon ESCI data)
+- Configure index settings for optimal search performance
+
+This ensures reliable initial data population with clear logging marked as `[API Direct]`.
+
+#### Ongoing Operations (MCP Server)
+After initial setup, all Algolia operations use the **official Algolia MCP Server**:
+- Product searches across multiple indices
+- Saving user interactions
+- Real-time personalization
+- All search operations from the UI
+
+This approach ensures MCP server utilization while maintaining setup reliability. All MCP operations are logged with `[MCP]` prefix for transparency.
+
 ## Technical Stack
 
 ### Frontend (Renderer Process)
