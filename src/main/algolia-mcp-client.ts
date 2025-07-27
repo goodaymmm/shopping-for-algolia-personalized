@@ -47,14 +47,26 @@ export class AlgoliaMCPClient {
     
     try {
       // Start the MCP server process with credentials
-      this.mcpProcess = spawn(mcpPath, [
-        'start-server',
-        '--credentials', `${applicationId}:${apiKey}`
-      ], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        shell: process.platform === 'win32', // Windows requires shell to execute .bat files
-        windowsVerbatimArguments: true // Prevent Windows from mishandling paths with spaces
-      });
+      if (process.platform === 'win32') {
+        // Windows: Use cmd.exe to properly handle paths with spaces
+        this.mcpProcess = spawn('cmd.exe', [
+          '/c',
+          `"${mcpPath}"`, // Wrap path in quotes to handle spaces
+          'start-server',
+          '--credentials', `${applicationId}:${apiKey}`
+        ], {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          windowsHide: true // Hide command prompt window
+        });
+      } else {
+        // Other platforms: Direct execution
+        this.mcpProcess = spawn(mcpPath, [
+          'start-server',
+          '--credentials', `${applicationId}:${apiKey}`
+        ], {
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
+      }
 
       // Set up readline interface for parsing JSON-RPC messages
       this.rl = readline.createInterface({
