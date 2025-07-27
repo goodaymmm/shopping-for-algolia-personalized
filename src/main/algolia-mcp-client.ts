@@ -48,15 +48,25 @@ export class AlgoliaMCPClient {
     try {
       // Start the MCP server process with credentials
       if (process.platform === 'win32') {
-        // Windows: Use cmd.exe to properly handle paths with spaces
-        this.mcpProcess = spawn('cmd.exe', [
-          '/c',
-          `"${mcpPath}"`, // Wrap path in quotes to handle spaces
+        // Windows: Execute according to official Algolia MCP Server README Development section
+        const nodePath = process.execPath;
+        const appTsPath = path.join(
+          path.dirname(mcpPath), 
+          'algolia-mcp-source', 
+          'src', 
+          'app.ts'
+        );
+        
+        // Use exact command line from official README
+        this.mcpProcess = spawn(nodePath, [
+          '--experimental-strip-types',
+          '--no-warnings=ExperimentalWarning',
+          appTsPath,
           'start-server',
           '--credentials', `${applicationId}:${apiKey}`
         ], {
           stdio: ['pipe', 'pipe', 'pipe'],
-          windowsHide: true // Hide command prompt window
+          cwd: path.join(path.dirname(mcpPath), 'algolia-mcp-source')
         });
       } else {
         // Other platforms: Direct execution
