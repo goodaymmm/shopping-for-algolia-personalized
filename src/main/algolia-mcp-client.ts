@@ -62,7 +62,8 @@ export class AlgoliaMCPClient {
           '--no-warnings=ExperimentalWarning',
           appTsPath,
           'start-server',
-          '--credentials', `${applicationId}:${apiKey}`
+          '--credentials', `${applicationId}:${apiKey}`,
+          '--allow-tools', 'getUserInfo,getApplications,listIndices,searchSingleIndex,saveObject,setSettings,getSettings'
         ], {
           stdio: ['pipe', 'pipe', 'pipe'],
           cwd: path.join(path.dirname(mcpPath), 'algolia-mcp-source'),
@@ -72,7 +73,8 @@ export class AlgoliaMCPClient {
         // Other platforms: Direct execution
         this.mcpProcess = spawn(mcpPath, [
           'start-server',
-          '--credentials', `${applicationId}:${apiKey}`
+          '--credentials', `${applicationId}:${apiKey}`,
+          '--allow-tools', 'getUserInfo,getApplications,listIndices,searchSingleIndex,saveObject,setSettings,getSettings'
         ], {
           stdio: ['pipe', 'pipe', 'pipe']
         });
