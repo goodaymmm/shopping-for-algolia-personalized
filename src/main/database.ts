@@ -233,6 +233,13 @@ export class DatabaseService {
     return stmt.all()
   }
 
+  getAllProducts() {
+    const stmt = this.db.prepare(`
+      SELECT * FROM saved_products ORDER BY created_at DESC
+    `)
+    return stmt.all()
+  }
+
   async removeProduct(productId: string) {
     const stmt = this.db.prepare(`
       DELETE FROM saved_products WHERE id = ?
@@ -372,6 +379,21 @@ export class DatabaseService {
     `)
     const result = stmt.get() as any
     return result ? (parseInt(result.setting_value) as DiscoveryPercentage) : 0
+  }
+
+  getUserSettings() {
+    const stmt = this.db.prepare(`
+      SELECT * FROM user_settings WHERE setting_key = 'outlier_percentage'
+    `)
+    const result = stmt.get() as any
+    return result ? { discoveryPercentage: parseInt(result.setting_value) } : null
+  }
+
+  getMLTrainingData() {
+    const stmt = this.db.prepare(`
+      SELECT * FROM ml_training_events ORDER BY timestamp DESC
+    `)
+    return stmt.all()
   }
 
   // ML data operations (for Phase C - advanced features)

@@ -140,8 +140,12 @@ jobs:
         run: |
           echo "Copying MCP server files..."
           if [ -f "src/main/mcp-minimal.js" ]; then
+            # Ensure dist/main directory exists
+            mkdir -p dist/main
             cp src/main/mcp-minimal.js dist/main/
             echo "Copied mcp-minimal.js to dist/main/"
+            # Make the file executable on Unix systems
+            chmod +x dist/main/mcp-minimal.js || true
             ls -la dist/main/mcp-*.js || echo "MCP server files in dist/main"
           else
             echo "ERROR: mcp-minimal.js not found!"
@@ -164,7 +168,7 @@ jobs:
       - name: Build Electron app
         shell: bash
         run: |
-          # Build for the appropriate platform
+          # Build for the appropriate platform with increased timeout
           npx electron-builder --${{ matrix.platform }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -173,6 +177,10 @@ jobs:
           # Electron Builder configuration
           ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
           USE_HARD_LINKS: false
+          # Increase timeout for native module compilation
+          npm_config_build_timeout: 600000
+          # Skip unnecessary steps in CI
+          ELECTRON_BUILDER_CACHE: false
 
       - name: Build Desktop Extension (.dxt)
         if: matrix.os == 'windows-latest'
