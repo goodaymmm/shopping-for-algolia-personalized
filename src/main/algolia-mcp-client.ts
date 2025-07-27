@@ -259,7 +259,7 @@ export class AlgoliaMCPClient {
     return this.callTool('searchSingleIndex', {
       applicationId: this.applicationId,
       indexName: params.indexName,
-      searchParams: {
+      requestBody: {
         query: params.query,
         hitsPerPage: params.hitsPerPage || 20,
         page: params.page || 0,
