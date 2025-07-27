@@ -162,7 +162,7 @@ class MainApplication {
       const activityStmt = this.database.database.prepare(`
         SELECT MAX(timestamp) as last_activity 
         FROM (
-          SELECT created_at as timestamp FROM products
+          SELECT created_at as timestamp FROM saved_products
           UNION ALL
           SELECT timestamp FROM ml_training_events
           UNION ALL
@@ -204,7 +204,7 @@ class MainApplication {
       }
       
       // Gather minimal essential data only
-      const products = this.database.database.prepare('SELECT * FROM products').all()
+      const products = this.database.database.prepare('SELECT * FROM saved_products').all()
       const userSettings = this.database.database.prepare('SELECT * FROM user_settings WHERE id = 1').get()
       
       // Create minimal export object
