@@ -51,7 +51,8 @@ export class AlgoliaMCPClient {
         'start-server',
         '--credentials', `${applicationId}:${apiKey}`
       ], {
-        stdio: ['pipe', 'pipe', 'pipe']
+        stdio: ['pipe', 'pipe', 'pipe'],
+        shell: process.platform === 'win32' // Windows requires shell to execute .bat files
       });
 
       // Set up readline interface for parsing JSON-RPC messages
