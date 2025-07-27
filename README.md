@@ -27,33 +27,33 @@ AI-powered shopping assistant with image search, ML personalization, and Claude 
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    React UI (Renderer)                       │
-│         Chat View | Search Panel | Product Sidebar           │
-└────────────────────────────┬────────────────────────────────┘
-                             │ IPC
-┌────────────────────────────┴────────────────────────────────┐
-│                  Electron Main Process                       │
-│  ┌─────────────┐  ┌──────────────┐  ┌─────────────────┐   │
-│  │   Gemini    │  │  Algolia MCP │  │ Personalization │   │
-│  │  Service    │  │    Client    │  │     Engine      │   │
-│  └──────┬──────┘  └──────┬───────┘  └────────┬────────┘   │
-│         │                 │                    │             │
-│  ┌──────┴─────────────────┴────────────────────┴────────┐  │
-│  │                  SQLite Database                      │  │
-│  └──────────────────────────────────────────────────────┘  │
-│                                                             │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │            Shopping AI MCP Server                     │  │
-│  │        (8 tools for Claude Desktop)                   │  │
-│  └──────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-                             │
-┌─────────────────────┐  ┌─────────────────┐  ┌──────────────┐
-│ Algolia MCP Server  │  │ Google Gemini   │  │Claude Desktop│
-│ (Official)          │  │ 2.5 Flash API   │  │ (MCP Client) │
-└─────────────────────┘  └─────────────────┘  └──────────────┘
+```mermaid
+graph TD
+    UI[React UI/Frontend]
+    UI -->|Initial Setup Only|ALGOLIA_RESTAPI[Algolia REST API]
+    UI <-->|All Operations| MCP_SERVICE
+  
+    MCP_SERVICE[AlgoliaMCPService<br/>Bridge Service]
+    MCP_SERVICE <--> DB[(SQLite<br/>Local DB)]
+    MCP_SERVICE <--> ALGOLIA_MCP
+    
+    MCP_SERVICE <--> GEMINI_API[Gemini API<br/>2.5 Flash]
+    
+    DB <--> SHOPPING_MCP[Shopping AI MCP Server<br/>8 tools for Claude]
+    SHOPPING_MCP <--> CLAUDE[Claude Desktop]
+    
+    ALGOLIA_MCP[Algolia MCP Server]
+    ALGOLIA_MCP <--> ALGOLIA[Algolia]
+    
+    style UI fill:#ff6b35,stroke:#333,stroke-width:2px,color:#fff
+    style MCP_SERVICE fill:#4a90e2,stroke:#333,stroke-width:2px,color:#fff
+    style DB fill:#50c878,stroke:#333,stroke-width:2px,color:#fff
+    style ALGOLIA_MCP fill:#003dff,stroke:#333,stroke-width:2px,color:#fff
+
+    style CLAUDE fill:#8b5cf6,stroke:#333,stroke-width:2px,color:#fff
+    style GEMINI_API fill:#ea4335,stroke:#333,stroke-width:2px,color:#fff
+    style ALGOLIA fill:#003dff,stroke:#333,stroke-width:2px,color:#fff
+    style SHOPPING_MCP fill:#8b5cf6,stroke:#333,stroke-width:2px,color:#fff
 ```
 
 ### Integration Strategy

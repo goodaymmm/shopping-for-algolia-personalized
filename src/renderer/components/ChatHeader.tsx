@@ -13,11 +13,11 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({ isDark }) => {
         ? 'bg-gray-800 border-gray-700' 
         : 'bg-gray-50 border-gray-200'
     }`}>
-      {/* Header Bar */}
-      <div className={`flex items-center px-4 py-2 ${
+      {/* Header Bar with draggable area */}
+      <div className={`flex items-center justify-between px-4 py-2 ${
         isDark ? 'bg-gray-900' : 'bg-gray-100'
-      }`}>
-        <div className="flex items-center gap-3">
+      }`} style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
+        <div className="flex items-center gap-3" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
           <div className="w-6 h-6 bg-orange-500 rounded-md flex items-center justify-center">
             <MessageSquare className="w-4 h-4 text-white" />
           </div>

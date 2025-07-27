@@ -108,6 +108,7 @@ class MainApplication {
       width: 1200,
       height: 800,
       autoHideMenuBar: true,  // PRODUCTION: Hide menu bar
+      frame: false,  // Remove window controls for clean UI
       webPreferences: {
         preload: join(__dirname, '../preload/index.js'),
         contextIsolation: true,
