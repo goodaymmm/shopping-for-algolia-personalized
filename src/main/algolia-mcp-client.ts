@@ -106,7 +106,7 @@ export class AlgoliaMCPClient {
     }
     
     const mcpPath = isProduction
-      ? path.join(process.resourcesPath, 'algolia-mcp', mcpFileName)
+      ? path.join(process.resourcesPath, 'resources', 'algolia-mcp', mcpFileName)
       : path.join(__dirname, '..', '..', 'resources', 'algolia-mcp', mcpFileName);
     
     // Check if file exists and has reasonable size

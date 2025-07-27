@@ -107,8 +107,7 @@
       "mcp-server.sh",
       "dist/main/mcp-minimal.js",
       "dist/main/database.js",
-      "dist/main/personalization.js",
-      "resources/algolia-mcp/**/*"
+      "dist/main/personalization.js"
     ],
     "extraResources": [
       "resources/algolia-mcp/**/*"
