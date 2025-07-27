@@ -23,7 +23,7 @@ export class DatabaseService {
     // MCP mode always reads from JSON export
     const exportDir = join(homedir(), '.shopping-algolia')
     this.exportPath = join(exportDir, 'mcp-export.json')
-    console.log('[Database MCP] Using JSON export at:', this.exportPath)
+    // Removed console.log to prevent MCP JSON-RPC errors
   }
 
   get database(): any {
@@ -46,10 +46,9 @@ export class DatabaseService {
       if (existsSync(this.exportPath)) {
         const data = readFileSync(this.exportPath, 'utf8')
         this.cachedData = JSON.parse(data)
-        console.log('[Database MCP] Loaded export data from', this.exportPath)
-        console.log(`[Database MCP] Export timestamp: ${this.cachedData?.exportedAt}`)
+        // Successfully loaded export data
       } else {
-        console.log('[Database MCP] No export file found at', this.exportPath)
+        // No export file found
         // Initialize with empty data
         this.cachedData = {
           exportedAt: new Date().toISOString(),
@@ -62,7 +61,7 @@ export class DatabaseService {
         }
       }
     } catch (error) {
-      console.error('[Database MCP] Failed to load export data:', error)
+      // Failed to load export data
       // Initialize with empty data on error
       this.cachedData = {
         exportedAt: new Date().toISOString(),
@@ -138,61 +137,61 @@ export class DatabaseService {
 
   // Write methods - all no-op in MCP mode
   saveProduct(product: any): any {
-    console.log('[Database MCP] Write operation ignored - read-only mode')
+    // Write operation ignored - read-only mode
     return { lastInsertRowid: 0 }
   }
 
   removeProduct(id: number): boolean {
-    console.log('[Database MCP] Write operation ignored - read-only mode')
+    // Write operation ignored - read-only mode
     return false
   }
 
   createChatSession(name: string, category?: string): number {
-    console.log('[Database MCP] Write operation ignored - read-only mode')
+    // Write operation ignored - read-only mode
     return 0
   }
 
   saveChatMessage(message: any): any {
-    console.log('[Database MCP] Write operation ignored - read-only mode')
+    // Write operation ignored - read-only mode
     return { lastInsertRowid: 0 }
   }
 
   saveUserSettings(settings: any): void {
-    console.log('[Database MCP] Write operation ignored - read-only mode')
+    // Write operation ignored - read-only mode
   }
 
   saveAPIKey(provider: string, apiKey: string): void {
-    console.log('[Database MCP] Write operation ignored - read-only mode')
+    // Write operation ignored - read-only mode
   }
 
   deleteAPIKey(provider: string): boolean {
-    console.log('[Database MCP] Write operation ignored - read-only mode')
+    // Write operation ignored - read-only mode
     return false
   }
 
   deleteAllAPIKeys(): boolean {
-    console.log('[Database MCP] Write operation ignored - read-only mode')
+    // Write operation ignored - read-only mode
     return false
   }
 
   cleanupDuplicateAPIKeys(provider?: string): void {
-    console.log('[Database MCP] Write operation ignored - read-only mode')
+    // Write operation ignored - read-only mode
   }
 
   resetDatabase(): void {
-    console.log('[Database MCP] Write operation ignored - read-only mode')
+    // Write operation ignored - read-only mode
   }
 
   resetMLData(): void {
-    console.log('[Database MCP] Write operation ignored - read-only mode')
+    // Write operation ignored - read-only mode
   }
 
   updateChatSession(sessionId: number, updates: any): void {
-    console.log('[Database MCP] Write operation ignored - read-only mode')
+    // Write operation ignored - read-only mode
   }
 
   deleteChatSession(sessionId: number): boolean {
-    console.log('[Database MCP] Write operation ignored - read-only mode')
+    // Write operation ignored - read-only mode
     return false
   }
 

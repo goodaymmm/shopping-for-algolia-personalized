@@ -26,12 +26,12 @@ export class PersonalizationEngine {
     // Check if we have cached personalization profile
     const cachedProfile = this.database.getPersonalizationProfile()
     if (cachedProfile) {
-      console.log('[Personalization MCP] Using cached personalization profile from export')
+      // Using cached personalization profile from export
       return cachedProfile
     }
 
     // If no cached profile, generate basic profile from available data
-    console.log('[Personalization MCP] Generating personalization profile from available data')
+    // Generating personalization profile from available data
     
     const products = this.database.getAllProducts()
     const mlData = this.database.getMLTrainingData()
@@ -150,10 +150,10 @@ export class PersonalizationEngine {
 
   // Write methods - all no-op in MCP mode
   async trackUserInteraction(event: any): Promise<void> {
-    console.log('[Personalization MCP] Write operation ignored - read-only mode')
+    // Write operation ignored - read-only mode
   }
 
   async updateUserProfile(updates: any): Promise<void> {
-    console.log('[Personalization MCP] Write operation ignored - read-only mode')
+    // Write operation ignored - read-only mode
   }
 }
