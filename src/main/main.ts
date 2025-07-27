@@ -145,7 +145,7 @@ class MainApplication {
       const products = await this.database.getProducts()
       // Get ML data directly from database
       const mlDataStmt = this.database.database.prepare(`
-        SELECT * FROM ml_training_data
+        SELECT * FROM ml_training_events
         ORDER BY timestamp DESC
       `)
       const mlTrainingData = mlDataStmt.all()
@@ -164,7 +164,7 @@ class MainApplication {
         FROM (
           SELECT created_at as timestamp FROM products
           UNION ALL
-          SELECT timestamp FROM ml_training_data
+          SELECT timestamp FROM ml_training_events
           UNION ALL
           SELECT created_at as timestamp FROM chat_messages
         )
