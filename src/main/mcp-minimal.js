@@ -2,6 +2,9 @@
 
 // Minimal MCP Server for Shopping for Algolia Personalized
 // This version uses the high-level McpServer API like the official examples
+// 
+// Update 2025-07-27: Added fallback mode to handle better-sqlite3 compatibility issues
+// The server will gracefully degrade if database modules cannot be loaded
 
 const fs = require('fs');
 const path = require('path');
@@ -53,6 +56,7 @@ async function startMinimalMCPServer() {
     // Load database and personalization modules
     log('Loading database and personalization modules...');
     let DatabaseService, PersonalizationEngine;
+    let dbError = null;
     
     try {
       // Try to load from dist/main first (production)
@@ -70,15 +74,28 @@ async function startMinimalMCPServer() {
       }
     } catch (error) {
       log(`Failed to load database/personalization modules: ${error.message}`);
-      throw error;
+      dbError = error;
+      // Continue with limited functionality instead of throwing
     }
     
-    // Initialize database and personalization
-    const database = new DatabaseService(true); // Pass true for MCP mode
-    database.initialize();
-    const personalization = new PersonalizationEngine(database);
+    // Initialize database and personalization with error handling
+    let database = null;
+    let personalization = null;
     
-    log('Database and personalization initialized');
+    if (DatabaseService && PersonalizationEngine && !dbError) {
+      try {
+        database = new DatabaseService(true); // Pass true for MCP mode
+        database.initialize();
+        personalization = new PersonalizationEngine(database);
+        log('Database and personalization initialized');
+      } catch (error) {
+        log(`Failed to initialize database: ${error.message}`);
+        log(`Stack: ${error.stack}`);
+        // Continue with null database - tools will return mock data
+      }
+    } else {
+      log('Running in fallback mode - database unavailable');
+    }
     
     // Create MCP server using high-level API
     const server = new McpServer({
@@ -99,6 +116,21 @@ async function startMinimalMCPServer() {
         log('Tool called: get_personalization_summary');
         
         try {
+          // Check if database is available
+          if (!database || !personalization) {
+            log('Database not available, returning fallback data');
+            return {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  error: 'Database temporarily unavailable',
+                  message: 'The Shopping for Algolia app database is not accessible. Please ensure the app is installed and has been run at least once.',
+                  helpText: 'To use this extension, install and run the Shopping for Algolia Personalized desktop application first.'
+                }, null, 2)
+              }]
+            };
+          }
+          
           // Get real data from personalization engine
           const profile = await personalization.exportForClaudeDesktop();
           const savedProducts = database.getAllProducts();
@@ -168,6 +200,21 @@ async function startMinimalMCPServer() {
         log('Tool called: get_user_preferences');
         
         try {
+          // Check if database is available
+          if (!database || !personalization) {
+            log('Database not available, returning fallback data');
+            return {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  error: 'Database temporarily unavailable',
+                  message: 'The Shopping for Algolia app database is not accessible. Please ensure the app is installed and has been run at least once.',
+                  helpText: 'To use this extension, install and run the Shopping for Algolia Personalized desktop application first.'
+                }, null, 2)
+              }]
+            };
+          }
+          
           // Get real data from personalization engine
           const profile = await personalization.exportForClaudeDesktop();
           const settings = database.getUserSettings();

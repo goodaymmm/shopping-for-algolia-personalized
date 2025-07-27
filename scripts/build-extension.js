@@ -134,7 +134,7 @@ async function buildExtension() {
     // Copy only required node_modules
     const requiredModules = [
       '@modelcontextprotocol',
-      'better-sqlite3',
+      // 'better-sqlite3', // Skipped due to binary compatibility issues
       'zod',
       'zod-to-json-schema',
       'ajv',
@@ -155,28 +155,17 @@ async function buildExtension() {
       if (copiedModules.has(moduleName)) return;
       copiedModules.add(moduleName);
       
+      // Skip better-sqlite3 entirely to avoid binary compatibility issues
+      if (moduleName === 'better-sqlite3') {
+        console.log(`Skipping ${moduleName} to avoid binary compatibility issues`);
+        return;
+      }
+      
       const moduleSrc = path.join(baseDir, moduleName);
       const moduleDest = path.join(nodeModulesDest, moduleName);
       
       if (fs.existsSync(moduleSrc)) {
-        // Copy module with filtering for better-sqlite3
-        const filter = (src) => {
-          // Skip problematic files in better-sqlite3
-          if (moduleName === 'better-sqlite3') {
-            const relativePath = path.relative(moduleSrc, src);
-            // Skip build tools and python scripts
-            if (relativePath.includes('node_gyp_bins') || 
-                relativePath.includes('deps') ||
-                relativePath.includes('.github') ||
-                relativePath.endsWith('.md') ||
-                relativePath.endsWith('.txt')) {
-              return false;
-            }
-          }
-          return true;
-        };
-        
-        fs.copySync(moduleSrc, moduleDest, { filter });
+        fs.copySync(moduleSrc, moduleDest);
         console.log(`Copied node_modules/${moduleName}`);
         
         // Check for dependencies
@@ -197,14 +186,8 @@ async function buildExtension() {
       copyModuleWithDeps(moduleName);
     }
     
-    // Copy better-sqlite3 bindings
-    const bindingSrc = path.join(nodeModulesSrc, 'better-sqlite3/build/Release/better_sqlite3.node');
-    const bindingDest = path.join(nodeModulesDest, 'better-sqlite3/build/Release/better_sqlite3.node');
-    if (fs.existsSync(bindingSrc)) {
-      fs.ensureDirSync(path.dirname(bindingDest));
-      fs.copyFileSync(bindingSrc, bindingDest);
-      console.log('Copied better-sqlite3 native bindings');
-    }
+    // Skip copying better-sqlite3 bindings to avoid compatibility issues
+    console.log('Skipping better-sqlite3 native bindings - will use fallback mode');
     
     
     // Create .dxt file (ZIP archive)
