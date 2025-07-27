@@ -70,6 +70,35 @@ async function copyAlgoliaMcpSource() {
       { spaces: 2 }
     );
     
+    // Copy node_modules if it exists
+    const nodeModulesSource = path.join(sourceDir, 'node_modules');
+    const nodeModulesTarget = path.join(targetDir, 'node_modules');
+    
+    if (fs.existsSync(nodeModulesSource)) {
+      console.log('Copying node_modules...');
+      await fs.copy(nodeModulesSource, nodeModulesTarget, {
+        overwrite: true,
+        filter: (src) => {
+          // Skip development dependencies and unnecessary files
+          const relativePath = path.relative(nodeModulesSource, src);
+          if (relativePath.includes('.bin') || 
+              relativePath.includes('@types') || 
+              relativePath.includes('@eslint') ||
+              relativePath.includes('@vitest') ||
+              relativePath.includes('eslint') ||
+              relativePath.includes('vitest') ||
+              relativePath.includes('typescript')) {
+            return false;
+          }
+          return true;
+        }
+      });
+      console.log('Copied node_modules (production dependencies only)');
+    } else {
+      console.warn('Warning: node_modules not found in source directory');
+      console.warn('Make sure to run "npm install" in the Algolia MCP Server directory first');
+    }
+    
     console.log('Official Algolia MCP Server source copied successfully!');
     console.log(`Target directory: ${targetDir}`);
     

@@ -96,6 +96,13 @@ jobs:
           if [ -d "../AIgolia-mcp-node-main/src" ]; then
             echo "✓ Official Algolia MCP Server repository cloned successfully"
             ls -la ../AIgolia-mcp-node-main/
+            
+            # Install dependencies for Algolia MCP Server
+            echo "Installing Algolia MCP Server dependencies..."
+            cd ../AIgolia-mcp-node-main
+            npm install --production
+            cd -
+            echo "✓ Dependencies installed"
           else
             echo "✗ Failed to clone Algolia MCP Server repository"
             exit 1
