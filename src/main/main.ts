@@ -46,6 +46,20 @@ class MainApplication {
       this.logger.info('Main', 'Application starting up')
       this.createWindow()
       this.database.initialize()
+      
+      // Check if this is first installation
+      const exportDir = join(homedir(), '.shopping-algolia')
+      const exportPath = join(exportDir, 'mcp-export.json')
+      const isFirstInstall = !existsSync(exportPath)
+      
+      if (isFirstInstall) {
+        console.log('[MCP Export] First installation detected, creating initial export...')
+        // Export once for first installation
+        setTimeout(() => {
+          this.exportMCPData()
+        }, 2000) // Wait 2 seconds for database to be ready
+      }
+      
       // Start MCP data export timer
       this.startMCPExportTimer()
     })
@@ -65,13 +79,15 @@ class MainApplication {
       }
     })
 
-    app.on('before-quit', async (event) => {
-      // Prevent immediate quit to allow export
-      event.preventDefault()
-      
-      // Export MCP data one final time
+    app.on('before-quit', () => {
+      // Export MCP data synchronously before quit
       console.log('[Main] Exporting MCP data before quit...')
-      await this.exportMCPData()
+      try {
+        // Use synchronous version for quick export
+        this.exportMCPDataSync()
+      } catch (error) {
+        console.error('[Main] Failed to export MCP data on quit:', error)
+      }
       
       // Clear export timer
       if (this.mcpExportInterval) {
@@ -84,9 +100,6 @@ class MainApplication {
         console.log('[Main] Cleaning up Algolia MCP client before quit...')
         this.algoliaMCPService.cleanup()
       }
-      
-      // Now quit
-      app.quit()
     })
   }
 
@@ -180,14 +193,47 @@ class MainApplication {
     }
   }
 
+  private exportMCPDataSync(): void {
+    try {
+      console.log('[MCP Export] Starting synchronous data export...')
+      
+      // Create export directory if it doesn't exist
+      const exportDir = join(homedir(), '.shopping-algolia')
+      if (!existsSync(exportDir)) {
+        mkdirSync(exportDir, { recursive: true })
+      }
+      
+      // Gather minimal essential data only
+      const products = this.database.database.prepare('SELECT * FROM products').all()
+      const userSettings = this.database.database.prepare('SELECT * FROM user_settings WHERE id = 1').get()
+      
+      // Create minimal export object
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        version: '1.0',
+        products: products || [],
+        userSettings: userSettings || null,
+        productCount: products?.length || 0
+      }
+      
+      // Write to file synchronously
+      const exportPath = join(exportDir, 'mcp-export.json')
+      writeFileSync(exportPath, JSON.stringify(exportData, null, 2), 'utf8')
+      
+      console.log(`[MCP Export] Quick export completed: ${products?.length || 0} products`)
+    } catch (error) {
+      console.error('[MCP Export] Sync export failed:', error)
+    }
+  }
+
   private startMCPExportTimer(): void {
     // Clear existing interval if any
     if (this.mcpExportInterval) {
       clearInterval(this.mcpExportInterval)
     }
     
-    // Export immediately
-    this.exportMCPData()
+    // Don't export immediately on startup - only on timer
+    console.log('[MCP Export] Export timer will start in 5 minutes...')
     
     // Set up interval for periodic exports
     this.mcpExportInterval = setInterval(() => {

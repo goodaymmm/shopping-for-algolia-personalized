@@ -1,6 +1,6 @@
 // Lightweight personalization engine for MCP server
 // Works with JSON export data instead of SQLite
-import { DatabaseService } from './database-mcp'
+import { DatabaseService } from './database'
 
 export interface MLTrainingEvent {
   id?: number
